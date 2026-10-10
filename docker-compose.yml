@@ -1,0 +1,100 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: clinic_backend
+    working_dir: /var/www/html
+    volumes:
+      - ./backend:/var/www/html
+    ports:
+      - "${BACKEND_PORT}:8000"
+    environment:
+      APP_ENV: local
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: ${POSTGRES_DB}
+      DB_USERNAME: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      EXPERT_SYSTEM_URL: ${EXPERT_SYSTEM_URL:-http://expert-system:8001}
+      EXPERT_SYSTEM_TIMEOUT: ${EXPERT_SYSTEM_TIMEOUT:-5}
+      EXPERT_SYSTEM_CONNECT_TIMEOUT: ${EXPERT_SYSTEM_CONNECT_TIMEOUT:-2}
+      EXPERT_SYSTEM_API_KEY: ${EXPERT_SYSTEM_API_KEY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      expert-system:
+        condition: service_started
+    networks:
+      - clinic
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: clinic_frontend
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "${FRONTEND_PORT}:5173"
+    depends_on:
+      - backend
+    networks:
+      - clinic
+
+  expert-system:
+    build:
+      context: ./expert-system
+      dockerfile: Dockerfile
+    container_name: clinic_expert_system
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: "postgresql+psycopg://${POSTGRES_USER:-clinic_user}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-clinic_db}"
+      EXPERT_SYSTEM_API_KEY: ${EXPERT_SYSTEM_API_KEY:-}
+      LOG_LEVEL: ${EXPERT_SYSTEM_LOG_LEVEL:-INFO}
+      DB_CONNECT_TIMEOUT_SECONDS: ${DB_CONNECT_TIMEOUT_SECONDS:-5}
+      DB_STATEMENT_TIMEOUT_MS: ${DB_STATEMENT_TIMEOUT_MS:-5000}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # Development only: bound to loopback. Remove this mapping in production;
+    # Laravel reaches the service over the private `clinic` network.
+    ports:
+      - "127.0.0.1:8001:8001"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - clinic
+
+  postgres:
+    image: postgres:18
+    container_name: clinic_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - clinic
+
+networks:
+  clinic:
+
+volumes:
+  postgres_data:
