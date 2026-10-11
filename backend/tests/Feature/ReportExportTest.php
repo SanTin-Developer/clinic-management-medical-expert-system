@@ -86,10 +86,71 @@ class ReportExportTest extends TestCase
         $this->get('/api/v1/reports/nonsense/export')->assertNotFound();
     }
 
+    public function test_admin_can_export_appointments_pdf(): void
+    {
+        $this->actingAsRole('Admin');
+        $doctor = $this->userWithRole('Doctor');
+        $patient = Patient::factory()->create();
+
+        Appointment::create([
+            'appointment_number' => 'APT-PDF-1',
+            'patient_id' => $patient->id,
+            'doctor_id' => $doctor->id,
+            'appointment_date' => '2030-01-01',
+            'appointment_time' => '10:00',
+            'status' => 'scheduled',
+        ]);
+
+        $response = $this->get('/api/v1/reports/appointments/pdf');
+
+        $response->assertOk();
+        $this->assertStringContainsString('application/pdf', $response->headers->get('content-type'));
+        $this->assertStringContainsString('attachment', $response->headers->get('content-disposition'));
+        $this->assertStringContainsString('appointments-report.pdf', $response->headers->get('content-disposition'));
+        $this->assertStringStartsWith('%PDF-', $response->getContent());
+    }
+
+    public function test_revenue_pdf_uses_supplied_date_range(): void
+    {
+        $this->actingAsRole('Admin');
+        $patient = Patient::factory()->create();
+
+        $invoiceId = $this->postJson('/api/v1/invoices', [
+            'patient_id' => $patient->id,
+            'items' => [['description' => 'Service', 'quantity' => 1, 'unit_price' => 80]],
+        ])->assertCreated()->json('data.id');
+
+        $this->postJson("/api/v1/invoices/{$invoiceId}/payments", [
+            'amount' => 80,
+            'method' => 'cash',
+        ])->assertCreated();
+
+        $this->get('/api/v1/reports/revenue/pdf?from=2000-01-01&to=2100-01-01')
+            ->assertOk()
+            ->assertHeader('content-type', 'application/pdf');
+    }
+
+    public function test_pdf_export_rejects_invalid_date_range(): void
+    {
+        $this->actingAsRole('Admin');
+
+        $this->getJson('/api/v1/reports/revenue/pdf?from=not-a-date')
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('from');
+    }
+
+    public function test_unknown_report_pdf_returns_not_found(): void
+    {
+        $this->actingAsRole('Admin');
+
+        $this->get('/api/v1/reports/nonsense/pdf')->assertNotFound();
+    }
+
     public function test_receptionist_cannot_export_reports(): void
     {
         $this->actingAsRole('Receptionist');
 
         $this->get('/api/v1/reports/appointments/export')->assertForbidden();
+        $this->get('/api/v1/reports/appointments/pdf')->assertForbidden();
     }
 }

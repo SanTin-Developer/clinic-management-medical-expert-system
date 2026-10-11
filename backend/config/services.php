@@ -52,4 +52,38 @@ return [
         'api_key' => env('EXPERT_SYSTEM_API_KEY'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Frontend SPA
+    |--------------------------------------------------------------------------
+    |
+    | Base URL of the frontend used when building verification and password
+    | reset links that are emailed to users.
+    |
+    */
+
+    'frontend' => [
+        'url' => env('FRONTEND_URL', 'http://localhost:5173'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Cloudinary (image/file storage)
+    |--------------------------------------------------------------------------
+    |
+    | Credentials for the Cloudinary account. Cloudinary is optional: the
+    | document storage abstraction defaults to the local disk and only uses
+    | Cloudinary when DOCUMENTS_DISK=cloudinary is set. The API secret is
+    | required for signed uploads and is never committed to the repository.
+    |
+    */
+
+    'cloudinary' => [
+        'cloud_name' => env('CLOUDINARY_CLOUD_NAME'),
+        'api_key' => env('CLOUDINARY_API_KEY'),
+        'api_secret' => env('CLOUDINARY_API_SECRET'),
+        'folder' => env('CLOUDINARY_FOLDER', 'clinic-documents'),
+        'secure' => (bool) env('CLOUDINARY_SECURE', true),
+    ],
+
 ];

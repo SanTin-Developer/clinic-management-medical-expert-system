@@ -5,11 +5,12 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Patient;
 use App\Models\PatientDocument;
+use App\Services\Files\DocumentStorage;
+use App\Services\Files\PatientDocumentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Symfony\Component\HttpFoundation\Response;
 
 class DocumentController extends Controller
 {
@@ -21,6 +22,11 @@ class DocumentController extends Controller
         'insurance',
         'other',
     ];
+
+    public function __construct(
+        private readonly PatientDocumentService $documents,
+        private readonly DocumentStorage $storage,
+    ) {}
 
     public function index(Patient $patient): JsonResponse
     {
@@ -41,20 +47,19 @@ class DocumentController extends Controller
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'category' => ['required', Rule::in(self::CATEGORIES)],
-            'file' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png,webp,doc,docx', 'max:10240'],
+            'file' => ['required', 'file', 'max:'.(int) config('documents.max_size_kb', 10240)],
         ]);
 
-        $file = $validated['file'];
-        $path = $file->store("patient-documents/{$patient->id}", 'local');
+        $stored = $this->documents->store($validated['file'], $patient);
 
         $document = $patient->documents()->create([
             'uploaded_by' => $request->user()->id,
             'title' => $validated['title'],
             'category' => $validated['category'],
-            'original_name' => $file->getClientOriginalName(),
-            'path' => $path,
-            'mime_type' => $file->getClientMimeType(),
-            'size' => $file->getSize() ?: 0,
+            'original_name' => $stored['original_name'],
+            'path' => $stored['path'],
+            'mime_type' => $stored['mime_type'],
+            'size' => $stored['size'],
         ]);
 
         return response()->json([
@@ -63,20 +68,20 @@ class DocumentController extends Controller
         ], 201);
     }
 
-    public function download(PatientDocument $document): StreamedResponse
+    public function download(PatientDocument $document): Response
     {
         $this->authorize('view', $document);
 
-        abort_unless(Storage::disk('local')->exists($document->path), 404, 'File not found.');
+        abort_unless($this->storage->exists($document->path), 404, 'File not found.');
 
-        return Storage::disk('local')->download($document->path, $document->original_name);
+        return $this->storage->download($document->path, $document->original_name);
     }
 
     public function destroy(PatientDocument $document): JsonResponse
     {
         $this->authorize('delete', $document);
 
-        Storage::disk('local')->delete($document->path);
+        $this->storage->delete($document->path);
 
         $document->delete();
 

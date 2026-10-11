@@ -33,7 +33,7 @@ class DocumentTest extends TestCase
         $this->postJson("/api/v1/patients/{$patient->id}/documents", [
             'title' => 'Blood test',
             'category' => 'lab-result',
-            'file' => UploadedFile::fake()->create('blood-test.pdf', 120, 'application/pdf'),
+            'file' => $this->fakePdf('blood-test.pdf'),
         ])->assertCreated()->assertJsonPath('data.title', 'Blood test');
 
         $this->assertDatabaseHas('patient_documents', [
@@ -64,7 +64,7 @@ class DocumentTest extends TestCase
         $documentId = $this->postJson("/api/v1/patients/{$patient->id}/documents", [
             'title' => 'Scan',
             'category' => 'imaging',
-            'file' => UploadedFile::fake()->create('scan.png', 30, 'image/png'),
+            'file' => $this->fakePng('scan.png'),
         ])->assertCreated()->json('data.id');
 
         $document = PatientDocument::findOrFail($documentId);
@@ -99,11 +99,31 @@ class DocumentTest extends TestCase
         $documentId = $this->postJson("/api/v1/patients/{$patient->id}/documents", [
             'title' => 'Scan',
             'category' => 'imaging',
-            'file' => UploadedFile::fake()->create('scan.png', 30, 'image/png'),
+            'file' => $this->fakePng('scan.png'),
         ])->assertCreated()->json('data.id');
 
         $this->actingAsRole('Receptionist');
 
         $this->deleteJson("/api/v1/documents/{$documentId}")->assertForbidden();
+    }
+
+    private function fakePdf(string $name): UploadedFile
+    {
+        $pdf = "%PDF-1.4\n"
+            ."%\xE2\xE3\xCF\xD3\n"
+            ."1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n"
+            ."2 0 obj\n<< /Type /Pages /Kids [] /Count 0 >>\nendobj\n"
+            ."trailer\n<< /Root 1 0 R >>\n%%EOF";
+
+        return UploadedFile::fake()->createWithContent($name, $pdf);
+    }
+
+    private function fakePng(string $name): UploadedFile
+    {
+        $png = base64_decode(
+            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
+        );
+
+        return UploadedFile::fake()->createWithContent($name, $png);
     }
 }

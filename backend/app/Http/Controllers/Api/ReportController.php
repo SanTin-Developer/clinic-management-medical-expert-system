@@ -12,16 +12,34 @@ use App\Models\Medicine;
 use App\Models\Patient;
 use App\Models\Payment;
 use App\Models\Prescription;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Closure;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReportController extends Controller
 {
+    private const REPORT_TITLES = [
+        'appointments' => 'Appointments Report',
+        'revenue' => 'Revenue Report',
+        'inventory' => 'Inventory Report',
+    ];
+
     public function summary(Request $request): JsonResponse
     {
         $this->authorizeReports($request);
 
+        return response()->json([
+            'data' => $this->cachedReport('report:summary', fn (): array => $this->summaryData()),
+        ]);
+    }
+
+    private function summaryData(): array
+    {
         $monthStart = now()->startOfMonth();
 
         $appointmentsByStatus = Appointment::query()
@@ -29,41 +47,39 @@ class ReportController extends Controller
             ->groupBy('status')
             ->pluck('total', 'status');
 
-        return response()->json([
-            'data' => [
-                'patients' => [
-                    'total' => Patient::count(),
-                    'new_this_month' => Patient::where('created_at', '>=', $monthStart)->count(),
-                ],
-                'appointments' => [
-                    'total' => Appointment::count(),
-                    'by_status' => $appointmentsByStatus,
-                ],
-                'consultations' => [
-                    'total' => Consultation::count(),
-                ],
-                'diagnoses' => [
-                    'total' => Diagnosis::count(),
-                ],
-                'prescriptions' => [
-                    'total' => Prescription::count(),
-                    'pending' => Prescription::where('status', 'pending')->count(),
-                ],
-                'billing' => [
-                    'invoices_total' => Invoice::count(),
-                    'unpaid' => Invoice::whereIn('status', ['unpaid', 'partially_paid'])->count(),
-                    'outstanding_balance' => round((float) Invoice::whereIn('status', ['unpaid', 'partially_paid'])->sum('balance'), 2),
-                    'revenue_total' => round((float) Payment::sum('amount'), 2),
-                    'revenue_this_month' => round((float) Payment::where('paid_at', '>=', $monthStart)->sum('amount'), 2),
-                ],
-                'inventory' => [
-                    'medicines_total' => Medicine::count(),
-                    'active_medicines' => Medicine::where('is_active', true)->count(),
-                    'low_stock' => $this->lowStockMedicines()->count(),
-                    'expiring_within_30_days' => $this->expiringSoon()->count(),
-                ],
+        return [
+            'patients' => [
+                'total' => Patient::count(),
+                'new_this_month' => Patient::where('created_at', '>=', $monthStart)->count(),
             ],
-        ]);
+            'appointments' => [
+                'total' => Appointment::count(),
+                'by_status' => $appointmentsByStatus,
+            ],
+            'consultations' => [
+                'total' => Consultation::count(),
+            ],
+            'diagnoses' => [
+                'total' => Diagnosis::count(),
+            ],
+            'prescriptions' => [
+                'total' => Prescription::count(),
+                'pending' => Prescription::where('status', 'pending')->count(),
+            ],
+            'billing' => [
+                'invoices_total' => Invoice::count(),
+                'unpaid' => Invoice::whereIn('status', ['unpaid', 'partially_paid'])->count(),
+                'outstanding_balance' => round((float) Invoice::whereIn('status', ['unpaid', 'partially_paid'])->sum('balance'), 2),
+                'revenue_total' => round((float) Payment::sum('amount'), 2),
+                'revenue_this_month' => round((float) Payment::where('paid_at', '>=', $monthStart)->sum('amount'), 2),
+            ],
+            'inventory' => [
+                'medicines_total' => Medicine::count(),
+                'active_medicines' => Medicine::where('is_active', true)->count(),
+                'low_stock' => $this->lowStockMedicines()->count(),
+                'expiring_within_30_days' => $this->expiringSoon()->count(),
+            ],
+        ];
     }
 
     public function appointments(Request $request): JsonResponse
@@ -75,6 +91,19 @@ class ReportController extends Controller
             'to' => ['nullable', 'date'],
         ]);
 
+        return response()->json([
+            'data' => $this->cachedReport(
+                'report:appointments:'.($validated['from'] ?? 'all').'|'.($validated['to'] ?? 'all'),
+                fn (): array => $this->appointmentsData($validated)
+            ),
+        ]);
+    }
+
+    /**
+     * @param  array{from?: string, to?: string}  $validated
+     */
+    private function appointmentsData(array $validated): array
+    {
         $query = Appointment::query();
 
         if (isset($validated['from'])) {
@@ -95,13 +124,11 @@ class ReportController extends Controller
             ->groupBy('doctor_id')
             ->pluck('total', 'doctor_id');
 
-        return response()->json([
-            'data' => [
-                'total' => (clone $query)->count(),
-                'by_status' => $byStatus,
-                'by_doctor_id' => $byDoctor,
-            ],
-        ]);
+        return [
+            'total' => (clone $query)->count(),
+            'by_status' => $byStatus,
+            'by_doctor_id' => $byDoctor,
+        ];
     }
 
     public function revenue(Request $request): JsonResponse
@@ -113,6 +140,19 @@ class ReportController extends Controller
             'to' => ['nullable', 'date'],
         ]);
 
+        return response()->json([
+            'data' => $this->cachedReport(
+                'report:revenue:'.($validated['from'] ?? 'all').'|'.($validated['to'] ?? 'all'),
+                fn (): array => $this->revenueData($validated)
+            ),
+        ]);
+    }
+
+    /**
+     * @param  array{from?: string, to?: string}  $validated
+     */
+    private function revenueData(array $validated): array
+    {
         $query = Payment::query();
 
         if (isset($validated['from'])) {
@@ -123,67 +163,68 @@ class ReportController extends Controller
             $query->where('paid_at', '<=', $validated['to'].' 23:59:59');
         }
 
-        $payments = (clone $query)->get(['amount', 'method', 'paid_at']);
+        $byDay = (clone $query)
+            ->selectRaw('date(paid_at) as day, sum(amount) as total')
+            ->groupBy('day')
+            ->orderBy('day')
+            ->pluck('total', 'day')
+            ->map(fn (mixed $amount): float => round((float) $amount, 2));
 
-        $byDay = $payments
-            ->groupBy(fn (Payment $payment) => $payment->paid_at?->toDateString())
-            ->map(fn ($group) => round((float) $group->sum('amount'), 2));
-
-        $byMethod = $payments
+        $byMethod = (clone $query)
+            ->selectRaw('method, sum(amount) as total')
             ->groupBy('method')
-            ->map(fn ($group) => round((float) $group->sum('amount'), 2));
+            ->pluck('total', 'method')
+            ->map(fn (mixed $amount): float => round((float) $amount, 2));
 
-        return response()->json([
-            'data' => [
-                'total' => round((float) $payments->sum('amount'), 2),
-                'by_day' => $byDay,
-                'by_method' => $byMethod,
-                'outstanding_balance' => round((float) Invoice::whereIn('status', ['unpaid', 'partially_paid'])->sum('balance'), 2),
-            ],
-        ]);
+        return [
+            'total' => round((float) (clone $query)->sum('amount'), 2),
+            'by_day' => $byDay,
+            'by_method' => $byMethod,
+            'outstanding_balance' => round((float) Invoice::whereIn('status', ['unpaid', 'partially_paid'])->sum('balance'), 2),
+        ];
     }
 
     public function inventory(Request $request): JsonResponse
     {
         $this->authorizeReports($request);
 
+        return response()->json([
+            'data' => $this->cachedReport('report:inventory', fn (): array => $this->inventoryData()),
+        ]);
+    }
+
+    private function inventoryData(): array
+    {
         $lowStock = $this->lowStockMedicines();
 
         $stockValue = Medicine::withSum('inventoryItems as total_stock', 'quantity')
             ->get()
             ->sum(fn (Medicine $medicine) => (int) $medicine->total_stock * (float) $medicine->price);
 
-        return response()->json([
-            'data' => [
-                'total_stock_value' => round((float) $stockValue, 2),
-                'low_stock' => $lowStock->map(fn (Medicine $medicine) => [
-                    'id' => $medicine->id,
-                    'name' => $medicine->name,
-                    'code' => $medicine->code,
-                    'stock' => (int) $medicine->total_stock,
-                    'reorder_level' => (int) $medicine->reorder_level,
-                ])->values(),
-                'expiring_within_30_days' => $this->expiringSoon()->map(fn (InventoryItem $item) => [
-                    'id' => $item->id,
-                    'medicine_id' => $item->medicine_id,
-                    'batch_number' => $item->batch_number,
-                    'quantity' => (int) $item->quantity,
-                    'expiration_date' => $item->expiration_date?->toDateString(),
-                ])->values(),
-            ],
-        ]);
+        return [
+            'total_stock_value' => round((float) $stockValue, 2),
+            'low_stock' => $lowStock->map(fn (Medicine $medicine) => [
+                'id' => $medicine->id,
+                'name' => $medicine->name,
+                'code' => $medicine->code,
+                'stock' => (int) $medicine->total_stock,
+                'reorder_level' => (int) $medicine->reorder_level,
+            ])->values(),
+            'expiring_within_30_days' => $this->expiringSoon()->map(fn (InventoryItem $item) => [
+                'id' => $item->id,
+                'medicine_id' => $item->medicine_id,
+                'batch_number' => $item->batch_number,
+                'quantity' => (int) $item->quantity,
+                'expiration_date' => $item->expiration_date?->toDateString(),
+            ])->values(),
+        ];
     }
 
     public function export(Request $request, string $report): StreamedResponse
     {
         $this->authorizeReports($request);
 
-        [$filename, $rows] = match ($report) {
-            'appointments' => $this->appointmentsExport($request),
-            'revenue' => $this->revenueExport($request),
-            'inventory' => $this->inventoryExport(),
-            default => abort(404, 'Unknown report.'),
-        };
+        [$filename, $rows] = $this->reportRows($request, $report);
 
         return response()->streamDownload(function () use ($rows) {
             $handle = fopen('php://output', 'w');
@@ -198,6 +239,52 @@ class ReportController extends Controller
         }, $filename, [
             'Content-Type' => 'text/csv',
         ]);
+    }
+
+    public function pdf(Request $request, string $report): Response
+    {
+        $this->authorizeReports($request);
+
+        [, $rows] = $this->reportRows($request, $report);
+
+        $title = self::REPORT_TITLES[$report];
+
+        $pdf = Pdf::loadView('reports.pdf', [
+            'title' => $title,
+            'rows' => $rows,
+            'generatedAt' => now()->toDateTimeString(),
+            'generatedBy' => $request->user()?->name ?? 'System',
+        ])->setPaper('a4');
+
+        return $pdf->download(Str::slug($title).'.pdf');
+    }
+
+    private function reportRows(Request $request, string $report): array
+    {
+        return match ($report) {
+            'appointments' => $this->appointmentsExport($request),
+            'revenue' => $this->revenueExport($request),
+            'inventory' => $this->inventoryExport(),
+            default => abort(404, 'Unknown report.'),
+        };
+    }
+
+    /**
+     * Cache aggregate report payloads so dashboard queries are not recomputed
+     * on every request. Falls back to computing directly when caching is off.
+     * Uses a stale-within grace period so that when the cache expires, a single
+     * request refreshes it and every other request keeps serving the stale
+     * value (avoids a thundering herd on the database).
+     */
+    private function cachedReport(string $key, Closure $callback): mixed
+    {
+        if (! config('reports.cache.enabled')) {
+            return $callback();
+        }
+
+        $ttl = (int) config('reports.cache.ttl', 300);
+
+        return Cache::flexible($key, [$ttl, $ttl + 60], $callback);
     }
 
     private function appointmentsExport(Request $request): array
@@ -257,18 +344,22 @@ class ReportController extends Controller
             $query->where('paid_at', '<=', $validated['to'].' 23:59:59');
         }
 
-        $payments = (clone $query)->get(['amount', 'method', 'paid_at']);
+        $rows = [['Total', 'Revenue', round((float) (clone $query)->sum('amount'), 2)]];
 
-        $rows = [['Total', 'Revenue', round((float) $payments->sum('amount'), 2)]];
+        $byDay = (clone $query)
+            ->selectRaw('date(paid_at) as day, sum(amount) as total')
+            ->groupBy('day')
+            ->orderBy('day')
+            ->get()
+            ->each(fn (Payment $payment) => $rows[] = ['By day', (string) $payment->day, round((float) $payment->total, 2)]);
 
-        $byDay = $payments->groupBy(fn (Payment $payment) => $payment->paid_at?->toDateString());
+        $byMethod = (clone $query)
+            ->selectRaw('method, sum(amount) as total')
+            ->groupBy('method')
+            ->get();
 
-        foreach ($byDay as $day => $group) {
-            $rows[] = ['By day', $day, round((float) $group->sum('amount'), 2)];
-        }
-
-        foreach ($payments->groupBy('method') as $method => $group) {
-            $rows[] = ['By method', $method, round((float) $group->sum('amount'), 2)];
+        foreach ($byMethod as $row) {
+            $rows[] = ['By method', $row->method, round((float) $row->total, 2)];
         }
 
         $rows[] = [

@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\ConsultationController;
 use App\Http\Controllers\Api\DiagnosisController;
 use App\Http\Controllers\Api\DiseaseController;
 use App\Http\Controllers\Api\DocumentController;
+use App\Http\Controllers\Api\EmailVerificationController;
 use App\Http\Controllers\Api\ExpertRuleController;
 use App\Http\Controllers\Api\ExpertSystemController;
 use App\Http\Controllers\Api\InventoryItemController;
@@ -14,6 +15,7 @@ use App\Http\Controllers\Api\InvoiceController;
 use App\Http\Controllers\Api\MedicalRecordController;
 use App\Http\Controllers\Api\MedicineController;
 use App\Http\Controllers\Api\PatientController;
+use App\Http\Controllers\Api\PasswordResetController;
 use App\Http\Controllers\Api\PrescriptionController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\StockMovementController;
@@ -26,11 +28,40 @@ Route::prefix('v1')->group(function () {
 
     // Authentication routes
     Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:login');
+    Route::post('/auth/otp/verify', [AuthController::class, 'verifyOtp'])->middleware('throttle:otp');
+    Route::post('/auth/otp/resend', [AuthController::class, 'resendOtp'])->middleware('throttle:otp');
+
+    // Password reset
+    Route::post('/auth/forgot-password', [PasswordResetController::class, 'forgot'])->middleware('throttle:password-reset');
+    Route::post('/auth/reset-password', [PasswordResetController::class, 'reset'])->middleware('throttle:password-reset');
+
+    // Email verification (signed link)
+    Route::get('/auth/email/verify/{id}/{hash}', [EmailVerificationController::class, 'verify'])
+        ->middleware(['signed', 'throttle:api'])
+        ->name('verification.verify');
 
     // Protected routes
-    Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
+    $protectedMiddleware = ['auth:sanctum', 'throttle:api'];
+
+    if (config('auth.require_verified_email')) {
+        $protectedMiddleware[] = 'verified';
+    }
+
+    if (config('auth.otp.enforce_trusted_device')) {
+        $protectedMiddleware[] = 'device.trust';
+    }
+
+    Route::middleware($protectedMiddleware)->group(function () {
         Route::post('/auth/logout', [AuthController::class, 'logout']);
         Route::get('/auth/me', [AuthController::class, 'me']);
+
+        // Trusted devices ("remember this device")
+        Route::get('/auth/devices', [AuthController::class, 'devices']);
+        Route::delete('/auth/devices/{device}', [AuthController::class, 'revokeDevice']);
+        Route::delete('/auth/devices', [AuthController::class, 'revokeAllDevices']);
+
+        // Email verification resend
+        Route::post('/auth/email/verification-notification', [EmailVerificationController::class, 'resend']);
 
         // User
         Route::apiResource('users', UserController::class);
@@ -125,6 +156,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/reports/revenue', [ReportController::class, 'revenue']);
         Route::get('/reports/inventory', [ReportController::class, 'inventory']);
         Route::get('/reports/{report}/export', [ReportController::class, 'export']);
+        Route::get('/reports/{report}/pdf', [ReportController::class, 'pdf']);
 
         // Knowledge Base management
         Route::prefix('knowledge-base')->group(function () {
