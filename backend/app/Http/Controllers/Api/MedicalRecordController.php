@@ -16,7 +16,7 @@ class MedicalRecordController extends Controller
     //
     public function index(): JsonResponse
     {
-        $this->authorize('ViewAny', MedicalRecord::class);
+        $this->authorize('viewAny', MedicalRecord::class);
 
         $record = MedicalRecord::with([
             'patient',
@@ -77,7 +77,7 @@ class MedicalRecordController extends Controller
         $appointment = null;
         $consultation = null;
 
-        if (!empty($validated['appointment_id'])) {
+        if (! empty($validated['appointment_id'])) {
             $appointment = Appointment::findOrFail(
                 $validated['appointment_id']
             );
@@ -91,7 +91,7 @@ class MedicalRecordController extends Controller
             }
         }
 
-        if (!empty($validated['consultation_id'])) {
+        if (! empty($validated['consultation_id'])) {
             $consultation = Consultation::with('appointment')
                 ->findOrFail($validated['consultation_id']);
 
@@ -115,7 +115,7 @@ class MedicalRecordController extends Controller
             }
 
             if (
-                $request->user()->hasRole('Doctor') && (int) $consultation->doctor_id !== (int)  $request->user()->id
+                $request->user()->hasRole('Doctor') && (int) $consultation->doctor_id !== (int) $request->user()->id
             ) {
                 return response()->json([
                     'message' => 'You are not assigned to this consultation.',
@@ -129,13 +129,13 @@ class MedicalRecordController extends Controller
 
         $doctor = $request->user();
 
-        if (!$doctor->hasRole('Doctor')) {
+        if (! $doctor->hasRole('Doctor')) {
             $doctor = User::query()
                 ->role('Doctor')
                 ->find($request->input('doctor_id'));
         }
 
-        if (!$doctor) {
+        if (! $doctor) {
             return response()->json([
                 'message' => 'A valid doctor must be assigned to the medical record.',
             ], 422);
@@ -217,6 +217,17 @@ class MedicalRecordController extends Controller
                 'consultation',
                 'doctor',
             ]),
+        ]);
+    }
+
+    public function destroy(MedicalRecord $medicalRecord): JsonResponse
+    {
+        $this->authorize('delete', $medicalRecord);
+
+        $medicalRecord->delete();
+
+        return response()->json([
+            'message' => 'Medical record deleted successfully.',
         ]);
     }
 }

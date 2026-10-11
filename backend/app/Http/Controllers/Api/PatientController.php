@@ -49,7 +49,7 @@ class PatientController extends Controller
 
         return response()->json([
             'message' => 'Patient created successfully',
-            'data' => $patient
+            'data' => $patient,
         ], 201);
     }
 
@@ -87,7 +87,7 @@ class PatientController extends Controller
 
         return response()->json([
             'message' => 'Patient updated successfully',
-            'data' => $patient
+            'data' => $patient,
         ]);
     }
 
@@ -99,7 +99,7 @@ class PatientController extends Controller
         $patient->delete();
 
         return response()->json([
-            'message' => 'Patient deleted successfully'
+            'message' => 'Patient deleted successfully',
         ]);
     }
 
@@ -107,7 +107,7 @@ class PatientController extends Controller
     private function generatePatientNumber(): string
     {
         do {
-            $number = 'PAT-' . random_int(100000, 999999);
+            $number = 'PAT-'.random_int(100000, 999999);
         } while (Patient::where('patient_number', $number)->exists());
 
         return $number;

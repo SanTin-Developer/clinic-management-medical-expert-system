@@ -1,0 +1,248 @@
+{
+  "info": {
+    "_postman_id": "f3b4d2a8-7c1e-4a9b-9f2e-5d6c3b8a1e4f",
+    "name": "Clinic Medical Expert System",
+    "description": "Collection for the Clinic Management & Medical Expert System.\n\nTwo layers:\n1. Laravel API (authorized, proxy to Python) - login + evaluate.\n2. Python FastAPI service (direct, dev only; loopback on 127.0.0.1:8001).\n\nWorkflow: run Login, then Evaluate. Login stores the Sanctum token in the collection variable `token` automatically.\n\nSymptom IDs for quick tests (live KB): 5=high-fever, 9=body-ache, 25=dry-cough (-> RULE-FLU-001); 4=runny-nose, 30=sneezing (-> RULE-COLD-001).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://127.0.0.1:8000", "type": "string", "description": "Laravel API base URL (docker compose BACKEND_PORT)" },
+    { "key": "pythonUrl", "value": "http://127.0.0.1:8001", "type": "string", "description": "Direct access to the Python expert system (dev only, loopback bound)" },
+    { "key": "token", "value": "", "type": "string", "description": "Sanctum bearer token, populated by the Login request" },
+    { "key": "apiKey", "value": "", "type": "string", "description": "X-Internal-Api-Key for the Python service. Empty in dev; set it if EXPERT_SYSTEM_API_KEY is configured in production." }
+  ],
+  "item": [
+    {
+      "name": "Laravel API (authorized)",
+      "item": [
+        {
+          "name": "Login (Admin) -> sets {token}",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "const token = json.token ?? json.data?.token;",
+                  "if (token) {",
+                  "  pm.collectionVariables.set('token', token);",
+                  "  console.log('token saved');",
+                  "}",
+                  "pm.test('login returns token', () => pm.expect(token).to.be.ok);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@clinic.local\",\n  \"password\": \"Admin@12345\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "login"]
+            },
+            "description": "Authenticates the seeded Admin and stores the Sanctum token in the collection variable `token`."
+          },
+          "response": []
+        },
+        {
+          "name": "Evaluate (Laravel -> Python)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('has matched_rules array', () => pm.expect(json.data.matched_rules).to.be.an('array'));",
+                  "console.log('matched_rule_count=' + json.data.matched_rule_count);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"symptom_ids\": [9, 13, 31]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/expert-system/evaluate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "expert-system", "evaluate"]
+            },
+            "description": "Doctor/Admin only (expert-system.use). [9,13,31] = high-fever + body-ache + dry-cough -> expects RULE-FLU-001. Enforcing auth: run Login first."
+          },
+          "response": []
+        },
+        {
+          "name": "Evaluate - empty selection (200, no match)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"symptom_ids\": []\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/expert-system/evaluate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "expert-system", "evaluate"]
+            },
+            "description": "Valid request, no matches -> HTTP 200 with matched_rule_count 0."
+          },
+          "response": []
+        },
+        {
+          "name": "Evaluate - invalid/inactive symptom (422)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"symptom_ids\": [999999]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/expert-system/evaluate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "expert-system", "evaluate"]
+            },
+            "description": "Unknown symptom ID -> HTTP 422 with invalid_symptom_ids."
+          },
+          "response": []
+        },
+        {
+          "name": "Evaluate - unauthenticated (401)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"symptom_ids\": [9, 13, 31]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/expert-system/evaluate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "expert-system", "evaluate"]
+            },
+            "description": "No bearer token -> HTTP 401."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Python Expert System - direct (dev, loopback)",
+      "item": [
+        {
+          "name": "GET /health",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('health ok', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().status).to.eql('ok');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{pythonUrl}}/health", "host": ["{{pythonUrl}}"], "path": ["health"] },
+            "description": "Liveness probe (does not touch the database)."
+          },
+          "response": []
+        },
+        {
+          "name": "GET /ready",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('ready ok', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().database).to.eql('ok');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{pythonUrl}}/ready", "host": ["{{pythonUrl}}"], "path": ["ready"] },
+            "description": "Readiness probe; verifies PostgreSQL with SELECT 1. 503 if the DB is unreachable."
+          },
+          "response": []
+        },
+        {
+          "name": "POST /evaluate",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('has engine metadata', () => pm.expect(json.engine).to.eql('rule-based-expert-system'));",
+                  "console.log('matched_rule_count=' + json.matched_rule_count);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-Internal-Api-Key", "value": "{{apiKey}}", "description": "Only enforced when EXPERT_SYSTEM_API_KEY is set (production). Empty in dev." }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"symptom_ids\": [9, 13, 31]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{pythonUrl}}/evaluate",
+              "host": ["{{pythonUrl}}"],
+              "path": ["evaluate"]
+            },
+            "description": "Direct Python call (bypasses Laravel authz; dev only). [9,13,31] -> RULE-FLU-001."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

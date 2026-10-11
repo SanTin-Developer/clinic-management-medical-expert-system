@@ -26,4 +26,9 @@ class MedicalRecordPolicy
     {
         return $user->can('medical-records.update');
     }
+
+    public function delete(User $user, MedicalRecord $medicalRecord): bool
+    {
+        return $user->can('medical-records.delete');
+    }
 }

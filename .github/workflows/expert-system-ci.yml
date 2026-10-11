@@ -1,0 +1,51 @@
+name: expert-system
+
+on:
+  push:
+    branches: [master, main]
+    paths:
+      - "expert-system/**"
+      - ".github/workflows/expert-system-ci.yml"
+  pull_request:
+    paths:
+      - "expert-system/**"
+      - ".github/workflows/expert-system-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test and scan (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12"]
+    defaults:
+      run:
+        working-directory: expert-system
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Tests (pytest)
+        env:
+          DATABASE_URL: "sqlite://"
+        run: python -m pytest -q
+
+      - name: Static analysis (bandit)
+        run: python -m bandit -q -r app
+
+      - name: Dependency audit (pip-audit)
+        run: python -m pip_audit -r requirements.txt

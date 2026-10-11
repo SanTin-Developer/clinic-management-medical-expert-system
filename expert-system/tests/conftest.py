@@ -23,6 +23,7 @@ from sqlalchemy.pool import StaticPool  # noqa: E402
 
 from app.config import get_settings  # noqa: E402
 from app.database import get_db  # noqa: E402
+from app.engine import invalidate_rules_cache  # noqa: E402
 from app.main import app as fastapi_app  # noqa: E402
 
 DDL_STATEMENTS = [
@@ -71,6 +72,18 @@ DDL_STATEMENTS = [
         operator VARCHAR(20) NOT NULL DEFAULT 'present',
         expected_value BOOLEAN NOT NULL DEFAULT 1,
         condition_group INTEGER NOT NULL DEFAULT 1,
+        created_at TIMESTAMP,
+        updated_at TIMESTAMP
+    )
+    """,
+    """
+    CREATE TABLE expert_evaluation_audits (
+        id INTEGER PRIMARY KEY,
+        symptom_ids TEXT,
+        matched_rule_count INTEGER NOT NULL DEFAULT 0,
+        matched_rule_codes TEXT,
+        engine_version TEXT,
+        is_clinically_validated BOOLEAN NOT NULL DEFAULT 0,
         created_at TIMESTAMP,
         updated_at TIMESTAMP
     )
@@ -212,8 +225,10 @@ def _clear_settings_cache():
     """Ensure environment changes are reflected in each test."""
 
     get_settings.cache_clear()
+    invalidate_rules_cache()
     yield
     get_settings.cache_clear()
+    invalidate_rules_cache()
 
 
 @pytest.fixture

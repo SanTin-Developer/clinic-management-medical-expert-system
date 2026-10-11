@@ -1,0 +1,2 @@
+﻿disease_code,symptom_code,relationship,importance,evidence_source_id,evidence_quote_or_summary,review_status,reviewed_by,reviewed_at
+,,supports|against|red_flag,,,,needs_clinical_review,,

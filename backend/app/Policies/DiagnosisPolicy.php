@@ -26,4 +26,9 @@ class DiagnosisPolicy
     {
         return $user->can('diagnoses.update');
     }
+
+    public function delete(User $user, Diagnosis $diagnosis): bool
+    {
+        return $user->can('diagnoses.delete');
+    }
 }

@@ -28,23 +28,28 @@ class RolePermissionSeeder extends Seeder
             'appointments.create',
             'appointments.update',
             'appointments.cancel',
+            'appointments.delete',
 
             // Clinical
             'vitals.view',
             'vitals.create',
             'vitals.update',
+            'vitals.delete',
 
             'consultations.view',
             'consultations.create',
             'consultations.update',
+            'consultations.delete',
 
             'diagnoses.view',
             'diagnoses.create',
             'diagnoses.update',
+            'diagnoses.delete',
 
             'medical-records.view',
             'medical-records.create',
             'medical-records.update',
+            'medical-records.delete',
 
             // Expert System
             'expert-system.view',
@@ -54,6 +59,7 @@ class RolePermissionSeeder extends Seeder
             'prescriptions.view',
             'prescriptions.create',
             'prescriptions.update',
+            'prescriptions.delete',
 
             // Medicines
             'medicines.view',
@@ -69,6 +75,11 @@ class RolePermissionSeeder extends Seeder
             'billing.view',
             'billing.create',
             'billing.update',
+            'billing.delete',
+
+            // Patient Documents
+            'documents.view',
+            'documents.manage',
 
             // Reports
             'reports.view',
@@ -119,6 +130,7 @@ class RolePermissionSeeder extends Seeder
             'billing.view',
             'billing.create',
             'billing.update',
+            'documents.view',
         ]);
 
         Role::findByName('Nurse')->syncPermissions([
@@ -131,6 +143,8 @@ class RolePermissionSeeder extends Seeder
             'medical-records.create',
             'medical-records.update',
             'expert-system.view',
+            'documents.view',
+            'documents.manage',
         ]);
 
         Role::findByName('Doctor')->syncPermissions([
@@ -151,6 +165,8 @@ class RolePermissionSeeder extends Seeder
             'prescriptions.create',
             'prescriptions.update',
             'medicines.view',
+            'documents.view',
+            'documents.manage',
         ]);
 
         Role::findByName('Pharmacist')->syncPermissions([

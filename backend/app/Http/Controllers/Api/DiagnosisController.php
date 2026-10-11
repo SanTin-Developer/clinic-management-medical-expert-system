@@ -64,7 +64,6 @@ class DiagnosisController extends Controller
             ],
         ]);
 
-
         $consultation = Consultation::with('appointment')
             ->findOrFail($validated['consultation_id']);
 
@@ -74,7 +73,6 @@ class DiagnosisController extends Controller
                 'message' => 'You are not authorized to diagnose this consultation.',
             ], 403);
         }
-
 
         if (in_array($consultation->appointment->status, ['cancelled', 'no_show'])) {
             return response()->json([
@@ -169,6 +167,17 @@ class DiagnosisController extends Controller
                 'patient',
                 'doctor',
             ]),
+        ]);
+    }
+
+    public function destroy(Diagnosis $diagnosis): JsonResponse
+    {
+        $this->authorize('delete', $diagnosis);
+
+        $diagnosis->delete();
+
+        return response()->json([
+            'message' => 'Diagnosis deleted successfully.',
         ]);
     }
 }

@@ -85,6 +85,8 @@ Test-only (`requirements-dev.txt`): `pytest==8.4.2`, `httpx==0.28.1`.
 | `DB_STATEMENT_TIMEOUT_MS` | `5000` | PostgreSQL `statement_timeout`. |
 | `APP_VERSION` | `1.0.0` | Reported service version. |
 
+A ready-to-copy sample is provided at `expert-system/.env.example`.
+
 ## 5. Docker
 
 Start the whole stack from the project root:
@@ -150,7 +152,7 @@ Interactive API docs: `http://127.0.0.1:8001/docs`.
 Request:
 
 ```json
-{"symptom_ids": [5, 9, 25]}
+{"symptom_ids": [9, 13, 31]}
 ```
 
 Response `200`:
@@ -236,14 +238,25 @@ Tests use an isolated in-memory SQLite schema; they never touch the development
 or production PostgreSQL database. Coverage includes single/AND/OR matching,
 `present`/`absent`, `expected_value`, priority ordering, inactive
 rules/diseases/symptoms, rules without valid conditions, duplicates, no-match,
-invalid IDs, request validation, readiness failures, database failures, and API
-key enforcement.
+invalid IDs, request validation, readiness failures, database failures, an
+unconfigured `DATABASE_URL` (returns `503`, never `500`), and API key
+enforcement.
+
+Security scans (`requirements-dev.txt`):
+
+```sh
+.venv\Scripts\python -m bandit -q -r app
+.venv\Scripts\python -m pip_audit -r requirements.txt
+```
+
+CI (`.github/workflows/expert-system-ci.yml`) runs the test suite, `bandit`, and
+`pip-audit` on every change under `expert-system/`.
 
 ## 11. Troubleshooting
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| Startup: `RuntimeError: DATABASE_URL is not configured` | Missing env var | Set `DATABASE_URL`. |
+| `/ready` or `/evaluate` returns `503` `{"detail":"Database is not configured."}` | `DATABASE_URL` is unset | Copy `.env.example` and set `DATABASE_URL`, then restart. |
 | `/ready` returns 503 | PostgreSQL unreachable | Check `postgres` service health and credentials. |
 | `/evaluate` returns 503 | DB error or engine load failure | Inspect structured logs; check DB. |
 | `/evaluate` returns 422 | Unknown/inactive symptom IDs | Send only active symptom IDs. |

@@ -94,7 +94,7 @@ class UserController extends Controller
             'email' => $validated['email'] ?? $user->email,
         ]);
 
-        if (!empty($validated['password'])) {
+        if (! empty($validated['password'])) {
             $user->update([
                 'password' => Hash::make($validated['password']),
             ]);

@@ -6,8 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Appointment;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Validation\Rule;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class AppointmentController extends Controller
 {
@@ -81,7 +81,7 @@ class AppointmentController extends Controller
             ->role('Doctor')
             ->findOrFail($validated['doctor_id']);
 
-        if (!$doctor) {
+        if (! $doctor) {
             return response()->json([
                 'message' => 'The selected doctor is not a valid doctor.',
             ], 422);
@@ -182,7 +182,7 @@ class AppointmentController extends Controller
             ->role('Doctor')
             ->findOrFail($doctorId);
 
-        if (!$doctor) {
+        if (! $doctor) {
             return response()->json([
                 'message' => 'The selected doctor is not a valid doctor.',
             ], 422);
@@ -235,12 +235,26 @@ class AppointmentController extends Controller
     }
 
     /**
+     * Remove the specified resource from storage.
+     */
+    public function destroy(Appointment $appointment): JsonResponse
+    {
+        $this->authorize('delete', $appointment);
+
+        $appointment->delete();
+
+        return response()->json([
+            'message' => 'Appointment deleted successfully.',
+        ]);
+    }
+
+    /**
      * Generate a unique appointment number.
      */
     private function generateAppointmentNumber(): string
     {
         do {
-            $number = 'APT-' . random_int(100000, 999999);
+            $number = 'APT-'.random_int(100000, 999999);
         } while (Appointment::where('appointment_number', $number)->exists());
 
         return $number;

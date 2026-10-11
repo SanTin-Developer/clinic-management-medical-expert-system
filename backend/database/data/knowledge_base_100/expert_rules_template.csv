@@ -1,0 +1,2 @@
+﻿rule_code,disease_code,group_id,group_operator,conditions_json,conclusion_json,evidence_source_id,rationale_en,rationale_km,review_status,approved_by,approved_at,clinical_use_enabled
+,,,AND,[],{},,,,draft_needs_clinical_review,,,false

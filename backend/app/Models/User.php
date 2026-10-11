@@ -9,8 +9,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Spatie\Permission\Traits\HasRoles;
 use Laravel\Sanctum\HasApiTokens;
+use Spatie\Permission\Traits\HasRoles;
 
 #[Fillable(['name', 'email', 'password'])]
 #[Hidden(['password', 'remember_token'])]
@@ -19,7 +19,7 @@ class User extends Authenticatable
     /**
      * @use HasFactory<UserFactory>
      */
-    use HasApiTokens, HasFactory, Notifiable, HasRoles;
+    use HasApiTokens, HasFactory, HasRoles, Notifiable;
 
     /**
      * Get the attributes that should be cast.
@@ -57,5 +57,20 @@ class User extends Authenticatable
     public function doctorMedicalRecords(): HasMany
     {
         return $this->hasMany(MedicalRecord::class, 'doctor_id');
+    }
+
+    public function doctorPrescriptions(): HasMany
+    {
+        return $this->hasMany(Prescription::class, 'doctor_id');
+    }
+
+    public function createdInvoices(): HasMany
+    {
+        return $this->hasMany(Invoice::class, 'created_by');
+    }
+
+    public function stockMovements(): HasMany
+    {
+        return $this->hasMany(StockMovement::class);
     }
 }

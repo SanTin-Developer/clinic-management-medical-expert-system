@@ -18,7 +18,7 @@ class AuthController extends Controller
             'password' => ['required', 'string'],
         ]);
 
-        if (!Auth::attempt($credentials)) {
+        if (! Auth::attempt($credentials)) {
             throw ValidationException::withMessages([
                 'email' => ['The provided credentials are incorrect.'],
             ]);
@@ -40,7 +40,7 @@ class AuthController extends Controller
         ]);
     }
 
-    //logout current user (revoke the token)
+    // logout current user (revoke the token)
     public function logout(Request $request): JsonResponse
     {
         $request->user()->currentAccessToken()->delete();
@@ -49,7 +49,6 @@ class AuthController extends Controller
             'message' => 'Logout successful.',
         ]);
     }
-
 
     // Get the authenticated user's details
     public function me(Request $request): JsonResponse

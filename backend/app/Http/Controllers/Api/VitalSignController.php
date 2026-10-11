@@ -120,7 +120,7 @@ class VitalSignController extends Controller
             ->role('Nurse')
             ->findOrFail($validated['nurse_id']);
 
-        if (!$nurse) {
+        if (! $nurse) {
             return response()->json([
                 'message' => 'Selected user is not a Nurse.',
             ], 422);
@@ -128,7 +128,7 @@ class VitalSignController extends Controller
 
         $appointment = Appointment::findOrFail($validated['appointment_id']);
 
-        if (!$appointment) {
+        if (! $appointment) {
             return response()->json([
                 'message' => 'Appointment not found.',
             ], 404);
@@ -268,8 +268,14 @@ class VitalSignController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    // public function destroy(string $id)
-    // {
-    //     //
-    // }
+    public function destroy(VitalSign $vitalSign): JsonResponse
+    {
+        $this->authorize('delete', $vitalSign);
+
+        $vitalSign->delete();
+
+        return response()->json([
+            'message' => 'Vital signs deleted successfully.',
+        ]);
+    }
 }

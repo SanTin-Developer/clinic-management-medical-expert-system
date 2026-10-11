@@ -21,6 +21,9 @@ DEFAULT_DB_POOL_RECYCLE_SECONDS = 1800
 DEFAULT_DB_CONNECT_TIMEOUT_SECONDS = 5
 DEFAULT_DB_STATEMENT_TIMEOUT_MS = 5000
 DEFAULT_LOG_LEVEL = "INFO"
+DEFAULT_RULES_CACHE_TTL_SECONDS = 60
+DEFAULT_REQUEST_TIMEOUT_SECONDS = 15.0
+DEFAULT_AUDIT_ENABLED = False
 
 
 def _int_from_env(name: str, default: int) -> int:
@@ -33,6 +36,38 @@ def _int_from_env(name: str, default: int) -> int:
     except ValueError:
         return default
     return value if value > 0 else default
+
+
+def _non_negative_int_from_env(name: str, default: int) -> int:
+    """Read a non-negative integer (0 allowed, used to disable a feature)."""
+    raw = os.getenv(name)
+    if raw is None or raw.strip() == "":
+        return default
+    try:
+        value = int(raw)
+    except ValueError:
+        return default
+    return value if value >= 0 else default
+
+
+def _float_from_env(name: str, default: float) -> float:
+    """Read a positive float from the environment, ignoring invalid values."""
+    raw = os.getenv(name)
+    if raw is None or raw.strip() == "":
+        return default
+    try:
+        value = float(raw)
+    except ValueError:
+        return default
+    return value if value > 0 else default
+
+
+def _bool_from_env(name: str, default: bool) -> bool:
+    """Read a boolean from common truthy/falsey string forms."""
+    raw = os.getenv(name)
+    if raw is None or raw.strip() == "":
+        return default
+    return raw.strip().lower() in {"1", "true", "yes", "y", "on"}
 
 
 @dataclass(frozen=True)
@@ -49,6 +84,9 @@ class Settings:
     log_level: str
     app_name: str
     app_version: str
+    rules_cache_ttl_seconds: int
+    request_timeout_seconds: float
+    audit_enabled: bool
 
     @property
     def api_key_required(self) -> bool:
@@ -87,4 +125,11 @@ def get_settings() -> Settings:
         log_level=(os.getenv("LOG_LEVEL") or DEFAULT_LOG_LEVEL).upper(),
         app_name=os.getenv("APP_NAME") or SERVICE_NAME,
         app_version=os.getenv("APP_VERSION") or SERVICE_VERSION,
+        rules_cache_ttl_seconds=_non_negative_int_from_env(
+            "EXPERT_RULES_CACHE_TTL_SECONDS", DEFAULT_RULES_CACHE_TTL_SECONDS
+        ),
+        request_timeout_seconds=_float_from_env(
+            "EXPERT_SYSTEM_REQUEST_TIMEOUT_SECONDS", DEFAULT_REQUEST_TIMEOUT_SECONDS
+        ),
+        audit_enabled=_bool_from_env("EXPERT_AUDIT_ENABLED", DEFAULT_AUDIT_ENABLED),
     )

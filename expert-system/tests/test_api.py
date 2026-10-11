@@ -6,13 +6,18 @@ no external PostgreSQL instance is required and no real data is touched.
 
 from __future__ import annotations
 
+import asyncio
+import json
+
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import text
 from sqlalchemy.exc import OperationalError
 
 from app.config import get_settings
-from app.database import get_db
+from app.database import _session_factory, get_db, get_engine
 from app.main import app as fastapi_app
+from app.main import timeout_middleware
 from app.schemas import MAX_SYMPTOMS_PER_REQUEST
 
 
@@ -76,6 +81,29 @@ def test_ready_returns_503_when_database_unavailable(db_session):
 
     assert response.status_code == 503
     assert response.json() == {"detail": "Database is not ready."}
+
+
+def test_missing_database_url_returns_clean_503(monkeypatch: pytest.MonkeyPatch):
+    """An unconfigured DATABASE_URL must yield 503, never an unhandled 500."""
+
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    get_settings.cache_clear()
+    get_engine.cache_clear()
+    _session_factory.cache_clear()
+    try:
+        with TestClient(fastapi_app, raise_server_exceptions=False) as client:
+            ready = client.get("/ready")
+            evaluate = client.post("/evaluate", json={"symptom_ids": [1]})
+    finally:
+        get_engine.cache_clear()
+        _session_factory.cache_clear()
+        get_settings.cache_clear()
+
+    assert ready.status_code == 503
+    assert ready.json() == {"detail": "Database is not configured."}
+    assert "Traceback" not in ready.text
+    assert evaluate.status_code == 503
+    assert evaluate.json() == {"detail": "Database is not configured."}
 
 
 # --- Evaluate: success paths ----------------------------------------------
@@ -201,3 +229,64 @@ def test_evaluate_rejects_wrong_api_key(client: TestClient, monkeypatch: pytest.
         headers={"X-Internal-Api-Key": "wrong"},
     )
     assert response.status_code == 401
+
+
+# --- Evaluation audit trail ------------------------------------------------
+
+
+def test_evaluate_does_not_audit_by_default(client: TestClient, db_session):
+    response = client.post("/evaluate", json={"symptom_ids": [1, 2]})
+    assert response.status_code == 200
+
+    rows = db_session.execute(text("SELECT count(*) FROM expert_evaluation_audits")).scalar()
+    assert rows == 0
+
+
+def test_evaluate_records_audit_when_enabled(client: TestClient, db_session, monkeypatch):
+    monkeypatch.setenv("EXPERT_AUDIT_ENABLED", "true")
+    get_settings.cache_clear()
+
+    response = client.post("/evaluate", json={"symptom_ids": [1, 2, 3, 4]})
+    assert response.status_code == 200
+
+    rows = db_session.execute(
+        text("SELECT symptom_ids, matched_rule_count, engine_version FROM expert_evaluation_audits")
+    ).all()
+    assert len(rows) == 1
+    assert json.loads(rows[0][0]) == [1, 2, 3, 4]
+    assert rows[0][1] == response.json()["matched_rule_count"]
+    assert rows[0][2] == response.json()["engine_version"]
+
+
+# --- Application-level timeout ---------------------------------------------
+
+
+class _FakeRequest:
+    class _URL:
+        path = "/evaluate"
+
+    url = _URL()
+
+
+def test_timeout_middleware_returns_504_for_slow_request(monkeypatch):
+    monkeypatch.setenv("EXPERT_SYSTEM_REQUEST_TIMEOUT_SECONDS", "0.05")
+    get_settings.cache_clear()
+
+    async def slow_call_next(_request):
+        await asyncio.sleep(1)
+        return "never"
+
+    response = asyncio.run(timeout_middleware(_FakeRequest(), slow_call_next))
+
+    assert response.status_code == 504
+    assert json.loads(response.body) == {"detail": "Request timed out."}
+
+
+def test_timeout_middleware_passes_through_fast_request(monkeypatch):
+    monkeypatch.setenv("EXPERT_SYSTEM_REQUEST_TIMEOUT_SECONDS", "5")
+    get_settings.cache_clear()
+
+    async def fast_call_next(_request):
+        return "ok"
+
+    assert asyncio.run(timeout_middleware(_FakeRequest(), fast_call_next)) == "ok"

@@ -26,4 +26,9 @@ class ConsultationPolicy
     {
         return $user->can('consultations.update');
     }
+
+    public function delete(User $user, Consultation $consultation): bool
+    {
+        return $user->can('consultations.delete');
+    }
 }

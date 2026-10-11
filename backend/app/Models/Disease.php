@@ -14,6 +14,8 @@ class Disease extends Model
     protected $fillable = [
         'code',
         'name',
+        'name_km',
+        'category',
         'description',
         'severity_level',
         'is_active',

@@ -21,6 +21,15 @@ from app.config import get_settings
 logger = logging.getLogger(__name__)
 
 
+class DatabaseConfigurationError(RuntimeError):
+    """Raised when a query is attempted without a configured ``DATABASE_URL``.
+
+    Subclasses :class:`RuntimeError` for backwards compatibility while letting
+    the application translate the condition into a clean ``503`` response
+    instead of an unhandled ``500``.
+    """
+
+
 def build_engine(database_url: str) -> Engine:
     """Create an :class:`Engine` for ``database_url``.
 
@@ -61,7 +70,7 @@ def get_engine() -> Engine:
 
     settings = get_settings()
     if not settings.database_url:
-        raise RuntimeError(
+        raise DatabaseConfigurationError(
             "DATABASE_URL is not configured; the expert system cannot reach its database."
         )
     return build_engine(settings.database_url)

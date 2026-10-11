@@ -26,4 +26,9 @@ class VitalSignPolicy
     {
         return $user->can('vitals.update');
     }
+
+    public function delete(User $user, VitalSign $vitalSign): bool
+    {
+        return $user->can('vitals.delete');
+    }
 }

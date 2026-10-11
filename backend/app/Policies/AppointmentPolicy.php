@@ -31,4 +31,9 @@ class AppointmentPolicy
     {
         return $user->can('appointments.cancel');
     }
+
+    public function delete(User $user, Appointment $appointment): bool
+    {
+        return $user->can('appointments.delete');
+    }
 }

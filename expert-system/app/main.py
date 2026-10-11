@@ -18,6 +18,7 @@ depth). Permissive CORS is intentionally not enabled.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from typing import Annotated, Iterator
@@ -28,8 +29,9 @@ from sqlalchemy import bindparam, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
+from app.audit import record_evaluation
 from app.config import SERVICE_NAME, SERVICE_VERSION, get_settings
-from app.database import get_db
+from app.database import DatabaseConfigurationError, get_db
 from app.engine import RuleEngineError, evaluate_rules
 from app.logging_config import configure_logging
 from app.schemas import (
@@ -79,6 +81,29 @@ async def log_requests(request: Request, call_next):
     return response
 
 
+async def timeout_middleware(request: Request, call_next):
+    """Enforce a hard application-level timeout on every request.
+
+    This complements the PostgreSQL ``statement_timeout``: even if the database
+    driver stalls, the client receives a bounded ``504`` instead of hanging.
+    """
+
+    timeout = get_settings().request_timeout_seconds
+    try:
+        return await asyncio.wait_for(call_next(request), timeout=timeout)
+    except asyncio.TimeoutError:
+        logger.error(
+            "Request to %s timed out after %.1fs", request.url.path, timeout
+        )
+        return JSONResponse(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            content={"detail": "Request timed out."},
+        )
+
+
+app.middleware("http")(timeout_middleware)
+
+
 def require_api_key(
     x_internal_api_key: Annotated[str | None, Header()] = None,
 ) -> None:
@@ -100,6 +125,19 @@ async def handle_database_error(request: Request, exc: SQLAlchemyError) -> JSONR
     return JSONResponse(
         status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
         content={"detail": "Database temporarily unavailable."},
+    )
+
+
+@app.exception_handler(DatabaseConfigurationError)
+async def handle_configuration_error(
+    request: Request, exc: DatabaseConfigurationError
+) -> JSONResponse:
+    """Return a clean 503 (not a 500) when ``DATABASE_URL`` is unset."""
+
+    logger.error("Database configuration error on %s", request.url.path)
+    return JSONResponse(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        content={"detail": "Database is not configured."},
     )
 
 
@@ -206,4 +244,6 @@ def evaluate(
             },
         )
 
-    return evaluate_rules(db, unique_ids)
+    result = evaluate_rules(db, unique_ids)
+    record_evaluation(db, result, unique_ids)
+    return result

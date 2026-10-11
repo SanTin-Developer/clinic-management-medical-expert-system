@@ -1,0 +1,61 @@
+﻿symptom_code,name_en,name_km,description_en,description_km,review_status,clinical_use_enabled
+SYM-001,Fever,គ្រុនក្តៅ,,,terminology_needs_review,False
+SYM-002,Cough,ក្អក,,,terminology_needs_review,False
+SYM-003,Shortness of breath,ពិបាកដកដង្ហើម,,,terminology_needs_review,False
+SYM-004,Sore throat,ឈឺបំពង់ក,,,terminology_needs_review,False
+SYM-005,Runny or blocked nose,ហៀរសំបោរ ឬតឹងច្រមុះ,,,terminology_needs_review,False
+SYM-006,Headache,ឈឺក្បាល,,,terminology_needs_review,False
+SYM-007,Dizziness,វិលមុខ,,,terminology_needs_review,False
+SYM-008,Fatigue,អស់កម្លាំង,,,terminology_needs_review,False
+SYM-009,Muscle pain,ឈឺសាច់ដុំ,,,terminology_needs_review,False
+SYM-010,Joint pain,ឈឺសន្លាក់,,,terminology_needs_review,False
+SYM-011,Nausea,ចង្អោរ,,,terminology_needs_review,False
+SYM-012,Vomiting,ក្អួត,,,terminology_needs_review,False
+SYM-013,Diarrhea,រាគ,,,terminology_needs_review,False
+SYM-014,Constipation,ទល់លាមក,,,terminology_needs_review,False
+SYM-015,Abdominal pain,ឈឺពោះ,,,terminology_needs_review,False
+SYM-016,Chest pain,ឈឺទ្រូង,,,terminology_needs_review,False
+SYM-017,Palpitations,បេះដូងលោតញាប់ ឬញ័រ,,,terminology_needs_review,False
+SYM-018,Swelling / edema,ហើម,,,terminology_needs_review,False
+SYM-019,Excessive thirst,ស្រេកទឹកខ្លាំង,,,terminology_needs_review,False
+SYM-020,Frequent urination,នោមញឹក,,,terminology_needs_review,False
+SYM-021,Painful urination,ឈឺពេលនោម,,,terminology_needs_review,False
+SYM-022,Blood in urine,មានឈាមក្នុងទឹកនោម,,,terminology_needs_review,False
+SYM-023,Back or flank pain,ឈឺខ្នង ឬចំហៀងចង្កេះ,,,terminology_needs_review,False
+SYM-024,Rash,កន្ទួលលើស្បែក,,,terminology_needs_review,False
+SYM-025,Itching,រមាស់,,,terminology_needs_review,False
+SYM-026,Red eye,ភ្នែកក្រហម,,,terminology_needs_review,False
+SYM-027,Blurred vision,មើលមិនច្បាស់,,,terminology_needs_review,False
+SYM-028,Ear pain,ឈឺត្រចៀក,,,terminology_needs_review,False
+SYM-029,Hearing difficulty,ពិបាកស្តាប់,,,terminology_needs_review,False
+SYM-030,Numbness or tingling,ស្ពឹក ឬចាក់ៗ,,,terminology_needs_review,False
+SYM-031,Weakness,ខ្សោយ,,,terminology_needs_review,False
+SYM-032,Confusion or altered mental status,វង្វេង ឬស្មារតីប្រែប្រួល,,,terminology_needs_review,False
+SYM-033,Seizure,ប្រកាច់,,,terminology_needs_review,False
+SYM-034,One-sided weakness,ខ្សោយម្ខាងនៃរាងកាយ,,,terminology_needs_review,False
+SYM-035,Unintentional weight loss,ស្រកទម្ងន់ដោយមិនបានចេតនា,,,terminology_needs_review,False
+SYM-036,Weight gain,ឡើងទម្ងន់,,,terminology_needs_review,False
+SYM-037,Heat intolerance,មិនអាចទ្រាំកម្ដៅបាន,,,terminology_needs_review,False
+SYM-038,Cold intolerance,មិនអាចទ្រាំត្រជាក់បាន,,,terminology_needs_review,False
+SYM-039,Excessive sweating,បែកញើសខ្លាំង,,,terminology_needs_review,False
+SYM-040,Sleep disturbance,បញ្ហាដំណេក,,,terminology_needs_review,False
+SYM-041,Low mood,អារម្មណ៍សោកសៅ,,,terminology_needs_review,False
+SYM-042,Anxiety or excessive worry,ថប់បារម្ភ ឬព្រួយបារម្ភខ្លាំង,,,terminology_needs_review,False
+SYM-043,Menstrual irregularity,រដូវមិនទៀងទាត់,,,terminology_needs_review,False
+SYM-044,Pelvic pain,ឈឺអាងត្រគាក,,,terminology_needs_review,False
+SYM-045,Vaginal discharge,មានទឹករំអិលចេញពីទ្វារមាស,,,terminology_needs_review,False
+SYM-046,Bleeding,ហូរឈាម,,,terminology_needs_review,False
+SYM-047,Pale skin,ស្បែកស្លេក,,,terminology_needs_review,False
+SYM-048,Jaundice,ស្បែក ឬភ្នែកលឿង,,,terminology_needs_review,False
+SYM-049,Persistent vomiting,ក្អួតមិនឈប់,,,terminology_needs_review,False
+SYM-050,Severe abdominal pain,ឈឺពោះខ្លាំង,,,terminology_needs_review,False
+SYM-051,Pain behind the eyes,ឈឺក្រោយភ្នែក,,,terminology_needs_review,False
+SYM-052,Nosebleed or gum bleeding,ហូរឈាមច្រមុះ ឬអញ្ចាញធ្មេញ,,,terminology_needs_review,False
+SYM-053,Rapid breathing,ដកដង្ហើមញាប់,,,terminology_needs_review,False
+SYM-054,Cold clammy skin,ស្បែកត្រជាក់ និងសើម,,,terminology_needs_review,False
+SYM-055,Fainting,សន្លប់,,,terminology_needs_review,False
+SYM-056,Neck stiffness,ករឹង,,,terminology_needs_review,False
+SYM-057,Light sensitivity,ខ្លាចពន្លឺ,,,terminology_needs_review,False
+SYM-058,Difficulty swallowing,ពិបាកលេប,,,terminology_needs_review,False
+SYM-059,Loss of appetite,បាត់បង់ចំណង់អាហារ,,,terminology_needs_review,False
+SYM-060,Skin lesion or ulcer,ដំបៅ ឬស្នាមខូចលើស្បែក,,,terminology_needs_review,False

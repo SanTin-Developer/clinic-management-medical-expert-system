@@ -28,20 +28,27 @@ stored ``confidence_score`` represents a clinically validated probability.
 from __future__ import annotations
 
 import logging
+import threading
+import time
 from dataclasses import dataclass, field
-from typing import Dict, Iterable, List, Sequence
+from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from app.config import SERVICE_VERSION
+from app.config import SERVICE_VERSION, get_settings
 from app.schemas import EvaluateResult, MatchedRule
 
 logger = logging.getLogger(__name__)
 
 ENGINE_NAME = "rule-based-expert-system"
 SUPPORTED_OPERATORS = frozenset({"present", "absent"})
+
+# (expiry_monotonic, rules). Guarded by ``_rules_cache_lock`` because FastAPI
+# runs synchronous endpoints in a threadpool.
+_rules_cache: Optional[Tuple[float, List["Rule"]]] = None
+_rules_cache_lock = threading.Lock()
 
 _RULE_QUERY = text(
     """
@@ -198,8 +205,23 @@ def _build_rules(rows: Iterable[dict]) -> List[Rule]:
     return list(rules.values())
 
 
-def load_active_rules(db: Session) -> List[Rule]:
-    """Load active rules (and their diseases/conditions) from PostgreSQL."""
+def load_active_rules(db: Session, *, use_cache: bool = True) -> List[Rule]:
+    """Load active rules (and their diseases/conditions) from PostgreSQL.
+
+    Results are cached in-process for ``EXPERT_RULES_CACHE_TTL_SECONDS`` seconds
+    (0 disables caching) so steady traffic does not re-read the knowledge base
+    on every request. The cache is time-based; call :func:`invalidate_rules_cache`
+    after a knowledge-base change if immediate visibility is required.
+    """
+
+    ttl = get_settings().rules_cache_ttl_seconds
+
+    global _rules_cache
+
+    if use_cache and ttl > 0:
+        cached = _rules_cache
+        if cached is not None and time.monotonic() < cached[0]:
+            return cached[1]
 
     try:
         rows = db.execute(_RULE_QUERY).mappings().all()
@@ -207,7 +229,21 @@ def load_active_rules(db: Session) -> List[Rule]:
         logger.error("Failed to load expert rules: %s", type(exc).__name__)
         raise RuleLoadError("Unable to load expert rules from the knowledge base.") from exc
 
-    return _build_rules(rows)
+    rules = _build_rules(rows)
+
+    if use_cache and ttl > 0:
+        with _rules_cache_lock:
+            _rules_cache = (time.monotonic() + ttl, rules)
+
+    return rules
+
+
+def invalidate_rules_cache() -> None:
+    """Drop the cached rules so the next load reads the database."""
+
+    global _rules_cache
+    with _rules_cache_lock:
+        _rules_cache = None
 
 
 def _condition_satisfied(condition: RuleCondition, selected: frozenset[int]) -> bool:

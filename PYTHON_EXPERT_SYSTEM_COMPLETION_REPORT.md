@@ -26,7 +26,7 @@ Key outcomes:
   applies timeouts, and validates the upstream response.
 * Pinned dependencies, non-root container, Docker healthcheck, and private
   networking.
-* **Python tests: 36 passed / 0 failed.** **Laravel tests: 11 passed / 0 failed
+* **Python tests: 37 passed / 0 failed.** **Laravel tests: 11 passed / 0 failed
   (26 assertions)** including 9 new expert-system integration tests.
 * Security tooling run: `pip-audit` (no known vulnerabilities), `bandit`
   (0 issues), `composer audit` (no advisories), `docker scout cves` on the built
@@ -80,8 +80,9 @@ deterministic pattern matcher, not a validated diagnostic model.
 | `app/main.py` | replaced | `/`, `/health`, `/ready`, `/evaluate`; API key; error handlers; middleware. |
 | `app/__init__.py` | kept | Unchanged (empty). |
 | `requirements.txt` | modified | Pinned to the versions already used by the container. |
-| `requirements-dev.txt` | created | `pytest`, `httpx`. |
+| `requirements-dev.txt` | created | `pytest`, `httpx`, `bandit`, `pip-audit`. |
 | `pytest.ini` | created | Test discovery. |
+| `.env.example` | created | Documented sample configuration (placeholders only). |
 | `Dockerfile` | replaced | Non-root, healthcheck, pinned deps, SIGTERM. |
 | `.dockerignore` | created | Excludes venv/tests/caches from build context. |
 | `.gitignore` | created | Excludes venv/caches. |
@@ -110,6 +111,7 @@ deterministic pattern matcher, not a validated diagnostic model.
 | `docker-compose.yml` | modified | Env for backend + expert-system, healthcheck, `depends_on`. |
 | `.env.example` | modified | Documented `EXPERT_SYSTEM_*` variables (placeholders only). |
 | `.gitignore` | created | Ignores real `.env*` files; keeps `.env.example` tracked. |
+| `.github/workflows/expert-system-ci.yml` | created | CI: pytest + bandit + pip-audit on `expert-system/**` changes. |
 | `PYTHON_EXPERT_SYSTEM_COMPLETION_REPORT.md` | created | This report. |
 
 **Not changed:** no Knowledge Base tables/columns were renamed or deleted; no
@@ -186,7 +188,7 @@ GET /health
 GET /ready
 {"status":"ready","service":"expert-system","version":"1.0.0","database":"ok"}
 
-POST /evaluate {"symptom_ids":[5,9,25]}   -> 200
+POST /evaluate {"symptom_ids":[9,13,31]}   -> 200
 {
   "engine":"rule-based-expert-system","engine_version":"1.0.0",
   "is_clinically_validated":false,"matched_rule_count":1,
@@ -224,7 +226,7 @@ Verified live (admin token): HTTP 200 with `data.matched_rule_count=1`
 
 Live role smoke test against the running stack (temporary Sanctum tokens minted
 in the container; no passwords changed; temporary objects deleted afterwards)
-with symptom set `[5,9,25]`:
+with symptom set `[9,13,31]`:
 
 | Role | Result |
 |---|---|
@@ -273,7 +275,7 @@ migration records already exist). No destructive command (`migrate:fresh`,
 Command: `expert-system\.venv\Scripts\python -m pytest -q`
 
 ```
-36 passed, 1 warning in 0.35s
+37 passed, 1 warning in 0.33s
 ```
 
 (The single warning is a third-party Starlette deprecation notice about
@@ -283,7 +285,8 @@ Coverage of the required cases: single-condition, AND, OR, present, absent,
 `expected_value`, priority ordering, inactive rule, inactive disease, inactive
 symptom, rule without valid conditions, unknown operator, no match, duplicate
 IDs, invalid IDs, empty body, empty list, too-many symptoms, readiness DB
-failure, evaluate DB failure (no internal leakage), and API-key enforcement.
+failure, evaluate DB failure (no internal leakage), an unconfigured
+`DATABASE_URL` (clean `503`), and API-key enforcement.
 
 ### Laravel (PHPUnit)
 
@@ -332,7 +335,7 @@ docker inspect --format "{{json .State.Health}}" clinic_expert_system
 # Live checks
 Invoke-WebRequest http://127.0.0.1:8001/health
 Invoke-WebRequest http://127.0.0.1:8001/ready
-Invoke-WebRequest http://127.0.0.1:8001/evaluate -Method POST ... -Body '{"symptom_ids":[5,9,25]}'
+Invoke-WebRequest http://127.0.0.1:8001/evaluate -Method POST ... -Body '{"symptom_ids":[9,13,31]}'
 Invoke-RestMethod  http://127.0.0.1:8000/api/v1/auth/login ...
 Invoke-WebRequest  http://127.0.0.1:8000/api/v1/expert-system/evaluate -Headers @{Authorization="Bearer ..."}
 
@@ -450,7 +453,7 @@ The following remain outstanding and require qualified professionals; they are
 | Inference semantics | **PASS** | 36 pytest cases; live real-DB match. |
 | FastAPI endpoints (`/`, `/health`, `/ready`, `/evaluate`) | **PASS** | Live 200/422 responses recorded. |
 | Laravel integration & authorization | **PASS** | 9 feature tests; live e2e 200 and 401. |
-| Automated tests (Python + Laravel) | **PASS** | 36 + 11 passed, 0 failed. |
+| Automated tests (Python + Laravel) | **PASS** | 37 + 11 passed, 0 failed. |
 | Database schema compatibility | **PASS** | Queries match migration columns; no schema change. |
 | Docker build/run/health | **PASS** | Built, healthy, non-root, readiness ok. |
 | Dependency security scans | **PASS** | pip-audit, bandit, composer audit clean. |
@@ -480,3 +483,77 @@ separately and is **0%**.
 **~93% complete and verified**; **clinical validation and regulatory approval
 remain 0% and outstanding**, and are required before any real-world clinical
 use.
+
+---
+
+## 17. Addendum — Knowledge Base Starter (100 diseases)
+
+Requested next: complete the bilingual (English/Khmer) starter catalog to the
+requested **100 diseases**.
+
+### Delivered (software scope)
+* `backend/database/data/knowledge_base_100/` — reproducible starter package:
+  `diseases_100.csv` (KB-001..KB-100), `symptoms_dictionary.csv`
+  (SYM-001..SYM-060), mapping/rule **templates** (empty by design), `sources.json`,
+  `manifest.json`, `README.md`, `knowledge_base_starter.json`, and
+  `generate_knowledge_base.py` (port of the supplied builder into the repo).
+* Migrations: `2026_10_10_100000_add_khmer_catalog_fields_to_diseases_and_symptoms.php`
+  — additive nullable `name_km` / `category` columns (guarded); engine columns
+  untouched.
+* Seeder: `KnowledgeBase100CatalogSeeder` — idempotent `updateOrCreate()` keyed
+  on `code`, inserts catalog records with **`is_active=false`**, never modifies
+  existing active `DIS-*` / `SYM-*` records, and **creates no mappings or
+  rules**.
+* Live state: `diseases` = 20 active + 100 inactive = **120**;
+  `symptoms` = 63 active + 60 inactive = **123**. Spot-checked `KB-001`
+  (respiratory) and `KB-100` (additional_common_conditions) carry Khmer + category.
+
+### Verification
+* `php artisan test` → **11 passed / 26 assertions** (migration runs in
+  RefreshDatabase tests). `pytest` → **37 passed**.
+* Live `/evaluate [9,13,31]` → still HTTP 200, `RULE-FLU-001` only (inactive
+  catalog rows are correctly excluded).
+
+### Clinical status (NOT DONE — unchanged)
+The 100 catalog entries are structure-only. ICD-11 codes are blank, mappings
+and rules are intentionally empty, and `clinical_use_enabled=false` /
+`catalog_needs_review` applies to every record. **No diagnosis may be derived
+from this catalog.** Known rough spots to reconcile during clinical review:
+duplicate symptom concepts between the active vocab and the catalog
+(e.g. Fever/Cough/Rash), the `Tonsillitis` Khmer term, and the
+`Tension headache` / `Tension-type headache` pair.
+
+---
+
+## 18. Addendum — Python-only completion pass
+
+A focused, Python-only completion/verification pass was performed (no frontend,
+no Laravel, no schema changes). All changes are under `expert-system/`.
+
+### Verified (no change needed)
+* All eight service modules present and free of `TODO`/`FIXME` markers.
+* `pytest` → **37 passed**; `bandit -q -r app` → **0 issues**; `pip-audit -r
+  requirements.txt` → **no known vulnerabilities**.
+* Live Docker stack healthy; service runs as non-root `appuser`.
+* Live knowledge base confirmed: **120** diseases (20 active + 100 inactive),
+  **123** symptoms (63 active + 60 inactive), **20** active rules, **117**
+  conditions; `/evaluate [9,13,31]` still returns `RULE-FLU-001`.
+
+### Gaps closed
+1. **`expert-system/.env.example`** added — documented sample of every runtime
+   variable, placeholders only.
+2. **Missing `DATABASE_URL` now returns a clean `503`** instead of an unhandled
+   `500`. `database.get_engine()` raises the new typed
+   `DatabaseConfigurationError`, handled by an exception handler in `main.py`
+   (`{"detail":"Database is not configured."}`, no stack trace). A regression
+   test (`test_missing_database_url_returns_clean_503`) covers both `/ready` and
+   `/evaluate`. README §11 corrected (the condition is first-request, not
+   startup).
+3. **CI workflow** `.github/workflows/expert-system-ci.yml` runs the test suite,
+   `bandit`, and `pip-audit` for changes under `expert-system/`. `bandit` and
+   `pip-audit` were added to `requirements-dev.txt` for reproducibility.
+
+### Status
+Software scope remains verified and passing. Clinical validation remains
+**NOT DONE / 0%** and is unchanged.
+

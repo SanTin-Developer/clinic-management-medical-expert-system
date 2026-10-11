@@ -1,0 +1,60 @@
+{
+  "package_name": "Clinic Management & Medical Expert System - Knowledge Base Starter",
+  "version": "0.1.0",
+  "created_date": "2026-10-10",
+  "language": [
+    "en",
+    "km"
+  ],
+  "target_disease_count": 100,
+  "disease_count": 100,
+  "symptom_term_count": 60,
+  "disease_symptom_mapping_count": 0,
+  "expert_rule_count": 0,
+  "status": "structured_starter_not_clinically_validated",
+  "important_note": "Disease catalog entries and symptom vocabulary are a bilingual starter index. No disease-symptom mappings or diagnostic rules are activated because those require disease-specific evidence and clinical review. Do not use for diagnosis or treatment.",
+  "recommended_workflow": [
+    "verify exact ICD-11 code and official title",
+    "attach disease-specific source URLs and access/review dates",
+    "review Khmer terminology",
+    "create evidence-linked symptom mappings",
+    "write rule with inclusion/exclusion and safety conditions",
+    "clinician review",
+    "automated test cases",
+    "only then enable clinical use"
+  ],
+  "sources": [
+    {
+      "source_id": "SRC-WHO-ICD11",
+      "organization": "World Health Organization",
+      "title": "ICD-11 Browser / Classification",
+      "url": "https://icd.who.int/en/",
+      "use": "Disease identity and classification; verify exact code per disease.",
+      "review_status": "reference_index"
+    },
+    {
+      "source_id": "SRC-MEDLINEPLUS",
+      "organization": "U.S. National Library of Medicine",
+      "title": "MedlinePlus Health Topics",
+      "url": "https://medlineplus.gov/healthtopics.html",
+      "use": "General health topic background and symptom information; capture a disease-specific page and review date for each claim.",
+      "review_status": "reference_index"
+    },
+    {
+      "source_id": "SRC-WHO-DENGUE-2025",
+      "organization": "World Health Organization",
+      "title": "WHO guidelines for clinical management of arboviral diseases: dengue, chikungunya, Zika and yellow fever (2025)",
+      "url": "https://www.who.int/publications/i/item/9789240111110",
+      "use": "Potential disease-specific clinical source for arboviral diseases; clinician must review applicability.",
+      "review_status": "reference_index"
+    },
+    {
+      "source_id": "SRC-WHO-DENGUE-FACTSHEET",
+      "organization": "World Health Organization",
+      "title": "Dengue and severe dengue fact sheet",
+      "url": "https://www.who.int/en/news-room/fact-sheets/detail/dengue-and-severe-dengue",
+      "use": "Disease-specific background and warning signs for dengue; not a standalone diagnostic rule.",
+      "review_status": "reference_index"
+    }
+  ]
+}

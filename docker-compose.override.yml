@@ -1,0 +1,11 @@
+# Development-only overrides.
+#
+# `docker compose` loads this file automatically when present, so local
+# development keeps direct loopback access to the expert system. The base
+# docker-compose.yml is production-safe (no host port on expert-system).
+#
+# IMPORTANT: do NOT deploy this file to production.
+services:
+  expert-system:
+    ports:
+      - "127.0.0.1:8001:8001"

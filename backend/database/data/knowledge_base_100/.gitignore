@@ -1,0 +1,2 @@
+# Build artifact (reproducible via generate_knowledge_base.py)
+*.zip

@@ -60,10 +60,10 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    # Development only: bound to loopback. Remove this mapping in production;
-    # Laravel reaches the service over the private `clinic` network.
-    ports:
-      - "127.0.0.1:8001:8001"
+    # Production-safe default: the service is reachable ONLY on the private
+    # `clinic` network (Laravel reaches it at http://expert-system:8001). The
+    # development-only host port is added by docker-compose.override.yml, which
+    # must NOT be deployed to production.
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/health', timeout=3)"]
       interval: 30s

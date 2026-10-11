@@ -3,6 +3,9 @@
 .env.*
 !.env.example
 
+# TLS certificates (never commit private keys)
+docker/nginx/certs/
+
 # OS / editor artifacts
 .DS_Store
 Thumbs.db

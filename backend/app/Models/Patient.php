@@ -5,11 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Patient extends Model
 {
     //
     use HasFactory;
+    use SoftDeletes;
 
     protected $fillable = [
         'patient_number',
@@ -24,7 +26,7 @@ class Patient extends Model
         'allergies',
         'emergency_contact_name',
         'emergency_contact_phone',
-        'notes'
+        'notes',
     ];
 
     protected function casts(): array
@@ -57,5 +59,20 @@ class Patient extends Model
     public function medicalRecords(): HasMany
     {
         return $this->hasMany(MedicalRecord::class);
+    }
+
+    public function prescriptions(): HasMany
+    {
+        return $this->hasMany(Prescription::class);
+    }
+
+    public function invoices(): HasMany
+    {
+        return $this->hasMany(Invoice::class);
+    }
+
+    public function documents(): HasMany
+    {
+        return $this->hasMany(PatientDocument::class);
     }
 }

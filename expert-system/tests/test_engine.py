@@ -10,10 +10,12 @@ from typing import List, Optional
 
 from sqlalchemy.orm import Session
 
+from app.config import get_settings
 from app.engine import (
     Rule,
     RuleCondition,
     evaluate_rules,
+    invalidate_rules_cache,
     load_active_rules,
     match_rules,
 )
@@ -216,3 +218,40 @@ def test_evaluate_with_no_matches_returns_empty_success(minimal_session: Session
 def test_evaluate_absent_rule_matches_when_cough_not_selected(db_session: Session):
     result = evaluate_rules(db_session, {1})  # fever only, no cough
     assert "RULE-ABSENT" in codes(result.matched_rules)
+
+
+# --- Rule caching ----------------------------------------------------------
+
+
+def test_rules_cache_reuses_result_within_ttl(db_session: Session, monkeypatch):
+    monkeypatch.setenv("EXPERT_RULES_CACHE_TTL_SECONDS", "60")
+    get_settings.cache_clear()
+    invalidate_rules_cache()
+
+    first = load_active_rules(db_session)
+    second = load_active_rules(db_session)
+
+    assert first is second  # same cached object, DB not re-read
+
+
+def test_rules_cache_disabled_loads_each_time(db_session: Session, monkeypatch):
+    monkeypatch.setenv("EXPERT_RULES_CACHE_TTL_SECONDS", "0")
+    get_settings.cache_clear()
+    invalidate_rules_cache()
+
+    first = load_active_rules(db_session)
+    second = load_active_rules(db_session)
+
+    assert first is not second
+
+
+def test_invalidate_rules_cache_forces_reload(db_session: Session, monkeypatch):
+    monkeypatch.setenv("EXPERT_RULES_CACHE_TTL_SECONDS", "60")
+    get_settings.cache_clear()
+    invalidate_rules_cache()
+
+    first = load_active_rules(db_session)
+    invalidate_rules_cache()
+    second = load_active_rules(db_session)
+
+    assert first is not second

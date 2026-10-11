@@ -8,7 +8,6 @@ use App\Models\Consultation;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Js;
 
 class ConsultationController extends Controller
 {
@@ -87,31 +86,31 @@ class ConsultationController extends Controller
             ->role('Doctor')
             ->findOrFail($validated['doctor_id']);
 
-        if (!$doctor) {
+        if (! $doctor) {
             return response()->json([
-                'message' => 'Selected user is not a Doctor.'
+                'message' => 'Selected user is not a Doctor.',
             ], 422);
         }
 
         $appointment = Appointment::findOrFail($validated['appointment_id']);
 
-        if (!$appointment) {
+        if (! $appointment) {
             return response()->json([
-                'message' => 'Appointment not found.'
+                'message' => 'Appointment not found.',
             ], 404);
         }
 
         // Verify appointment belongs to selected patient.
         if ($appointment->patient_id !== (int) $validated['patient_id']) {
             return response()->json([
-                'message' => 'Selected patient does not belongs to this appointment.'
+                'message' => 'Selected patient does not belongs to this appointment.',
             ], 422);
         }
 
         // Verify appointment belongs to selected doctor.
         if ($appointment->doctor_id !== (int) $validated['doctor_id']) {
             return response()->json([
-                'message' => 'Selected doctor is not assigned to this appointment.'
+                'message' => 'Selected doctor is not assigned to this appointment.',
             ], 422);
         }
 
@@ -125,7 +124,7 @@ class ConsultationController extends Controller
         // One consultation per appointment
         if (Consultation::where('appointment_id', $appointment->id)->exists()) {
             return response()->json([
-                'message' => 'A consultation already exists for this appointment.'
+                'message' => 'A consultation already exists for this appointment.',
             ], 422);
         }
 
@@ -205,6 +204,17 @@ class ConsultationController extends Controller
                 'patient',
                 'doctor',
             ]),
+        ]);
+    }
+
+    public function destroy(Consultation $consultation): JsonResponse
+    {
+        $this->authorize('delete', $consultation);
+
+        $consultation->delete();
+
+        return response()->json([
+            'message' => 'Consultation deleted successfully.',
         ]);
     }
 }

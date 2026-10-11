@@ -14,6 +14,7 @@ class Symptom extends Model
     protected $fillable = [
         'code',
         'name',
+        'name_km',
         'description',
         'is_active',
     ];
