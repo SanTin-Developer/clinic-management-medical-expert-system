@@ -1,16 +1,73 @@
-# React + Vite
+# Clinic Management System — Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React (Vite) SPA for the Clinic Management System and Medical Expert System.
 
-Currently, two official plugins are available:
+## Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- React 19 + Vite (JavaScript, JSX)
+- React Router v7 + Zustand (state) + TanStack Query (server state)
+- Tailwind CSS v4 (`@tailwindcss/vite`) with tokens in `src/styles/globals.css`
+- shadcn / Base UI primitives, class-variance-authority, tailwind-merge, clsx
+- Lucide + React Icons, Framer Motion, Sonner (toasts), Zod (validation)
+- axios API client, date-fns, react-day-picker, react-easy-crop, swiper
+- HTML-to-image / PDF export: html2canvas-pro, jspdf, qrcode.react
+- Geist + Kantumruy Pro (Khmer support) variable fonts
+- Oxlint for linting
 
-## React Compiler
+## Audit note
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+`npm audit` reports 7 high-severity advisories, all from the `shadcn` CLI's
+dev toolchain (`braces` → `micromatch` → `fast-glob`). There is no non-breaking
+fix and it never ships in the production bundle.
 
-## Expanding the Oxlint configuration
+## Quick start
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+```sh
+npm install
+npm run dev          # http://localhost:5173
+npm run build        # typecheck + production build
+npm run preview
+npm run lint
+```
+
+## Environment
+
+Copy `.env.example` to `.env` and set `VITE_API_URL` to the backend route
+prefix (default `http://localhost:8000/api/v1`).
+
+The API takes Bearer tokens for authorisation and also sets the trusted-device
+cookie, so the backend CORS config must allow this origin with credentials.
+
+## Structure
+
+```
+src/
+  api/         axios client + endpoint modules (auth, patients, appointments,
+               clinical, prescriptions, pharmacy, billing, documents, reports,
+               users, expert)
+  components/
+    ui/        Design-system primitives (Button, Card, Modal, Tabs, Table, …)
+    layout/    App shell (sidebar, header, layout)
+    auth/      Shared auth shell
+    patients/  appointments/  medical/  prescriptions/  pharmacy/  billing/
+    users/  expert/           Feature modals and selectors
+  constants/   App name, routes, role names
+  context/     AuthProvider + AuthContext
+  hooks/       useAuth, usePaginated / useAll
+  pages/       Route-level screens
+  router/      Router config, ProtectedRoute, permission Guard
+  styles/      Global styles + design tokens (rose healthcare theme)
+  utils/        cn, status maps, formatters, storage helpers
+```
+
+## Status
+
+Feature-complete SPA: authentication (login, device OTP, forgot/reset password,
+email verification), dashboard, patients + documents, appointments, medical
+records (consultations, diagnoses, vitals), prescriptions, pharmacy (medicines,
+inventory, stock movements), billing (invoices, payments, print), reports +
+CSV/PDF export, users & roles, settings (profile, trusted devices), and the
+medical expert system (symptom analysis, knowledge base, audit history).
+All screens are RBAC-aware and wired to the live API.
+
+See `../FRONTEND_UI_UX_COMPLETION_REPORT.md` for the full build report.

@@ -33,6 +33,7 @@ Route::prefix('v1')->group(function () {
 
     // Password reset
     Route::post('/auth/forgot-password', [PasswordResetController::class, 'forgot'])->middleware('throttle:password-reset');
+    Route::post('/auth/reset-password/verify-code', [PasswordResetController::class, 'verifyCode'])->middleware('throttle:password-reset');
     Route::post('/auth/reset-password', [PasswordResetController::class, 'reset'])->middleware('throttle:password-reset');
 
     // Email verification (signed link)

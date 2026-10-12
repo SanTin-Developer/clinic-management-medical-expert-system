@@ -127,10 +127,24 @@ class KnowledgeBaseTest extends TestCase
 
     public function test_roles_without_knowledge_base_permission_are_forbidden(): void
     {
-        $this->actingAsRole('Doctor');
+        $this->actingAsRole('Nurse');
 
         $this->getJson('/api/v1/knowledge-base/diseases')->assertForbidden();
         $this->getJson('/api/v1/knowledge-base/symptoms')->assertForbidden();
         $this->getJson('/api/v1/knowledge-base/expert-rules')->assertForbidden();
+    }
+
+    public function test_doctor_can_view_but_not_manage_the_knowledge_base(): void
+    {
+        $this->actingAsRole('Doctor');
+
+        $this->getJson('/api/v1/knowledge-base/diseases')->assertOk();
+        $this->getJson('/api/v1/knowledge-base/symptoms')->assertOk();
+        $this->getJson('/api/v1/knowledge-base/expert-rules')->assertOk();
+
+        $this->postJson('/api/v1/knowledge-base/symptoms', [
+            'code' => 'SYM-DOCTOR',
+            'name' => 'Doctor symptom',
+        ])->assertForbidden();
     }
 }

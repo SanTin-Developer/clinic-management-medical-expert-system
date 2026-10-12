@@ -10,7 +10,6 @@ use App\Services\Files\DiskDocumentStorage;
 use App\Services\Files\DocumentStorage;
 use App\Services\Files\FileScanner;
 use App\Services\Files\NullFileScanner;
-use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -88,8 +87,8 @@ class AppServiceProvider extends ServiceProvider
     }
 
     /**
-     * Point the built-in verification and password reset emails at the SPA so
-     * users land on a friendly frontend route rather than a JSON endpoint.
+     * Point the built-in email verification link at the SPA so users land on a
+     * friendly frontend route rather than a JSON endpoint.
      */
     private function configureNotificationUrls(): void
     {
@@ -102,11 +101,6 @@ class AppServiceProvider extends ServiceProvider
             ]);
 
             return $frontend.'/verify-email?verify_url='.urlencode($url);
-        });
-
-        ResetPassword::createUrlUsing(function (object $notifiable, string $token) use ($frontend): string {
-            return $frontend.'/reset-password?token='.$token
-                .'&email='.urlencode($notifiable->getEmailForPasswordReset());
         });
     }
 }

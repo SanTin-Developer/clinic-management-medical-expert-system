@@ -31,7 +31,14 @@ class AuthController extends Controller
     {
         $credentials = $request->validated();
 
-        if (! Auth::attempt($credentials)) {
+        $identifier = $credentials['email'];
+        $field = filter_var($identifier, FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
+
+        if ($field === 'username') {
+            $identifier = strtolower($identifier);
+        }
+
+        if (! Auth::attempt([$field => $identifier, 'password' => $credentials['password']])) {
             throw ValidationException::withMessages([
                 'email' => ['The provided credentials are incorrect.'],
             ]);
@@ -196,6 +203,7 @@ class AuthController extends Controller
         return [
             'id' => $user->id,
             'name' => $user->name,
+            'username' => $user->username,
             'email' => $user->email,
             'email_verified' => $user->hasVerifiedEmail(),
             'roles' => $user->getRoleNames(),

@@ -161,6 +161,7 @@ class RolePermissionSeeder extends Seeder
             'medical-records.update',
             'expert-system.view',
             'expert-system.use',
+            'knowledge-base.view',
             'prescriptions.view',
             'prescriptions.create',
             'prescriptions.update',

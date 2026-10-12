@@ -4,8 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use App\Notifications\PasswordChangedNotification;
+use App\Notifications\PasswordResetOtpNotification;
 use Database\Seeders\RolePermissionSeeder;
-use Illuminate\Auth\Notifications\ResetPassword as ResetPasswordNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
@@ -26,15 +26,16 @@ class PasswordResetTest extends TestCase
         Notification::fake();
     }
 
-    public function test_forgot_password_response_is_generic_and_sends_link(): void
+    public function test_forgot_password_response_is_generic_and_sends_code(): void
     {
         $user = $this->userWithRole('Doctor');
 
         $this->postJson('/api/v1/auth/forgot-password', ['email' => $user->email])
             ->assertOk()
-            ->assertJsonPath('message', 'If an account exists for that email address, a password reset link has been sent.');
+            ->assertJsonPath('message', 'If an account exists for that email address, a password reset code has been sent.');
 
-        Notification::assertSentTo($user, ResetPasswordNotification::class);
+        Notification::assertSentTo($user, PasswordResetOtpNotification::class);
+        $this->assertDatabaseCount('password_reset_otps', 1);
     }
 
     public function test_forgot_password_does_not_reveal_unknown_accounts(): void
@@ -43,9 +44,27 @@ class PasswordResetTest extends TestCase
             ->assertOk();
 
         Notification::assertNothingSent();
+        $this->assertDatabaseCount('password_reset_otps', 0);
     }
 
-    public function test_password_can_be_reset_with_valid_token(): void
+    public function test_verify_code_issues_a_reset_token(): void
+    {
+        $user = $this->userWithRole('Doctor');
+        $code = $this->captureResetCode($user);
+
+        $this->postJson('/api/v1/auth/reset-password/verify-code', [
+            'email' => $user->email,
+            'code' => $code,
+        ])->assertOk()
+            ->assertJsonStructure(['message', 'reset_token']);
+
+        $this->assertDatabaseHas('password_reset_otps', [
+            'user_id' => $user->id,
+            'consumed_at' => null,
+        ]);
+    }
+
+    public function test_password_can_be_reset_with_verified_token(): void
     {
         $user = $this->userWithRole('Doctor');
         $user->createToken('existing-session');
@@ -55,11 +74,11 @@ class PasswordResetTest extends TestCase
             'expires_at' => now()->addDay(),
         ]);
 
-        $token = $this->captureResetToken($user);
+        $resetToken = $this->captureResetToken($user);
 
         $this->postJson('/api/v1/auth/reset-password', [
-            'token' => $token,
             'email' => $user->email,
+            'reset_token' => $resetToken,
             'password' => 'NewSecret123',
             'password_confirmation' => 'NewSecret123',
         ])->assertOk();
@@ -70,42 +89,115 @@ class PasswordResetTest extends TestCase
         Notification::assertSentTo($user, PasswordChangedNotification::class);
     }
 
-    public function test_password_reset_fails_with_invalid_token(): void
+    public function test_reset_token_is_single_use(): void
     {
         $user = $this->userWithRole('Doctor');
+        $resetToken = $this->captureResetToken($user);
 
         $this->postJson('/api/v1/auth/reset-password', [
-            'token' => 'invalid-token',
             'email' => $user->email,
+            'reset_token' => $resetToken,
             'password' => 'NewSecret123',
             'password_confirmation' => 'NewSecret123',
-        ])->assertStatus(422)->assertJsonValidationErrors('email');
+        ])->assertOk();
+
+        $this->postJson('/api/v1/auth/reset-password', [
+            'email' => $user->email,
+            'reset_token' => $resetToken,
+            'password' => 'AnotherSecret123',
+            'password_confirmation' => 'AnotherSecret123',
+        ])->assertStatus(422)->assertJsonValidationErrors('reset_token');
+    }
+
+    public function test_code_is_consumed_by_a_completed_reset(): void
+    {
+        $user = $this->userWithRole('Doctor');
+        $code = $this->captureResetCode($user);
+        $resetToken = $this->verifyCode($user, $code);
+
+        $this->postJson('/api/v1/auth/reset-password', [
+            'email' => $user->email,
+            'reset_token' => $resetToken,
+            'password' => 'NewSecret123',
+            'password_confirmation' => 'NewSecret123',
+        ])->assertOk();
+
+        $this->postJson('/api/v1/auth/reset-password/verify-code', [
+            'email' => $user->email,
+            'code' => $code,
+        ])->assertStatus(422)->assertJsonValidationErrors('code');
+    }
+
+    public function test_verify_code_fails_with_invalid_code(): void
+    {
+        $user = $this->userWithRole('Doctor');
+        $this->captureResetCode($user);
+
+        $this->postJson('/api/v1/auth/reset-password/verify-code', [
+            'email' => $user->email,
+            'code' => '000000',
+        ])->assertStatus(422)->assertJsonValidationErrors('code');
+    }
+
+    public function test_verify_code_does_not_reveal_unknown_accounts(): void
+    {
+        $this->postJson('/api/v1/auth/reset-password/verify-code', [
+            'email' => 'nobody@clinic.local',
+            'code' => '123456',
+        ])->assertStatus(422)->assertJsonValidationErrors('code');
+    }
+
+    public function test_verify_code_fails_with_expired_code(): void
+    {
+        $user = $this->userWithRole('Doctor');
+        $this->captureResetCode($user);
+
+        $user->passwordResetOtps()->update(['expires_at' => now()->subMinute()]);
+
+        $this->postJson('/api/v1/auth/reset-password/verify-code', [
+            'email' => $user->email,
+            'code' => '000000',
+        ])->assertStatus(422)->assertJsonValidationErrors('code');
     }
 
     public function test_password_reset_requires_confirmation_and_min_length(): void
     {
         $user = $this->userWithRole('Doctor');
+        $resetToken = $this->captureResetToken($user);
 
         $this->postJson('/api/v1/auth/reset-password', [
-            'token' => 'whatever',
             'email' => $user->email,
+            'reset_token' => $resetToken,
             'password' => 'short',
             'password_confirmation' => 'mismatch',
         ])->assertStatus(422)->assertJsonValidationErrors('password');
     }
 
-    private function captureResetToken(User $user): string
+    private function captureResetCode(User $user): string
     {
         $this->postJson('/api/v1/auth/forgot-password', ['email' => $user->email])->assertOk();
 
-        $token = null;
+        $code = null;
 
-        Notification::assertSentTo($user, ResetPasswordNotification::class, function (ResetPasswordNotification $notification) use (&$token): bool {
-            $token = $notification->token;
+        Notification::assertSentTo($user, PasswordResetOtpNotification::class, function (PasswordResetOtpNotification $notification) use (&$code): bool {
+            $code = $notification->code;
 
             return true;
         });
 
-        return (string) $token;
+        return (string) $code;
+    }
+
+    private function verifyCode(User $user, string $code): string
+    {
+        return (string) $this->postJson('/api/v1/auth/reset-password/verify-code', [
+            'email' => $user->email,
+            'code' => $code,
+        ])->assertOk()->json('reset_token');
+    }
+
+    private function captureResetToken(User $user): string
+    {
+        return $this->verifyCode($user, $this->captureResetCode($user));
     }
 }

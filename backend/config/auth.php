@@ -161,4 +161,22 @@ return [
 
     'password_min_length' => (int) env('AUTH_PASSWORD_MIN', 8),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Password Reset OTP
+    |--------------------------------------------------------------------------
+    |
+    | Forgot-password issues a one-time passcode delivered by email instead of
+    | a reset link. The user submits their email together with the code and a
+    | new password to complete the reset.
+    |
+    */
+
+    'password_reset' => [
+        'code_length' => (int) env('AUTH_RESET_CODE_LENGTH', 6),
+        'expire_minutes' => (int) env('AUTH_RESET_EXPIRE_MINUTES', 15),
+        'max_attempts' => (int) env('AUTH_RESET_MAX_ATTEMPTS', 5),
+        'token_expire_minutes' => (int) env('AUTH_RESET_TOKEN_EXPIRE_MINUTES', 10),
+    ],
+
 ];

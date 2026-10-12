@@ -1,0 +1,141 @@
+@import "tailwindcss";
+
+@theme {
+  /* Brand */
+  --color-brand: #db2777;
+  --color-brand-dark: #9d174d;
+  --color-brand-darker: #831843;
+  --color-brand-soft: #fce7f3;
+  --color-brand-faint: #fff0f7;
+
+  /* Surfaces */
+  --color-canvas: #fff7fb;
+  --color-surface: #ffffff;
+  --color-line: #f3d9e6;
+
+  /* Text */
+  --color-ink: #172554;
+  --color-ink-muted: #64748b;
+
+  /* Semantic (map to Tailwind defaults) */
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-medical: #2563eb;
+
+  --font-sans:
+    "Geist Variable",
+    "Kantumruy Pro Variable",
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial,
+    sans-serif;
+
+  --shadow-card: 0 1px 2px rgb(23 37 84 / 0.04), 0 4px 16px rgb(219 39 119 / 0.06);
+  --shadow-dialog: 0 20px 50px -12px rgb(23 37 84 / 0.35);
+  --radius-card: 14px;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+*,
+*::before,
+*::after {
+  border-color: var(--color-line);
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #f0c8db;
+  border-radius: 999px;
+  border: 2px solid var(--color-canvas);
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Invoice print view */
+@media print {
+  body {
+    background: #fff;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .print-area {
+    box-shadow: none !important;
+  }
+
+  .print-area .print-break {
+    break-inside: avoid;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.18s ease-out;
+}

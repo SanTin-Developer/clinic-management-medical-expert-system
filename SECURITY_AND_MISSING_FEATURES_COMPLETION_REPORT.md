@@ -15,9 +15,9 @@ tested, and verified against the running stack:
 * **Device-trusted login OTP (2FA):** email one-time passcode required for
   first-time devices; trust stored in an `HttpOnly`, `SameSite=Lax`, `Secure`
   (prod) cookie with a hashed server-side token.
-* **Forgot / reset password:** familiar Laravel token broker with a generic
-  response, a hardened password policy, privileged-session revocation on reset,
-  and a "password changed" notification.
+* **Forgot / reset password:** an emailed one-time passcode (OTP) with a generic
+  response, a hardened password policy, single-use and expiring codes,
+  privileged-session revocation on reset, and a "password changed" notification.
 * **Email verification:** signed-link verification, resend, and an opt-in
   `verified` middleware; bulletproof frontend URLs for the verification and
   reset links.
@@ -99,18 +99,23 @@ All are documented as placeholders in `backend/.env.example`.
 
 ## 4. Password reset & email verification
 
-* `POST /api/v1/auth/forgot-password` — generic response (no enumeration); uses
-  the standard broker so token expiry/throttle are enforced.
-* `POST /api/v1/auth/reset-password` — validates `token`/`email`/`password`
-  (min length + letters + numbers), then: updates the password, deletes all
-  Sanctum tokens **and** trusted devices (same privilege revocation as logout),
-  and notifies via `PasswordChangedNotification`.
+* `POST /api/v1/auth/forgot-password` — generic response (no enumeration); issues
+  a single-use, expiring one-time passcode (`password_reset_otps`, 6 digits,
+  15 min, 5 attempts) and emails it. Any earlier outstanding code is invalidated;
+  calling the endpoint again is the resend.
+* `POST /api/v1/auth/reset-password` — validates `email`/`code`/`password`
+  (min length + letters + numbers, confirmed), verifies the code, then: updates
+  the password, deletes all Sanctum tokens **and** trusted devices (same
+  privilege revocation as logout), and notifies via `PasswordChangedNotification`.
+  Unknown account, invalid, expired or reused codes all return a generic 422 on
+  the `code` field (no enumeration).
 * `GET /api/v1/auth/email/verify/{id}/{hash}` — `signed` + `throttle:api`,
   `timingSafeCompare` hash check, idempotent.
 * `POST /api/v1/auth/email/verification-notification` — resend, auth required.
-* Notification **URLs point at the SPA** (`FRONTEND_URL`): `VerifyEmail` and
-  `ResetPassword ::createUrlUsing` build `{frontend}/verify-email?verify_url=…`
-  and `{frontend}/reset-password?token=…&email=…`.
+* Notification emails use a **branded theme** published to
+  `resources/views/vendor/mail` (palette `#db2777` / `#fff7fb` / `#64748b`), and
+  the verification link points at the SPA (`FRONTEND_URL`):
+  `VerifyEmail::createUrlUsing` builds `{frontend}/verify-email?verify_url=…`.
 
 ## 5. Secure document uploads
 
@@ -191,8 +196,8 @@ Layer stack in `app/Services/Files/*`:
 * **Tests** — full suite `124 passed (396 assertions)`:
   * `AuthOtpTest` — login challenge, verify issue, trusted-device round-trip,
     wrong/expired/consumed codes, resend cooldown, untrusted no-OTP-on-login.
-  * `PasswordResetTest` — generic feedback, reset flows, token/device
-    revocation, password policy, throttling.
+  * `PasswordResetTest` — generic feedback, OTP issue/verify, single-use and
+    expired codes, token/device revocation, password policy.
   * `EmailVerificationTest` — signed verify, tamper rejection, resend.
   * `FileSecurityTest` — allowed/rejected files, double extensions, magic-byte
     mismatch, size limit, fail-closed scanner, storage isolation.

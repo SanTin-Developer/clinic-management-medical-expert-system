@@ -21,11 +21,20 @@ services:
       EXPERT_SYSTEM_TIMEOUT: ${EXPERT_SYSTEM_TIMEOUT:-5}
       EXPERT_SYSTEM_CONNECT_TIMEOUT: ${EXPERT_SYSTEM_CONNECT_TIMEOUT:-2}
       EXPERT_SYSTEM_API_KEY: ${EXPERT_SYSTEM_API_KEY:-}
+      # In-memory cache/session/queue (mirrors the fast reference stack).
+      CACHE_STORE: redis
+      QUEUE_CONNECTION: redis
+      SESSION_DRIVER: redis
+      REDIS_CLIENT: phpredis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
     depends_on:
       postgres:
         condition: service_healthy
       expert-system:
         condition: service_started
+      redis:
+        condition: service_healthy
     networks:
       - clinic
 
@@ -93,8 +102,24 @@ services:
     networks:
       - clinic
 
+  redis:
+    image: redis:8-alpine
+    container_name: clinic_redis
+    restart: unless-stopped
+    # Internal only — no host port, so it never clashes with other stacks.
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - clinic
+
 networks:
   clinic:
 
 volumes:
   postgres_data:
+  redis_data:

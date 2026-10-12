@@ -31,6 +31,7 @@ class UserController extends Controller
 
         $validatedData = $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            'username' => ['nullable', 'string', 'min:3', 'max:50', 'regex:/^[A-Za-z0-9._-]+$/', 'unique:users,username'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
             'password' => ['required', 'string', 'min:8'],
             'role' => [
@@ -40,8 +41,13 @@ class UserController extends Controller
             ],
         ]);
 
+        $username = ! empty($validatedData['username'])
+            ? strtolower($validatedData['username'])
+            : $this->generateUsername($validatedData['email']);
+
         $user = User::create([
             'name' => $validatedData['name'],
+            'username' => $username,
             'email' => $validatedData['email'],
             'password' => Hash::make($validatedData['password']),
         ]);
@@ -73,6 +79,15 @@ class UserController extends Controller
 
         $validated = $request->validate([
             'name' => ['sometimes', 'required', 'string', 'max:255'],
+            'username' => [
+                'sometimes',
+                'nullable',
+                'string',
+                'min:3',
+                'max:50',
+                'regex:/^[A-Za-z0-9._-]+$/',
+                Rule::unique('users', 'username')->ignore($user->id),
+            ],
             'email' => [
                 'sometimes',
                 'required',
@@ -91,6 +106,7 @@ class UserController extends Controller
 
         $user->update([
             'name' => $validated['name'] ?? $user->name,
+            'username' => ! empty($validated['username']) ? strtolower($validated['username']) : $user->username,
             'email' => $validated['email'] ?? $user->email,
         ]);
 
@@ -122,12 +138,32 @@ class UserController extends Controller
         ]);
     }
 
+    // Derive a unique username from an email address local part
+    private function generateUsername(string $email): string
+    {
+        $base = strstr($email, '@', true) ?: $email;
+        $base = strtolower($base);
+        $base = preg_replace('/[^a-z0-9._-]/', '', $base) ?? '';
+        $base = trim($base, '._-') ?: 'user';
+
+        $candidate = $base;
+        $suffix = 1;
+
+        while (User::where('username', $candidate)->exists()) {
+            $candidate = $base.$suffix;
+            $suffix++;
+        }
+
+        return $candidate;
+    }
+
     // Format user data for response
     private function userData(User $user): array
     {
         return [
             'id' => $user->id,
             'name' => $user->name,
+            'username' => $user->username,
             'email' => $user->email,
             'roles' => $user->getRoleNames(),
             'permissions' => $user->getAllPermissions()->pluck('name'),

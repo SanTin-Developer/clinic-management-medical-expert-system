@@ -1,0 +1,173 @@
+import { createBrowserRouter } from 'react-router-dom'
+import { lazy, Suspense } from 'react'
+import AppLayout from '../components/layout/AppLayout.jsx'
+import ProtectedRoute from './ProtectedRoute.jsx'
+import Guard from './Guard.jsx'
+import { Spinner } from '../components/ui/Skeleton.jsx'
+
+const LoginPage = lazy(() => import('../pages/LoginPage.jsx'))
+const OtpVerifyPage = lazy(() => import('../pages/OtpVerifyPage.jsx'))
+const ForgotPasswordPage = lazy(() => import('../pages/ForgotPasswordPage.jsx'))
+const ResetPasswordPage = lazy(() => import('../pages/ResetPasswordPage.jsx'))
+const NewPasswordPage = lazy(() => import('../pages/NewPasswordPage.jsx'))
+const VerifyEmailPage = lazy(() => import('../pages/VerifyEmailPage.jsx'))
+const DashboardPage = lazy(() => import('../pages/DashboardPage.jsx'))
+const PatientListPage = lazy(() => import('../pages/PatientListPage.jsx'))
+const PatientDetailPage = lazy(() => import('../pages/PatientDetailPage.jsx'))
+const AppointmentListPage = lazy(() => import('../pages/AppointmentListPage.jsx'))
+const AppointmentDetailPage = lazy(() => import('../pages/AppointmentDetailPage.jsx'))
+const MedicalRecordsPage = lazy(() => import('../pages/MedicalRecordsPage.jsx'))
+const PrescriptionListPage = lazy(() => import('../pages/PrescriptionListPage.jsx'))
+const PrescriptionDetailPage = lazy(() => import('../pages/PrescriptionDetailPage.jsx'))
+const PharmacyPage = lazy(() => import('../pages/PharmacyPage.jsx'))
+const InvoiceListPage = lazy(() => import('../pages/InvoiceListPage.jsx'))
+const InvoiceDetailPage = lazy(() => import('../pages/InvoiceDetailPage.jsx'))
+const ReportsPage = lazy(() => import('../pages/ReportsPage.jsx'))
+const UsersPage = lazy(() => import('../pages/UsersPage.jsx'))
+const SettingsPage = lazy(() => import('../pages/SettingsPage.jsx'))
+const ExpertSystemPage = lazy(() => import('../pages/ExpertSystemPage.jsx'))
+const NotFoundPage = lazy(() => import('../pages/NotFoundPage.jsx'))
+const ForbiddenPage = lazy(() => import('../pages/ForbiddenPage.jsx'))
+
+function withSuspense(element) {
+  return (
+    <Suspense
+      fallback={
+        <div className="grid min-h-screen place-items-center bg-canvas">
+          <Spinner label="Loading page…" />
+        </div>
+      }
+    >
+      {element}                                                                                                                 
+    </Suspense>
+  )
+}
+
+export const router = createBrowserRouter([
+  { path: '/login', element: withSuspense(<LoginPage />) },
+  { path: '/login/verify', element: withSuspense(<OtpVerifyPage />) },
+  { path: '/forgot-password', element: withSuspense(<ForgotPasswordPage />) },
+  { path: '/reset-password', element: withSuspense(<ResetPasswordPage />) },
+  { path: '/reset-password/new', element: withSuspense(<NewPasswordPage />) },
+  { path: '/verify-email', element: withSuspense(<VerifyEmailPage />) },
+  {
+    path: '/',
+    element: (
+      <ProtectedRoute>
+        <AppLayout />
+      </ProtectedRoute>
+    ),
+    children: [
+      { index: true, element: withSuspense(<DashboardPage />) },
+      {
+        path: 'patients',
+        element: withSuspense(
+          <Guard permission="patients.view">
+            <PatientListPage />
+          </Guard>,
+        ),
+      },
+      {
+        path: 'patients/:id',
+        element: withSuspense(
+          <Guard permission="patients.view">
+            <PatientDetailPage />
+          </Guard>,
+        ),
+      },
+      {
+        path: 'appointments',
+        element: withSuspense(
+          <Guard permission="appointments.view">
+            <AppointmentListPage />
+          </Guard>,
+        ),
+      },
+      {
+        path: 'appointments/:id',
+        element: withSuspense(
+          <Guard permission="appointments.view">
+            <AppointmentDetailPage />
+          </Guard>,
+        ),
+      },
+      {
+        path: 'medical-records',
+        element: withSuspense(
+          <Guard permission="medical-records.view">
+            <MedicalRecordsPage />
+          </Guard>,
+        ),
+      },
+      {
+        path: 'prescriptions',
+        element: withSuspense(
+          <Guard permission="prescriptions.view">
+            <PrescriptionListPage />
+          </Guard>,
+        ),
+      },
+      {
+        path: 'prescriptions/:id',
+        element: withSuspense(
+          <Guard permission="prescriptions.view">
+            <PrescriptionDetailPage />
+          </Guard>,
+        ),
+      },
+      {
+        path: 'pharmacy',
+        element: withSuspense(
+          <Guard any={['medicines.view', 'inventory.view']}>
+            <PharmacyPage />
+          </Guard>,
+        ),
+      },
+      {
+        path: 'billing',
+        element: withSuspense(
+          <Guard permission="billing.view">
+            <InvoiceListPage />
+          </Guard>,
+        ),
+      },
+      {
+        path: 'billing/:id',
+        element: withSuspense(
+          <Guard permission="billing.view">
+            <InvoiceDetailPage />
+          </Guard>,
+        ),
+      },
+      {
+        path: 'reports',
+        element: withSuspense(
+          <Guard permission="reports.view">
+            <ReportsPage />
+          </Guard>,
+        ),
+      },
+      {
+        path: 'users',
+        element: withSuspense(
+          <Guard permission="users.view">
+            <UsersPage />
+          </Guard>,
+        ),
+      },
+      { path: 'settings', element: withSuspense(<SettingsPage />) },
+      {
+        path: 'expert-system',
+        element: withSuspense(
+          <Guard any={['expert-system.view', 'expert-system.use']}>
+            <ExpertSystemPage />
+          </Guard>,
+        ),
+      },
+      { path: 'forbidden', element: withSuspense(<ForbiddenPage />) },
+    ],
+  },
+  { path: '*', element: withSuspense(<NotFoundPage />) },
+])
+
+export default router

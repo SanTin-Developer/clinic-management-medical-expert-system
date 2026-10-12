@@ -13,7 +13,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 
-#[Fillable(['name', 'email', 'password', 'email_verified_at'])]
+#[Fillable(['name', 'username', 'email', 'password', 'email_verified_at'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -43,6 +43,11 @@ class User extends Authenticatable implements MustVerifyEmail
     public function loginChallenges(): HasMany
     {
         return $this->hasMany(LoginChallenge::class);
+    }
+
+    public function passwordResetOtps(): HasMany
+    {
+        return $this->hasMany(PasswordResetOtp::class);
     }
 
     public function doctorAppointments(): HasMany

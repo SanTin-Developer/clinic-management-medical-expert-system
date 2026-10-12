@@ -3,6 +3,7 @@
 .env
 .env.backup
 .env.production
+supervisord.pid
 .phpactor.json
 .phpunit.result.cache
 /.codex
