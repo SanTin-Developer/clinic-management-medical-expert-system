@@ -1,4 +1,4 @@
-export const APP_NAME = 'Clinic Management System'
+export const APP_NAME = 'RoyalCare Clinic'
 
 export const ROUTES = {
   login: '/login',

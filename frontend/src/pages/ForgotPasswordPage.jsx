@@ -5,11 +5,13 @@ import Button from '../components/ui/Button.jsx'
 import Field from '../components/ui/Field.jsx'
 import Input from '../components/ui/Input.jsx'
 import { forgotPassword } from '../api/auth.js'
+import { usePageTitle } from '../hooks/usePageTitle.js'
 import AuthShell from './auth/AuthShell.jsx'
 
 const EMAIL_RE = /^\S+@\S+\.\S+$/
 
 export default function ForgotPasswordPage() {
+  usePageTitle('Forgot Password')
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [sentEmail, setSentEmail] = useState(null)

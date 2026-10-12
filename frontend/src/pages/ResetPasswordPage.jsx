@@ -5,12 +5,14 @@ import Button from '../components/ui/Button.jsx'
 import Field from '../components/ui/Field.jsx'
 import Input from '../components/ui/Input.jsx'
 import { forgotPassword, verifyResetCode } from '../api/auth.js'
+import { usePageTitle } from '../hooks/usePageTitle.js'
 import AuthShell from './auth/AuthShell.jsx'
 
 const CODE_LENGTH = 6
 const EMAIL_RE = /^\S+@\S+\.\S+$/
 
 export default function ResetPasswordPage() {
+  usePageTitle('Reset Password')
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const emailParam = searchParams.get('email') ?? ''

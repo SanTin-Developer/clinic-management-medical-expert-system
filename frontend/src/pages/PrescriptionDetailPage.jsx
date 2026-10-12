@@ -105,7 +105,7 @@ export default function PrescriptionDetailPage() {
                         {item.instructions ? ` · ${item.instructions}` : ''}
                       </p>
                     </div>
-                    <Badge tone="pink">Qty {item.quantity}</Badge>
+                    <Badge tone="brand">Qty {item.quantity}</Badge>
                   </li>
                 )) ?? <p className="py-4 text-sm text-ink-muted">No items.</p>}
               </ul>

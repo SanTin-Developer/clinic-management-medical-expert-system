@@ -90,6 +90,18 @@ class RolePermissionSeeder extends Seeder
 
             // Audit
             'audit-logs.view',
+
+            // Staff Communication
+            'chat.view',
+            'chat.create',
+            'chat.send',
+            'chat.manage',
+
+            'notifications.view',
+            'notifications.manage',
+
+            'telegram.connect',
+            'telegram.group.manage',
         ];
 
         foreach ($permissions as $permission) {
@@ -131,6 +143,12 @@ class RolePermissionSeeder extends Seeder
             'billing.create',
             'billing.update',
             'documents.view',
+            'chat.view',
+            'chat.create',
+            'chat.send',
+            'notifications.view',
+            'notifications.manage',
+            'telegram.connect',
         ]);
 
         Role::findByName('Nurse')->syncPermissions([
@@ -145,6 +163,12 @@ class RolePermissionSeeder extends Seeder
             'expert-system.view',
             'documents.view',
             'documents.manage',
+            'chat.view',
+            'chat.create',
+            'chat.send',
+            'notifications.view',
+            'notifications.manage',
+            'telegram.connect',
         ]);
 
         Role::findByName('Doctor')->syncPermissions([
@@ -168,6 +192,12 @@ class RolePermissionSeeder extends Seeder
             'medicines.view',
             'documents.view',
             'documents.manage',
+            'chat.view',
+            'chat.create',
+            'chat.send',
+            'notifications.view',
+            'notifications.manage',
+            'telegram.connect',
         ]);
 
         Role::findByName('Pharmacist')->syncPermissions([
@@ -180,6 +210,12 @@ class RolePermissionSeeder extends Seeder
             'medicines.delete',
             'inventory.view',
             'inventory.manage',
+            'chat.view',
+            'chat.create',
+            'chat.send',
+            'notifications.view',
+            'notifications.manage',
+            'telegram.connect',
         ]);
 
         Role::findByName('Patient')->syncPermissions([

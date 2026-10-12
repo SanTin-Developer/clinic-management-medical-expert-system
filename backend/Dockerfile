@@ -7,7 +7,7 @@ RUN apt-get update && apt-get install -y \
     supervisor \
     libpq-dev \
     $PHPIZE_DEPS \
-    && docker-php-ext-install pdo_pgsql \
+    && docker-php-ext-install pdo_pgsql pcntl \
     && pecl install redis \
     && docker-php-ext-enable redis \
     && apt-get purge -y --auto-remove $PHPIZE_DEPS \
@@ -45,5 +45,6 @@ COPY docker/warmup.sh /usr/local/bin/warmup.sh
 RUN chmod +x /usr/local/bin/warmup.sh
 
 EXPOSE 8000
+EXPOSE 8080
 
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

@@ -136,7 +136,7 @@ export default function MedicineFormModal({ open, onClose, initial, onSaved }) {
               type="checkbox"
               checked={form.is_active}
               onChange={(e) => set('is_active')(e.target.checked)}
-              className="size-4 accent-[#db2777]"
+              className="size-4 accent-brand"
             />
             Active (available for prescriptions)
           </label>

@@ -23,3 +23,29 @@ export const tokenStorage = {
     }
   },
 }
+
+// Remove every trace of the session: the stored bearer token, any session
+// storage entries, and all readable cookies for the current host.
+export function clearStoredAuth() {
+  tokenStorage.clear()
+
+  try {
+    window.sessionStorage.clear()
+  } catch {
+    // Ignore.
+  }
+
+  try {
+    const hostname = window.location.hostname
+    const cookies = document.cookie ? document.cookie.split(';') : []
+    for (const cookie of cookies) {
+      const name = cookie.split('=')[0]?.trim()
+      if (!name) continue
+      document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`
+      document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=${hostname}`
+    }
+  } catch {
+    // Ignore.
+  }
+}
+

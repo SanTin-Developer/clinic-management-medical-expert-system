@@ -136,7 +136,7 @@ export default function PatientListPage() {
                     <Td>{p.phone_number ?? '—'}</Td>
                     <Td>
                       {p.blood_type ? (
-                        <Badge tone="pink">{p.blood_type}</Badge>
+                        <Badge tone="brand">{p.blood_type}</Badge>
                       ) : (
                         <span className="text-ink-muted">—</span>
                       )}

@@ -6,7 +6,7 @@ const TONES = {
   amber: 'bg-amber-100 text-amber-800',
   red: 'bg-red-100 text-red-700',
   blue: 'bg-blue-100 text-blue-700',
-  pink: 'bg-pink-100 text-pink-800',
+  brand: 'bg-brand-soft text-brand-dark',
   navy: 'bg-blue-900/10 text-ink',
 }
 

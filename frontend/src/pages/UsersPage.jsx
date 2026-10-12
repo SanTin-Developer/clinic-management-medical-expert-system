@@ -20,7 +20,7 @@ import { formatDate } from '../utils/format.js'
 const ROLE_TONES = {
   Admin: 'navy',
   Doctor: 'blue',
-  Nurse: 'pink',
+  Nurse: 'brand',
   Receptionist: 'amber',
   Pharmacist: 'green',
   Patient: 'gray',

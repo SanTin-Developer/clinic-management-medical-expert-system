@@ -12,10 +12,12 @@ import ConfirmDialog from '../components/ui/ConfirmDialog.jsx'
 import Tabs from '../components/ui/Tabs.jsx'
 import { CardSkeleton } from '../components/ui/Skeleton.jsx'
 import { EmptyState, ErrorState } from '../components/ui/State.jsx'
+import NotificationPreferencesPanel from '../components/communication/NotificationPreferencesPanel.jsx'
+import TelegramSettingsPanel from '../components/communication/TelegramSettingsPanel.jsx'
 import { formatDateTime } from '../utils/format.js'
 
 export default function SettingsPage() {
-  const { user } = useAuth()
+  const { user, can } = useAuth()
   const [tab, setTab] = useState('profile')
   const [revokingAll, setRevokingAll] = useState(false)
 
@@ -53,6 +55,9 @@ export default function SettingsPage() {
         tabs={[
           { value: 'profile', label: 'Profile' },
           { value: 'security', label: 'Security' },
+          ...(can('notifications.view') || can('telegram.connect')
+            ? [{ value: 'communication', label: 'Communication' }]
+            : []),
         ]}
       />
 
@@ -80,7 +85,7 @@ export default function SettingsPage() {
                   {(user?.roles ?? []).map((role) => {
                     const name = typeof role === 'string' ? role : role?.name
                     return name ? (
-                      <Badge key={name} tone="pink">
+                      <Badge key={name} tone="brand">
                         {name}
                       </Badge>
                     ) : null
@@ -207,6 +212,13 @@ export default function SettingsPage() {
             </ul>
           )}
         </Card>
+      ) : null}
+
+      {tab === 'communication' ? (
+        <div className="space-y-6">
+          {can('notifications.view') ? <NotificationPreferencesPanel /> : null}
+          {can('telegram.connect') ? <TelegramSettingsPanel /> : null}
+        </div>
       ) : null}
 
       <ConfirmDialog

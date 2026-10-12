@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AppointmentController;
 use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ConsultationController;
+use App\Http\Controllers\Api\ConversationController;
 use App\Http\Controllers\Api\DiagnosisController;
 use App\Http\Controllers\Api\DiseaseController;
 use App\Http\Controllers\Api\DocumentController;
@@ -14,12 +15,14 @@ use App\Http\Controllers\Api\InventoryItemController;
 use App\Http\Controllers\Api\InvoiceController;
 use App\Http\Controllers\Api\MedicalRecordController;
 use App\Http\Controllers\Api\MedicineController;
+use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\PatientController;
 use App\Http\Controllers\Api\PasswordResetController;
 use App\Http\Controllers\Api\PrescriptionController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\StockMovementController;
 use App\Http\Controllers\Api\SymptomController;
+use App\Http\Controllers\Api\TelegramController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\VitalSignController;
 use Illuminate\Support\Facades\Route;
@@ -40,6 +43,9 @@ Route::prefix('v1')->group(function () {
     Route::get('/auth/email/verify/{id}/{hash}', [EmailVerificationController::class, 'verify'])
         ->middleware(['signed', 'throttle:api'])
         ->name('verification.verify');
+
+    // Telegram webhook (public; authenticated via the X-Telegram-Bot-Api-Secret-Token header)
+    Route::post('/telegram/webhook', [TelegramController::class, 'webhook'])->middleware('throttle:api');
 
     // Protected routes
     $protectedMiddleware = ['auth:sanctum', 'throttle:api'];
@@ -170,6 +176,34 @@ Route::prefix('v1')->group(function () {
         // Expert system evaluation audit trail
         Route::get('/audit-logs', [AuditLogController::class, 'index']);
         Route::get('/audit-logs/{auditLog}', [AuditLogController::class, 'show']);
+
+        // Staff communication — direct & group conversations
+        Route::get('/conversations/recipients', [ConversationController::class, 'recipients']);
+        Route::get('/conversations', [ConversationController::class, 'index']);
+        Route::post('/conversations', [ConversationController::class, 'store']);
+        Route::get('/conversations/{conversation}', [ConversationController::class, 'show']);
+        Route::get('/conversations/{conversation}/messages', [ConversationController::class, 'messages']);
+        Route::post('/conversations/{conversation}/messages', [ConversationController::class, 'sendMessage']);
+        Route::post('/conversations/{conversation}/read', [ConversationController::class, 'markRead']);
+        Route::post('/conversations/{conversation}/participants', [ConversationController::class, 'addParticipants']);
+        Route::delete('/conversations/{conversation}/participants/{user}', [ConversationController::class, 'removeParticipant']);
+
+        // In-app notifications
+        Route::get('/notifications', [NotificationController::class, 'index']);
+        Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
+        Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead']);
+        Route::post('/notifications/{notification}/read', [NotificationController::class, 'markRead']);
+        Route::delete('/notifications/{notification}', [NotificationController::class, 'destroy']);
+        Route::get('/notification-preferences', [NotificationController::class, 'preferences']);
+        Route::put('/notification-preferences', [NotificationController::class, 'updatePreferences']);
+
+        // Telegram linking & group notifications
+        Route::get('/telegram/status', [TelegramController::class, 'status']);
+        Route::post('/telegram/link', [TelegramController::class, 'link']);
+        Route::delete('/telegram/link', [TelegramController::class, 'unlink']);
+        Route::post('/telegram/webhook/register', [TelegramController::class, 'linkWebhook']);
+        Route::get('/telegram/group-config', [TelegramController::class, 'groupConfig']);
+        Route::put('/telegram/group-config', [TelegramController::class, 'updateGroupConfig']);
 
         // Medical Expert System (proxied to the internal Python service)
         Route::post('/expert-system/evaluate', [ExpertSystemController::class, 'evaluate']);

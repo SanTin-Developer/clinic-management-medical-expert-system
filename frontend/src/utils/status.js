@@ -2,7 +2,7 @@ const meta = (label, tone) => ({ label, tone })
 
 export const APPOINTMENT_STATUS = {
   scheduled: meta('Scheduled', 'blue'),
-  confirmed: meta('Confirmed', 'pink'),
+  confirmed: meta('Confirmed', 'brand'),
   in_progress: meta('In progress', 'navy'),
   completed: meta('Completed', 'green'),
   cancelled: meta('Cancelled', 'red'),
@@ -29,7 +29,7 @@ export const INVOICE_STATUS = {
 export const PAYMENT_METHODS = {
   cash: meta('Cash', 'green'),
   card: meta('Card', 'blue'),
-  bank_transfer: meta('Bank transfer', 'pink'),
+  bank_transfer: meta('Bank transfer', 'brand'),
   insurance: meta('Insurance', 'navy'),
   other: meta('Other', 'gray'),
 }
@@ -46,7 +46,7 @@ export const STOCK_MOVEMENT_TYPE = {
 
 export const DOCUMENT_CATEGORIES = {
   'lab-result': meta('Lab result', 'blue'),
-  imaging: meta('Imaging', 'pink'),
+  imaging: meta('Imaging', 'brand'),
   referral: meta('Referral', 'navy'),
   consent: meta('Consent', 'amber'),
   insurance: meta('Insurance', 'green'),

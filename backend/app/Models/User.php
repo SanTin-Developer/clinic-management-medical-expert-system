@@ -7,7 +7,9 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -88,5 +90,47 @@ class User extends Authenticatable implements MustVerifyEmail
     public function stockMovements(): HasMany
     {
         return $this->hasMany(StockMovement::class);
+    }
+
+    public function conversations(): BelongsToMany
+    {
+        return $this->belongsToMany(Conversation::class, 'conversation_participants')
+            ->withPivot(['last_read_message_id', 'joined_at', 'left_at'])
+            ->withTimestamps();
+    }
+
+    public function conversationParticipants(): HasMany
+    {
+        return $this->hasMany(ConversationParticipant::class);
+    }
+
+    public function sentMessages(): HasMany
+    {
+        return $this->hasMany(ConversationMessage::class, 'sender_id');
+    }
+
+    public function notificationPreference(): HasOne
+    {
+        return $this->hasOne(NotificationPreference::class);
+    }
+
+    public function telegramConnection(): HasOne
+    {
+        return $this->hasOne(TelegramConnection::class);
+    }
+
+    public function telegramLinkingTokens(): HasMany
+    {
+        return $this->hasMany(TelegramLinkingToken::class);
+    }
+
+    public function telegramDeliveryLogs(): HasMany
+    {
+        return $this->hasMany(TelegramDeliveryLog::class);
+    }
+
+    public function receivesBroadcastNotificationsOn(?object $notification = null): string
+    {
+        return 'notifications.'.$this->id;
     }
 }

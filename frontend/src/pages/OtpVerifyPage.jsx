@@ -5,9 +5,11 @@ import Field from '../components/ui/Field.jsx'
 import Input from '../components/ui/Input.jsx'
 import { resendOtp } from '../api/auth.js'
 import { useAuth } from '../hooks/useAuth.js'
+import { usePageTitle } from '../hooks/usePageTitle.js'
 import AuthShell from './auth/AuthShell.jsx'
 
 export default function OtpVerifyPage() {
+  usePageTitle('Two-Factor Verification')
   const { verifyOtp } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
@@ -90,7 +92,7 @@ export default function OtpVerifyPage() {
             type="checkbox"
             checked={rememberDevice}
             onChange={(e) => setRememberDevice(e.target.checked)}
-            className="size-4 accent-[#db2777]"
+            className="size-4 accent-brand"
           />
           Remember this device for 30 days
         </label>

@@ -30,9 +30,10 @@ import { statusBadgeFor, APPOINTMENT_STATUS, PRESCRIPTION_STATUS } from '../util
 
 function greeting() {
   const hour = new Date().getHours()
-  if (hour < 12) return 'Good morning'
-  if (hour < 18) return 'Good afternoon'
-  return 'Good evening'
+  if (hour >= 5 && hour < 12) return 'Good morning'
+  if (hour >= 12 && hour < 17) return 'Good afternoon'
+  if (hour >= 17 && hour < 21) return 'Good evening'
+  return 'Good night'
 }
 
 export default function DashboardPage() {
@@ -91,7 +92,7 @@ export default function DashboardPage() {
                 : 'Loading…'
             }
             icon={Users}
-            tone="pink"
+            tone="brand"
             loading={summary.isLoading}
           />
           <StatCard

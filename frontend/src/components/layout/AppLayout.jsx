@@ -2,12 +2,14 @@ import { useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import Sidebar from './Sidebar.jsx'
 import Header from './Header.jsx'
+import DocumentTitle from '../../hooks/usePageTitle.js'
 
 export default function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
     <div className="flex h-screen overflow-hidden bg-canvas">
+      <DocumentTitle />
       <Sidebar
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}

@@ -1,17 +1,22 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import * as authApi from '../api/auth.js'
 import { AUTH_EVENTS } from '../api/client.js'
-import { tokenStorage } from '../utils/storage.js'
+import { clearStoredAuth, tokenStorage } from '../utils/storage.js'
+import { disconnectEcho } from '../lib/echo.js'
 import { AuthContext } from './AuthContext.js'
 
 export function AuthProvider({ children }) {
+  const queryClient = useQueryClient()
   const [user, setUser] = useState(null)
   const [isLoading, setIsLoading] = useState(() => Boolean(tokenStorage.get()))
 
   const clearSession = useCallback(() => {
-    tokenStorage.clear()
+    clearStoredAuth()
+    disconnectEcho()
+    queryClient.clear()
     setUser(null)
-  }, [])
+  }, [queryClient])
 
   useEffect(() => {
     const token = tokenStorage.get()

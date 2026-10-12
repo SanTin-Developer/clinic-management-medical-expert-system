@@ -2,7 +2,10 @@ import { Link } from 'react-router-dom'
 import { Compass } from 'lucide-react'
 import Button from '../components/ui/Button.jsx'
 
+import { usePageTitle } from '../hooks/usePageTitle.js'
+
 export default function NotFoundPage() {
+  usePageTitle('Not Found')
   return (
     <div className="grid min-h-screen place-items-center bg-canvas p-4">
       <div className="flex max-w-md flex-col items-center text-center">

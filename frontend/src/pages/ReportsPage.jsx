@@ -96,7 +96,7 @@ export default function ReportsPage() {
         ) : (
           <div className="space-y-6">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              <StatCard label="Patients" value={summary.data ? summary.data.patients.total.toLocaleString() : '—'} sub={summary.data ? `${summary.data.patients.new_this_month} new this month` : undefined} icon={Activity} loading={summary.isLoading} tone="pink" />
+              <StatCard label="Patients" value={summary.data ? summary.data.patients.total.toLocaleString() : '—'} sub={summary.data ? `${summary.data.patients.new_this_month} new this month` : undefined} icon={Activity} loading={summary.isLoading} tone="brand" />
               <StatCard label="Appointments" value={summary.data ? summary.data.appointments.total.toLocaleString() : '—'} sub={summary.data ? `${summary.data.appointments.by_status?.scheduled ?? 0} scheduled` : undefined} icon={CalendarDays} loading={summary.isLoading} tone="blue" />
               <StatCard label="Revenue (all time)" value={summary.data ? formatCurrency(summary.data.billing.revenue_total) : '—'} sub={summary.data ? `${formatCurrency(summary.data.billing.outstanding_balance)} outstanding` : undefined} icon={CircleDollarSign} loading={summary.isLoading} tone="green" />
               <StatCard label="Consultations" value={summary.data ? summary.data.consultations.total.toLocaleString() : '—'} sub={summary.data ? `${summary.data.diagnoses.total} diagnoses` : undefined} icon={PackageSearch} loading={summary.isLoading} tone="amber" />

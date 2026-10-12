@@ -127,7 +127,7 @@ export default function DiagnosisFormModal({ open, onClose, onSaved }) {
               type="checkbox"
               checked={form.is_confirmed}
               onChange={(e) => set('is_confirmed')(e.target.checked)}
-              className="size-4 accent-[#db2777]"
+              className="size-4 accent-brand"
             />
             Confirmed diagnosis
           </label>

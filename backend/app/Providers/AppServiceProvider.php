@@ -10,6 +10,8 @@ use App\Services\Files\DiskDocumentStorage;
 use App\Services\Files\DocumentStorage;
 use App\Services\Files\FileScanner;
 use App\Services\Files\NullFileScanner;
+use App\Services\Telegram\TelegramClient;
+use App\Services\Telegram\TelegramLinkService;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -43,6 +45,14 @@ class AppServiceProvider extends ServiceProvider
             }
 
             return new DiskDocumentStorage($driver);
+        });
+
+        $this->app->singleton(TelegramClient::class, function (): TelegramClient {
+            return new TelegramClient((array) config('communication.telegram', []));
+        });
+
+        $this->app->singleton(TelegramLinkService::class, function (): TelegramLinkService {
+            return new TelegramLinkService((array) config('communication.telegram', []));
         });
     }
 

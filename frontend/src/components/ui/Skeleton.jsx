@@ -14,7 +14,7 @@ export function Spinner({ label, className }) {
 }
 
 export function Skeleton({ className }) {
-  return <div className={cn('animate-pulse rounded-lg bg-pink-100/70', className)} />
+  return <div className={cn('animate-pulse rounded-lg bg-brand-soft/70', className)} />
 }
 
 export function CardSkeleton({ rows = 4 }) {

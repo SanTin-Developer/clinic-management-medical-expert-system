@@ -5,11 +5,13 @@ import Button from '../components/ui/Button.jsx'
 import Field from '../components/ui/Field.jsx'
 import Input from '../components/ui/Input.jsx'
 import { resetPassword } from '../api/auth.js'
+import { usePageTitle } from '../hooks/usePageTitle.js'
 import AuthShell from './auth/AuthShell.jsx'
 
 const EMAIL_RE = /^\S+@\S+\.\S+$/
 
 export default function NewPasswordPage() {
+  usePageTitle('Reset Password')
   const navigate = useNavigate()
   const location = useLocation()
   const emailParam = location.state?.email ?? ''

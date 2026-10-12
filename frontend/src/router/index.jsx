@@ -26,6 +26,7 @@ const ReportsPage = lazy(() => import('../pages/ReportsPage.jsx'))
 const UsersPage = lazy(() => import('../pages/UsersPage.jsx'))
 const SettingsPage = lazy(() => import('../pages/SettingsPage.jsx'))
 const ExpertSystemPage = lazy(() => import('../pages/ExpertSystemPage.jsx'))
+const ChatPage = lazy(() => import('../pages/ChatPage.jsx'))
 const NotFoundPage = lazy(() => import('../pages/NotFoundPage.jsx'))
 const ForbiddenPage = lazy(() => import('../pages/ForbiddenPage.jsx'))
 
@@ -156,6 +157,22 @@ export const router = createBrowserRouter([
         ),
       },
       { path: 'settings', element: withSuspense(<SettingsPage />) },
+      {
+        path: 'chat',
+        element: withSuspense(
+          <Guard permission="chat.view">
+            <ChatPage />
+          </Guard>,
+        ),
+      },
+      {
+        path: 'chat/:id',
+        element: withSuspense(
+          <Guard permission="chat.view">
+            <ChatPage />
+          </Guard>,
+        ),
+      },
       {
         path: 'expert-system',
         element: withSuspense(

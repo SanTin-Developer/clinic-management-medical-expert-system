@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { CheckCircle2, MailWarning, XCircle } from 'lucide-react'
 import { verifyEmailUrl } from '../api/auth.js'
+import { usePageTitle } from '../hooks/usePageTitle.js'
 import AuthShell from './auth/AuthShell.jsx'
 import { Spinner } from '../components/ui/Skeleton.jsx'
 
 export default function VerifyEmailPage() {
+  usePageTitle('Verify Email')
   const [searchParams] = useSearchParams()
   const verifyUrl = searchParams.get('verify_url') ?? ''
   const [status, setStatus] = useState(verifyUrl ? 'verifying' : 'missing')

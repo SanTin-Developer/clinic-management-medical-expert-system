@@ -1,16 +1,17 @@
 import { useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import Button from '../components/ui/Button.jsx'
 import Field from '../components/ui/Field.jsx'
 import Input from '../components/ui/Input.jsx'
 import { useAuth } from '../hooks/useAuth.js'
+import { usePageTitle } from '../hooks/usePageTitle.js'
+import { APP_NAME } from '../constants/index.js'
 import AuthShell from './auth/AuthShell.jsx'
 
 export default function LoginPage() {
+  usePageTitle('Sign In')
   const { login } = useAuth()
   const navigate = useNavigate()
-  const location = useLocation()
-  const from = location.state?.from ?? '/'
 
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
@@ -35,7 +36,7 @@ export default function LoginPage() {
         })
         return
       }
-      navigate(from, { replace: true })
+      navigate('/', { replace: true })
     } catch (err) {
       setErrors({ form: err.message })
     } finally {
@@ -44,7 +45,7 @@ export default function LoginPage() {
   }
 
   return (
-    <AuthShell title="Clinic Management System" description="Sign in to your account to continue.">
+    <AuthShell title={APP_NAME} description="Sign in to your account to continue.">
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
         {errors.form ? (
           <div
