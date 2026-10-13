@@ -55,16 +55,42 @@ class TelegramClient
     /**
      * @return array<string, mixed>
      */
-    public function deleteWebhook(): array
+    public function deleteWebhook(bool $dropPending = false): array
     {
-        return $this->call('deleteWebhook', ['drop_pending_updates' => true]);
+        return $this->call('deleteWebhook', ['drop_pending_updates' => $dropPending]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function getWebhookInfo(): array
+    {
+        $response = $this->call('getWebhookInfo');
+
+        return $response['result'] ?? [];
+    }
+
+    /**
+     * Long-poll Telegram for new updates.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function getUpdates(int $offset = 0, int $timeout = 0): array
+    {
+        $response = $this->call('getUpdates', array_filter([
+            'offset' => $offset > 0 ? $offset : null,
+            'timeout' => $timeout,
+            'allowed_updates' => ['message'],
+        ], fn ($value) => $value !== null), $timeout + (int) ($this->config['timeout'] ?? 10) + 5);
+
+        return $response['result'] ?? [];
     }
 
     /**
      * @param  array<string, mixed>  $payload
      * @return array<string, mixed>
      */
-    private function call(string $method, array $payload = []): array
+    private function call(string $method, array $payload = [], ?int $timeout = null): array
     {
         $token = $this->config['bot_token'] ?? null;
 
@@ -72,7 +98,7 @@ class TelegramClient
             throw new RuntimeException('Telegram bot token is not configured.');
         }
 
-        $response = Http::timeout((int) ($this->config['timeout'] ?? 10))
+        $response = Http::timeout($timeout ?? (int) ($this->config['timeout'] ?? 10))
             ->baseUrl(rtrim((string) ($this->config['api_base_url'] ?? 'https://api.telegram.org'), '/'))
             ->asJson()
             ->post('/bot'.$token.'/'.$method, $payload);

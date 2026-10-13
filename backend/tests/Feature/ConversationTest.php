@@ -2,10 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Events\MessagesRead;
 use App\Models\Conversation;
 use App\Notifications\NewMessageNotification;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Notification;
 use Laravel\Sanctum\Sanctum;
 use Spatie\Permission\PermissionRegistrar;
@@ -205,6 +207,75 @@ class ConversationTest extends TestCase
             ->assertJsonPath('message', 'You left the conversation.');
 
         $this->getJson("/api/v1/conversations/{$conversation->id}")->assertForbidden();
+    }
+
+    public function test_conversation_show_exposes_participant_read_markers(): void
+    {
+        $nurse = $this->actingAsRole('Nurse');
+        $doctor = $this->userWithRole('Doctor');
+
+        $conversation = Conversation::create([
+            'type' => Conversation::TYPE_PRIVATE,
+            'created_by' => $nurse->id,
+        ]);
+        $conversation->participants()->create(['user_id' => $nurse->id]);
+        $conversation->participants()->create(['user_id' => $doctor->id]);
+
+        $messageId = $this->postJson("/api/v1/conversations/{$conversation->id}/messages", [
+            'body' => 'Please confirm.',
+        ])->assertCreated()->json('data.id');
+
+        Sanctum::actingAs($doctor);
+        $this->postJson("/api/v1/conversations/{$conversation->id}/read")->assertOk();
+
+        Sanctum::actingAs($nurse);
+
+        $participants = collect(
+            $this->getJson("/api/v1/conversations/{$conversation->id}")
+                ->assertOk()
+                ->json('data.participants'),
+        );
+
+        $doctorMarker = $participants->firstWhere('id', $doctor->id);
+        $nurseMarker = $participants->firstWhere('id', $nurse->id);
+
+        $this->assertSame($messageId, $doctorMarker['last_read_message_id']);
+        $this->assertGreaterThanOrEqual($messageId, $nurseMarker['last_read_message_id']);
+    }
+
+    public function test_marking_read_broadcasts_a_read_receipt_once(): void
+    {
+        Event::fake([MessagesRead::class]);
+
+        $nurse = $this->actingAsRole('Nurse');
+        $doctor = $this->userWithRole('Doctor');
+
+        $conversation = Conversation::create([
+            'type' => Conversation::TYPE_PRIVATE,
+            'created_by' => $nurse->id,
+        ]);
+        $conversation->participants()->create(['user_id' => $nurse->id]);
+        $conversation->participants()->create(['user_id' => $doctor->id]);
+
+        $messageId = $this->postJson("/api/v1/conversations/{$conversation->id}/messages", [
+            'body' => 'Ping.',
+        ])->assertCreated()->json('data.id');
+
+        Sanctum::actingAs($doctor);
+
+        $this->postJson("/api/v1/conversations/{$conversation->id}/read",
+            ['message_id' => $messageId])->assertOk();
+        // Repeating with the same marker must not broadcast again.
+        $this->postJson("/api/v1/conversations/{$conversation->id}/read",
+            ['message_id' => $messageId])->assertOk();
+
+        Event::assertDispatchedTimes(MessagesRead::class, 1);
+        Event::assertDispatched(
+            MessagesRead::class,
+            fn (MessagesRead $event) => $event->conversationId === $conversation->id
+                && $event->userId === $doctor->id
+                && $event->lastReadMessageId === $messageId,
+        );
     }
 
     public function test_patients_cannot_access_staff_chat(): void

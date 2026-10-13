@@ -79,10 +79,15 @@ export default function LoginPage() {
             invalid={Boolean(errors.password)}
           />
         </Field>
-        <Button type="submit" className="w-full" size="lg" loading={loading}>
+        <Button
+          type="submit"
+          className="w-full bg-gradient-to-r from-brand to-brand-dark shadow-[0_10px_24px_-12px_rgb(37_99_235_/_0.8)] hover:from-brand-dark hover:to-brand-darker dark:from-brand dark:to-brand dark:hover:brightness-110"
+          size="lg"
+          loading={loading}
+        >
           Sign in
         </Button>
-        <p className="text-center text-sm text-ink-muted">
+        <p className="pt-1 text-center text-sm text-ink-muted">
           Forgotten your password?{' '}
           <Link className="font-medium text-brand hover:text-brand-dark" to="/forgot-password">
             Reset it

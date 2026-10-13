@@ -5,7 +5,9 @@ import Button from '../ui/Button.jsx'
 import Field from '../ui/Field.jsx'
 import Input from '../ui/Input.jsx'
 import Select from '../ui/Select.jsx'
+import PasswordChecklist from '../ui/PasswordChecklist.jsx'
 import { userApi } from '../../api/users.js'
+import { passwordError } from '../../utils/password.js'
 import { ROLES } from '../../utils/status.js'
 
 export default function UserFormModal({ open, onClose, initial, onSaved }) {
@@ -37,9 +39,13 @@ export default function UserFormModal({ open, onClose, initial, onSaved }) {
     if (!form.role) next.role = 'Select a role.'
     if (!editing) {
       if (!form.password) next.password = 'Required.'
-      else if (form.password.length < 8) next.password = 'At least 8 characters.'
-    } else if (form.password && form.password.length < 8) {
-      next.password = 'At least 8 characters.'
+      else {
+        const pwdError = passwordError(form.password)
+        if (pwdError) next.password = pwdError
+      }
+    } else if (form.password) {
+      const pwdError = passwordError(form.password)
+      if (pwdError) next.password = pwdError
     }
     setErrors(next)
     if (Object.keys(next).length) return
@@ -114,10 +120,11 @@ export default function UserFormModal({ open, onClose, initial, onSaved }) {
           htmlFor="u-password"
           required={!editing}
           error={errors.password}
-          hint={editing ? 'Leave blank to keep the current password.' : 'At least 8 characters.'}
+          hint={editing ? 'Leave blank to keep the current password. Otherwise it must meet all requirements below.' : 'Must meet all requirements below.'}
         >
-          <Input id="u-password" type="password" autoComplete="new-password" value={form.password} onChange={(e) => set('password')(e.target.value)} invalid={Boolean(errors.password)} />
+          <Input id="u-password" type="password" autoComplete="new-password" value={form.password} onChange={(e) => set('password')(e.target.value)} invalid={Boolean(errors.password)} aria-describedby="u-password-requirements" />
         </Field>
+        <PasswordChecklist id="u-password-requirements" value={form.password} />
       </form>
     </Modal>
   )

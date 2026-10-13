@@ -94,6 +94,13 @@ class AppServiceProvider extends ServiceProvider
                 (string) $request->input('email').'|'.$request->ip()
             );
         });
+
+        // Telegram delivers webhook updates from its own infrastructure; give it
+        // a higher ceiling than the shared per-user API limiter so bursts of
+        // updates are not rejected (which would trigger Telegram retries).
+        RateLimiter::for('telegram-webhook', function (Request $request) {
+            return Limit::perMinute(120)->by($request->ip());
+        });
     }
 
     /**

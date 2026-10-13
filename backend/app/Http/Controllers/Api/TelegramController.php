@@ -6,16 +6,16 @@ use App\Http\Controllers\Controller;
 use App\Models\TelegramGroupConfig;
 use App\Services\Telegram\TelegramClient;
 use App\Services\Telegram\TelegramLinkService;
+use App\Services\Telegram\TelegramUpdateHandler;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
-use Throwable;
 
 class TelegramController extends Controller
 {
     public function __construct(
         private readonly TelegramLinkService $links,
         private readonly TelegramClient $client,
+        private readonly TelegramUpdateHandler $updates,
     ) {}
 
     public function status(Request $request): JsonResponse
@@ -66,13 +66,33 @@ class TelegramController extends Controller
 
         abort_unless($this->client->isConfigured(), 503, 'Telegram bot token is not configured.');
 
-        $webhookUrl = url('/api/v1/telegram/webhook');
+        $webhookUrl = $this->resolveWebhookUrl();
+
+        if (! str_starts_with($webhookUrl, 'https://')) {
+            return response()->json([
+                'message' => 'Telegram requires a public HTTPS webhook URL. Set TELEGRAM_WEBHOOK_URL or use polling.',
+                'data' => ['url' => $webhookUrl],
+            ], 422);
+        }
 
         $this->client->setWebhook($webhookUrl, config('communication.telegram.webhook_secret'));
 
         return response()->json([
             'message' => 'Telegram webhook registered.',
             'data' => ['url' => $webhookUrl],
+        ]);
+    }
+
+    public function unregisterWebhook(Request $request): JsonResponse
+    {
+        $this->authorizeAbility($request, 'telegram.group.manage');
+
+        abort_unless($this->client->isConfigured(), 503, 'Telegram bot token is not configured.');
+
+        $this->client->deleteWebhook();
+
+        return response()->json([
+            'message' => 'Telegram webhook removed.',
         ]);
     }
 
@@ -120,56 +140,16 @@ class TelegramController extends Controller
             403,
         );
 
-        $message = $request->input('message');
-
-        if (is_array($message) && isset($message['text'], $message['chat']['id'])) {
-            $this->handleCommand(
-                (int) $message['chat']['id'],
-                (string) $message['text'],
-                $message['from']['username'] ?? null,
-            );
-        }
+        $this->updates->handle($request->all());
 
         return response()->json(['ok' => true]);
     }
 
-    private function handleCommand(int $chatId, string $text, ?string $username): void
+    private function resolveWebhookUrl(): string
     {
-        $text = trim($text);
+        $configured = (string) (config('communication.telegram.webhook_url') ?? '');
 
-        if (Str::startsWith($text, '/start')) {
-            $parts = preg_split('/\s+/', $text) ?: [];
-            $token = $parts[1] ?? null;
-
-            if (filled($token)) {
-                $connection = $this->links->consumeToken($token, $chatId, $username);
-
-                $this->safeReply($chatId, $connection
-                    ? 'Your RoyalCare account is now linked. You will receive notifications here.'
-                    : 'This linking code is invalid or has expired. Generate a new one from RoyalCare.');
-            } else {
-                $this->safeReply($chatId, 'Welcome to RoyalCare. Open Settings → Telegram in the app to link your account.');
-            }
-
-            return;
-        }
-
-        if (Str::startsWith($text, '/stop')) {
-            $removed = $this->links->unlinkByChatId($chatId);
-
-            $this->safeReply($chatId, $removed
-                ? 'You have been unlinked and will no longer receive notifications here.'
-                : 'This chat is not linked to any RoyalCare account.');
-        }
-    }
-
-    private function safeReply(int $chatId, string $text): void
-    {
-        try {
-            $this->client->sendMessage($chatId, $text);
-        } catch (Throwable $exception) {
-            report($exception);
-        }
+        return $configured !== '' ? $configured : url('/api/v1/telegram/webhook');
     }
 
     private function authorizeAbility(Request $request, string $ability): void

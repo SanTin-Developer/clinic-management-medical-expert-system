@@ -20,8 +20,9 @@ class ResetPasswordRequest extends FormRequest
                 'string',
                 'confirmed',
                 Rules\Password::min((int) config('auth.password_min_length', 8))
-                    ->letters()
-                    ->numbers(),
+                    ->mixedCase()
+                    ->numbers()
+                    ->symbols(),
             ],
         ];
     }

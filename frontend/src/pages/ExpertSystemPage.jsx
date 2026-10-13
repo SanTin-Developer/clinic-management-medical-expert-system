@@ -166,7 +166,7 @@ function AnalyzeTab({ canUse, canViewRules }) {
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search symptoms…"
                 aria-label="Search symptoms"
-                className="h-10 w-full rounded-xl border border-line bg-white px-3 text-sm outline-none transition focus:ring-2 focus:ring-brand"
+                className="h-10 w-full rounded-xl border border-line bg-surface px-3 text-sm outline-none transition focus:ring-2 focus:ring-brand"
               />
               {canFilterByRules ? (
                 <label className="flex items-center gap-2 text-xs font-medium text-ink-muted">
@@ -524,11 +524,11 @@ function AuditTab({ canView }) {
       <div className="mb-4 flex flex-wrap items-end gap-3">
         <label className="flex flex-col gap-1 text-xs font-medium text-ink-muted" htmlFor="aud-from">
           From
-          <input id="aud-from" type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="h-10 w-40 rounded-xl border border-line bg-white px-3 text-sm outline-none transition focus:ring-2 focus:ring-brand focus:ring-offset-0" />
+          <input id="aud-from" type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="h-10 w-40 rounded-xl border border-line bg-surface px-3 text-sm outline-none transition focus:ring-2 focus:ring-brand focus:ring-offset-0" />
         </label>
         <label className="flex flex-col gap-1 text-xs font-medium text-ink-muted" htmlFor="aud-to">
           To
-          <input id="aud-to" type="date" value={to} onChange={(e) => setTo(e.target.value)} className="h-10 w-40 rounded-xl border border-line bg-white px-3 text-sm outline-none transition focus:ring-2 focus:ring-brand focus:ring-offset-0" />
+          <input id="aud-to" type="date" value={to} onChange={(e) => setTo(e.target.value)} className="h-10 w-40 rounded-xl border border-line bg-surface px-3 text-sm outline-none transition focus:ring-2 focus:ring-brand focus:ring-offset-0" />
         </label>
         <Button size="sm" variant="outline" onClick={() => { setPage(1); query.refetch() }}>
           Apply

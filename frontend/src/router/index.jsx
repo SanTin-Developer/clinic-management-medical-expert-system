@@ -1,8 +1,10 @@
 import { createBrowserRouter } from 'react-router-dom'
 import { lazy, Suspense } from 'react'
 import AppLayout from '../components/layout/AppLayout.jsx'
+import AuthLayout from '../components/layout/AuthLayout.jsx'
 import ProtectedRoute from './ProtectedRoute.jsx'
 import Guard from './Guard.jsx'
+import { COMING_SOON_ITEMS } from '../constants/navigation.js'
 import { Spinner } from '../components/ui/Skeleton.jsx'
 
 const LoginPage = lazy(() => import('../pages/LoginPage.jsx'))
@@ -27,6 +29,7 @@ const UsersPage = lazy(() => import('../pages/UsersPage.jsx'))
 const SettingsPage = lazy(() => import('../pages/SettingsPage.jsx'))
 const ExpertSystemPage = lazy(() => import('../pages/ExpertSystemPage.jsx'))
 const ChatPage = lazy(() => import('../pages/ChatPage.jsx'))
+const ComingSoonPage = lazy(() => import('../pages/ComingSoonPage.jsx'))
 const NotFoundPage = lazy(() => import('../pages/NotFoundPage.jsx'))
 const ForbiddenPage = lazy(() => import('../pages/ForbiddenPage.jsx'))
 
@@ -45,12 +48,17 @@ function withSuspense(element) {
 }
 
 export const router = createBrowserRouter([
-  { path: '/login', element: withSuspense(<LoginPage />) },
-  { path: '/login/verify', element: withSuspense(<OtpVerifyPage />) },
-  { path: '/forgot-password', element: withSuspense(<ForgotPasswordPage />) },
-  { path: '/reset-password', element: withSuspense(<ResetPasswordPage />) },
-  { path: '/reset-password/new', element: withSuspense(<NewPasswordPage />) },
-  { path: '/verify-email', element: withSuspense(<VerifyEmailPage />) },
+  {
+    element: <AuthLayout />,
+    children: [
+      { path: 'login', element: withSuspense(<LoginPage />) },
+      { path: 'login/verify', element: withSuspense(<OtpVerifyPage />) },
+      { path: 'forgot-password', element: withSuspense(<ForgotPasswordPage />) },
+      { path: 'reset-password', element: withSuspense(<ResetPasswordPage />) },
+      { path: 'reset-password/new', element: withSuspense(<NewPasswordPage />) },
+      { path: 'verify-email', element: withSuspense(<VerifyEmailPage />) },
+    ],
+  },
   {
     path: '/',
     element: (
@@ -181,6 +189,12 @@ export const router = createBrowserRouter([
           </Guard>,
         ),
       },
+      ...COMING_SOON_ITEMS.map((item) => ({
+        path: item.to.replace(/^\//, ''),
+        element: withSuspense(
+          <ComingSoonPage title={item.label} description={item.description} Icon={item.icon} />,
+        ),
+      })),
       { path: 'forbidden', element: withSuspense(<ForbiddenPage />) },
     ],
   },

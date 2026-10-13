@@ -16,6 +16,9 @@ class TelegramDeliveryLog extends Model
     protected $fillable = [
         'user_id',
         'telegram_chat_id',
+        'telegram_message_id',
+        'conversation_id',
+        'conversation_message_id',
         'event_type',
         'subject',
         'status',
@@ -28,6 +31,9 @@ class TelegramDeliveryLog extends Model
     {
         return [
             'telegram_chat_id' => 'integer',
+            'telegram_message_id' => 'integer',
+            'conversation_id' => 'integer',
+            'conversation_message_id' => 'integer',
             'attempts' => 'integer',
         ];
     }
@@ -35,5 +41,15 @@ class TelegramDeliveryLog extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function conversation(): BelongsTo
+    {
+        return $this->belongsTo(Conversation::class);
+    }
+
+    public function conversationMessage(): BelongsTo
+    {
+        return $this->belongsTo(ConversationMessage::class);
     }
 }

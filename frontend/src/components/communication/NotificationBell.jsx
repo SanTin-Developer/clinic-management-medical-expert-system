@@ -21,6 +21,13 @@ function describe(notification) {
       url: data.url,
     }
   }
+  if (notification.kind === 'telegram_delivery_failed' || data.kind === 'telegram_delivery_failed') {
+    return {
+      title: 'Telegram delivery failed',
+      body: 'A Telegram copy of your message could not be delivered.',
+      url: data.url,
+    }
+  }
   return {
     title: data.title ?? 'Notification',
     body: data.body ?? data.message ?? '',

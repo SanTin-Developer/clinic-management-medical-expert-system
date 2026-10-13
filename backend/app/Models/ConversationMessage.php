@@ -8,11 +8,31 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ConversationMessage extends Model
 {
+    public const SOURCE_WEB = 'web';
+
+    public const SOURCE_TELEGRAM = 'telegram';
+
     protected $fillable = [
         'conversation_id',
         'sender_id',
         'body',
+        'source',
+        'telegram_chat_id',
+        'telegram_message_id',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'telegram_chat_id' => 'integer',
+            'telegram_message_id' => 'integer',
+        ];
+    }
+
+    public function isFromTelegram(): bool
+    {
+        return $this->source === self::SOURCE_TELEGRAM;
+    }
 
     public function conversation(): BelongsTo
     {

@@ -8,6 +8,7 @@ import Card from '../components/ui/Card.jsx'
 import Button from '../components/ui/Button.jsx'
 import Badge from '../components/ui/Badge.jsx'
 import Dropdown, { DropdownItem } from '../components/ui/Dropdown.jsx'
+import Modal from '../components/ui/Modal.jsx'
 import Textarea from '../components/ui/Textarea.jsx'
 import { Spinner } from '../components/ui/Skeleton.jsx'
 import { EmptyState, ErrorState } from '../components/ui/State.jsx'
@@ -19,6 +20,7 @@ import { useAuth } from '../hooks/useAuth.js'
 import { formatDateTime, formatTime, truncate } from '../utils/format.js'
 
 const BROADCAST_EVENT = '.message.sent'
+const READ_EVENT = '.messages.read'
 
 function initials(name = '') {
   return name
@@ -32,8 +34,11 @@ function initials(name = '') {
 function normalizeMessage(message) {
   return {
     id: message.id,
+    client_id: message.client_id ?? null,
+    status: message.status ?? 'sent',
     conversation_id: message.conversation_id,
     body: message.body,
+    source: message.source ?? 'web',
     created_at: message.created_at,
     sender: {
       id: message.sender?.id ?? message.sender_id ?? null,
@@ -87,9 +92,13 @@ export default function ChatPage() {
 
   const [messages, setMessages] = useState([])
   const [loadingMessages, setLoadingMessages] = useState(false)
+  const [loadingOlder, setLoadingOlder] = useState(false)
+  const [page, setPage] = useState(1)
+  const [hasMore, setHasMore] = useState(false)
   const [draft, setDraft] = useState('')
   const [sending, setSending] = useState(false)
   const [newOpen, setNewOpen] = useState(false)
+  const [membersOpen, setMembersOpen] = useState(false)
   const scrollRef = useRef(null)
 
   const activeId = id ? Number(id) : null
@@ -117,7 +126,10 @@ export default function ChatPage() {
 
     let cancelled = false
     setLoadingMessages(true)
+    setLoadingOlder(false)
     setMessages([])
+    setPage(1)
+    setHasMore(false)
 
     conversationApi
       .messages(activeId, { page: 1 })
@@ -125,6 +137,7 @@ export default function ChatPage() {
         if (cancelled) return
         const ordered = [...(res.data ?? [])].reverse().map(normalizeMessage)
         setMessages(ordered)
+        setHasMore((res.current_page ?? 1) < (res.last_page ?? 1))
       })
       .catch((err) => {
         if (!cancelled) toast.error(err.message)
@@ -151,9 +164,28 @@ export default function ChatPage() {
     const channel = echo.private(`conversation.${activeId}`)
     channel.listen(BROADCAST_EVENT, (payload) => {
       const message = normalizeMessage(payload)
-      setMessages((prev) => (prev.some((m) => m.id === message.id) ? prev : [...prev, message]))
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === message.id)) return prev
+        const pending = prev.findIndex(
+          (m) =>
+            m.client_id &&
+            m.status !== 'sent' &&
+            m.body === message.body &&
+            m.sender.id === message.sender.id,
+        )
+        if (pending !== -1) {
+          const next = [...prev]
+          next[pending] = { ...message, client_id: prev[pending].client_id }
+          return next
+        }
+        return [...prev, message]
+      })
       conversationApi.markRead(activeId, message.id).catch(() => {})
       queryClient.invalidateQueries({ queryKey: ['conversations'] })
+    })
+
+    channel.listen(READ_EVENT, () => {
+      queryClient.invalidateQueries({ queryKey: ['conversation', activeId] })
     })
 
     return () => {
@@ -161,27 +193,88 @@ export default function ChatPage() {
     }
   }, [activeId, queryClient])
 
+  const newestId = messages.length ? messages[messages.length - 1].id : null
+
   useEffect(() => {
     const node = scrollRef.current
     if (node) node.scrollTop = node.scrollHeight
-  }, [messages, loadingMessages])
+  }, [newestId, loadingMessages])
+
+  const loadOlder = async () => {
+    if (!activeId || loadingOlder || !hasMore) return
+    const nextPage = page + 1
+    setLoadingOlder(true)
+    try {
+      const res = await conversationApi.messages(activeId, { page: nextPage })
+      const older = [...(res.data ?? [])].reverse().map(normalizeMessage)
+      setMessages((prev) => {
+        const known = new Set(prev.map((m) => m.id))
+        return [...older.filter((m) => !known.has(m.id)), ...prev]
+      })
+      setPage(nextPage)
+      setHasMore((res.current_page ?? nextPage) < (res.last_page ?? nextPage))
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setLoadingOlder(false)
+    }
+  }
+
+  const sendBody = async (body, clientId) => {
+    try {
+      const saved = normalizeMessage(await conversationApi.send(activeId, body))
+      setMessages((prev) =>
+        prev.map((m) => (m.client_id === clientId ? { ...saved, client_id: clientId } : m)),
+      )
+      queryClient.invalidateQueries({ queryKey: ['conversations'] })
+    } catch (err) {
+      setMessages((prev) =>
+        prev.map((m) => (m.client_id === clientId ? { ...m, status: 'failed' } : m)),
+      )
+      toast.error(err.message)
+    }
+  }
 
   const handleSend = async (event) => {
     event?.preventDefault()
     const body = draft.trim()
     if (!body || !activeId || sending) return
 
-    setSending(true)
-    try {
-      const message = normalizeMessage(await conversationApi.send(activeId, body))
-      setMessages((prev) => (prev.some((m) => m.id === message.id) ? prev : [...prev, message]))
-      setDraft('')
-      queryClient.invalidateQueries({ queryKey: ['conversations'] })
-    } catch (err) {
-      toast.error(err.message)
-    } finally {
-      setSending(false)
+    const clientId = `local-${Date.now()}-${Math.random().toString(36).slice(2)}`
+    const optimistic = {
+      id: clientId,
+      client_id: clientId,
+      status: 'sending',
+      conversation_id: activeId,
+      body,
+      source: 'web',
+      created_at: new Date().toISOString(),
+      sender: { id: user?.id ?? null, name: user?.name ?? 'You', username: user?.username ?? null },
     }
+
+    setMessages((prev) => [...prev, optimistic])
+    setDraft('')
+    setSending(true)
+    await sendBody(body, clientId)
+    setSending(false)
+  }
+
+  const retryMessage = async (message) => {
+    if (!message.client_id) return
+    setMessages((prev) =>
+      prev.map((m) => (m.client_id === message.client_id ? { ...m, status: 'sending' } : m)),
+    )
+    await sendBody(message.body, message.client_id)
+  }
+
+  const receiptLabel = (message) => {
+    if (!message.id || String(message.id).startsWith('local-')) return null
+    const others = (currentConversation?.participants ?? []).filter((p) => p.id !== user?.id)
+    if (others.length === 0) return null
+    const readers = others.filter((p) => (p.last_read_message_id ?? 0) >= message.id).length
+    if (readers === 0) return 'Delivered'
+    if (readers >= others.length) return 'Seen'
+    return `Seen by ${readers}`
   }
 
   const handleKeyDown = (event) => {
@@ -228,9 +321,9 @@ export default function ChatPage() {
         }
       />
 
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 md:grid-cols-[320px_1fr]">
+      <div className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[minmax(0,1fr)] gap-4 md:grid-cols-[320px_1fr]">
         <Card
-          bodyClassName="p-0"
+          bodyClassName="flex min-h-0 flex-1 flex-col p-0"
           className={cn('min-h-0 overflow-hidden', activeId ? 'hidden md:flex md:flex-col' : 'flex flex-col')}
         >
           <div className="border-b border-line px-4 py-3">
@@ -263,7 +356,7 @@ export default function ChatPage() {
         </Card>
 
         <Card
-          bodyClassName="p-0"
+          bodyClassName="flex min-h-0 flex-1 flex-col p-0"
           className={cn('min-h-0 overflow-hidden', activeId ? 'flex flex-col' : 'hidden md:flex md:flex-col')}
         >
           {!activeId ? (
@@ -297,9 +390,13 @@ export default function ChatPage() {
                     {currentConversation?.title ?? 'Conversation'}
                   </p>
                   {currentConversation?.is_group ? (
-                    <p className="truncate text-xs text-ink-muted">
+                    <button
+                      type="button"
+                      onClick={() => setMembersOpen(true)}
+                      className="truncate text-xs text-ink-muted hover:text-brand hover:underline"
+                    >
                       {(currentConversation.participants ?? []).length} participants
-                    </p>
+                    </button>
                   ) : null}
                 </div>
                 {currentConversation?.is_group ? <Badge tone="brand">Group</Badge> : null}
@@ -314,6 +411,11 @@ export default function ChatPage() {
                     </button>
                   }
                 >
+                  {currentConversation?.is_group ? (
+                    <DropdownItem onClick={() => setMembersOpen(true)}>
+                      <Users className="size-4" aria-hidden /> View members
+                    </DropdownItem>
+                  ) : null}
                   {currentConversation?.is_group && canManageActive ? (
                     <DropdownItem onClick={() => setNewOpen(true)}>
                       <UserPlus className="size-4" aria-hidden /> New group
@@ -326,6 +428,13 @@ export default function ChatPage() {
               </div>
 
               <div ref={scrollRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-canvas/40 px-4 py-4">
+                {hasMore ? (
+                  <div className="flex justify-center pb-1">
+                    <Button variant="ghost" size="sm" loading={loadingOlder} onClick={loadOlder}>
+                      Load older messages
+                    </Button>
+                  </div>
+                ) : null}
                 {loadingMessages ? (
                   <div className="grid place-items-center py-10">
                     <Spinner />
@@ -337,6 +446,7 @@ export default function ChatPage() {
                 ) : (
                   messages.map((message) => {
                     const mine = message.sender.id === user?.id
+                    const receipt = mine && message.status === 'sent' ? receiptLabel(message) : null
                     return (
                       <div key={message.id} className={cn('flex', mine ? 'justify-end' : 'justify-start')}>
                         <div className={cn('flex max-w-[80%] flex-col', mine ? 'items-end' : 'items-start')}>
@@ -355,8 +465,30 @@ export default function ChatPage() {
                           >
                             {message.body}
                           </div>
-                          <span className="mt-1 px-1 text-[10px] text-ink-muted">
+                          <span className="mt-1 flex items-center gap-1.5 px-1 text-[10px] text-ink-muted">
+                            {message.source === 'telegram' ? (
+                              <span className="rounded-full bg-brand-soft px-1.5 font-semibold text-brand">
+                                Telegram
+                              </span>
+                            ) : null}
                             {formatDateTime(message.created_at)}
+                            {mine && message.status === 'sending' ? (
+                              <span className="italic">sending…</span>
+                            ) : null}
+                            {mine && message.status === 'failed' ? (
+                              <button
+                                type="button"
+                                onClick={() => retryMessage(message)}
+                                className="font-semibold text-red-600 hover:underline"
+                              >
+                                Failed — retry
+                              </button>
+                            ) : null}
+                            {receipt ? (
+                              <span className={receipt === 'Seen' ? 'font-semibold text-brand' : ''}>
+                                {receipt}
+                              </span>
+                            ) : null}
                           </span>
                         </div>
                       </div>
@@ -392,6 +524,34 @@ export default function ChatPage() {
         onCreated={handleCreated}
         canGroup
       />
+
+      <Modal
+        open={membersOpen}
+        onClose={() => setMembersOpen(false)}
+        title="Group members"
+        description={currentConversation?.title ?? undefined}
+      >
+        <ul className="divide-y divide-line">
+          {(currentConversation?.participants ?? []).map((participant) => (
+            <li key={participant.id} className="flex items-center gap-3 py-2.5">
+              <span className="grid size-9 shrink-0 place-items-center rounded-full bg-brand-soft text-xs font-bold text-brand">
+                {initials(participant.name)}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-semibold text-ink">
+                  {participant.name}
+                  {participant.id === user?.id ? (
+                    <span className="ml-1 text-xs font-normal text-ink-muted">(you)</span>
+                  ) : null}
+                </span>
+                {participant.username ? (
+                  <span className="block truncate text-xs text-ink-muted">@{participant.username}</span>
+                ) : null}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </Modal>
     </div>
   )
 }

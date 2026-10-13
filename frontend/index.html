@@ -9,6 +9,17 @@
       content="Frontend for the RoyalCare Clinic Management System and Medical Expert System."
     />
     <title>RoyalCare</title>
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem('clinic.theme')
+          var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+          if (stored === 'dark' || (stored !== 'light' && prefersDark)) {
+            document.documentElement.classList.add('dark')
+          }
+        } catch (e) {}
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>

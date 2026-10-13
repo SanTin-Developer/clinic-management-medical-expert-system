@@ -20,8 +20,9 @@
 
 {{-- Footer --}}
 <x-slot:footer>
-<x-mail::footer>
-© {{ date('Y') }} {{ config('app.name') }}. {{ __('All rights reserved.') }}
-</x-mail::footer>
+        <x-mail::footer>
+            © {{ date('Y') }} {{ config('app.name') }}. {{ __('All rights reserved.') }}<br>
+            Designed and developed by SanTin Dev with a focus on quality, security, and usability.
+        </x-mail::footer>
 </x-slot:footer>
 </x-mail::layout>

@@ -22,25 +22,27 @@ function buildEcho() {
     wssPort: Number(import.meta.env.VITE_REVERB_PORT ?? 443),
     forceTLS: useTls,
     enabledTransports: useTls ? ['wss'] : ['ws'],
-    authorizer: (channel) => (socketId, callback) => {
-      const token = tokenStorage.get()
+    authorizer: (channel) => ({
+      authorize: (socketId, callback) => {
+        const token = tokenStorage.get()
 
-      fetch(`${AUTH_ORIGIN}/broadcasting/auth`, {
-        method: 'POST',
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({ socket_id: socketId, channel_name: channel.name }),
-      })
-        .then((response) => {
-          if (!response.ok) throw new Error(`Broadcast auth failed (${response.status}).`)
-          return response.json()
+        fetch(`${AUTH_ORIGIN}/broadcasting/auth`, {
+          method: 'POST',
+          headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({ socket_id: socketId, channel_name: channel.name }),
         })
-        .then((data) => callback(null, data))
-        .catch((error) => callback(error, null))
-    },
+          .then((response) => {
+            if (!response.ok) throw new Error(`Broadcast auth failed (${response.status}).`)
+            return response.json()
+          })
+          .then((data) => callback(null, data))
+          .catch((error) => callback(error, null))
+      },
+    }),
   })
 }
 

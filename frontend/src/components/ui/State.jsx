@@ -19,7 +19,7 @@ export function ErrorState({ message = 'Something went wrong while loading this 
     <div
       className={`flex flex-col items-center gap-3 rounded-2xl border border-line bg-surface text-center ${compact ? 'p-6' : 'py-12'}`}
     >
-      <span className="grid size-12 place-items-center rounded-2xl bg-red-50 text-red-500">
+      <span className="grid size-12 place-items-center rounded-2xl bg-red-50 text-red-500 dark:bg-red-500/15 dark:text-red-400">
         <TriangleAlert className="size-6" aria-hidden />
       </span>
       <h3 className="text-base font-semibold text-ink">{title}</h3>
@@ -36,7 +36,7 @@ export function ErrorState({ message = 'Something went wrong while loading this 
 export function ForbiddenState({ message = 'You do not have permission to access this page.' }) {
   return (
     <div className="flex flex-col items-center gap-3 rounded-2xl border border-line bg-surface py-12 text-center">
-      <span className="grid size-12 place-items-center rounded-2xl bg-amber-100 text-amber-600">
+      <span className="grid size-12 place-items-center rounded-2xl bg-amber-100 text-amber-600 dark:bg-amber-500/15 dark:text-amber-300">
         <TriangleAlert className="size-6" aria-hidden />
       </span>
       <h3 className="text-base font-semibold text-ink">Access denied</h3>

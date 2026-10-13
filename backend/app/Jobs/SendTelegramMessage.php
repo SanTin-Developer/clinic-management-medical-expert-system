@@ -2,7 +2,9 @@
 
 namespace App\Jobs;
 
+use App\Models\ConversationMessage;
 use App\Models\TelegramDeliveryLog;
+use App\Notifications\TelegramDeliveryFailedNotification;
 use App\Services\Telegram\TelegramClient;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -30,6 +32,8 @@ class SendTelegramMessage implements ShouldQueue
         public string $eventType = 'generic',
         public ?string $subject = null,
         public ?string $idempotencyKey = null,
+        public ?int $conversationId = null,
+        public ?int $conversationMessageId = null,
     ) {}
 
     public function handle(TelegramClient $client): void
@@ -45,12 +49,13 @@ class SendTelegramMessage implements ShouldQueue
         }
 
         try {
-            $client->sendMessage($this->chatId, $this->text);
+            $result = $client->sendMessage($this->chatId, $this->text);
 
             $log->update([
                 'status' => TelegramDeliveryLog::STATUS_SENT,
                 'error' => null,
                 'attempts' => $log->attempts + 1,
+                'telegram_message_id' => $result['result']['message_id'] ?? null,
             ]);
         } catch (Throwable $exception) {
             $log->update([
@@ -75,6 +80,35 @@ class SendTelegramMessage implements ShouldQueue
                 'status' => TelegramDeliveryLog::STATUS_FAILED,
                 'error' => Str::limit($exception?->getMessage() ?? 'Delivery failed.', 255),
             ]);
+
+        $this->notifySender();
+    }
+
+    /**
+     * Let the message author know their Telegram copy never went out, without
+     * revealing any content. The author is the sender of the conversation
+     * message; the recipient (if any) is `$this->userId`.
+     */
+    private function notifySender(): void
+    {
+        if ($this->conversationMessageId === null || $this->conversationId === null) {
+            return;
+        }
+
+        $message = ConversationMessage::query()
+            ->with('sender')
+            ->find($this->conversationMessageId);
+
+        $sender = $message?->sender;
+
+        if ($sender === null || $sender->id === $this->userId) {
+            return;
+        }
+
+        $sender->notify(new TelegramDeliveryFailedNotification(
+            $this->conversationId,
+            $this->conversationMessageId,
+        ));
     }
 
     private function resolveLog(): TelegramDeliveryLog
@@ -82,6 +116,8 @@ class SendTelegramMessage implements ShouldQueue
         $attributes = [
             'user_id' => $this->userId,
             'telegram_chat_id' => $this->chatId,
+            'conversation_id' => $this->conversationId,
+            'conversation_message_id' => $this->conversationMessageId,
             'event_type' => $this->eventType,
             'subject' => $this->subject,
             'idempotency_key' => $this->idempotencyKey,

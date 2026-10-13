@@ -51,6 +51,29 @@ class Conversation extends Model
         return $this->type === self::TYPE_GROUP;
     }
 
+    /**
+     * Human-readable title for a given viewer: the group title, or the other
+     * participant's name for a direct conversation.
+     *
+     * Expects `activeParticipants.user` (or `participants.user`) to be loaded
+     * when called outside of a request that already eager-loaded them.
+     */
+    public function displayTitleFor(User $viewer): string
+    {
+        if ($this->isGroup()) {
+            return (string) ($this->title ?? 'Group');
+        }
+
+        $participants = $this->relationLoaded('activeParticipants')
+            ? $this->activeParticipants
+            : ($this->relationLoaded('participants') ? $this->participants : $this->participants()->with('user')->get());
+
+        $other = $participants
+            ->first(fn (ConversationParticipant $participant) => $participant->user_id !== $viewer->id);
+
+        return $other?->user?->name ?? 'Direct message';
+    }
+
     public function hasActiveParticipant(User $user): bool
     {
         return $this->participants()

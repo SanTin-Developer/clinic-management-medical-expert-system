@@ -11,6 +11,7 @@ class TelegramConnection extends Model
         'user_id',
         'telegram_chat_id',
         'telegram_username',
+        'active_conversation_id',
         'verified_at',
     ];
 
@@ -18,6 +19,7 @@ class TelegramConnection extends Model
     {
         return [
             'telegram_chat_id' => 'integer',
+            'active_conversation_id' => 'integer',
             'verified_at' => 'datetime',
         ];
     }
@@ -25,6 +27,11 @@ class TelegramConnection extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function activeConversation(): BelongsTo
+    {
+        return $this->belongsTo(Conversation::class, 'active_conversation_id');
     }
 
     public function isVerified(): bool

@@ -8,6 +8,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules;
 
 class UserController extends Controller
 {
@@ -33,7 +34,7 @@ class UserController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'username' => ['nullable', 'string', 'min:3', 'max:50', 'regex:/^[A-Za-z0-9._-]+$/', 'unique:users,username'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
-            'password' => ['required', 'string', 'min:8'],
+            'password' => ['required', 'string', $this->passwordRule()],
             'role' => [
                 'required',
                 'string',
@@ -95,7 +96,7 @@ class UserController extends Controller
                 'max:255',
                 Rule::unique('users', 'email')->ignore($user->id),
             ],
-            'password' => ['sometimes', 'required', 'string', 'min:8'],
+            'password' => ['sometimes', 'required', 'string', $this->passwordRule()],
             'role' => [
                 'sometimes',
                 'required',
@@ -136,6 +137,15 @@ class UserController extends Controller
         return response()->json([
             'message' => 'User deleted successfully.',
         ]);
+    }
+
+    // Shared password complexity rule (8+, upper, lower, number, symbol)
+    private function passwordRule(): Rules\Password
+    {
+        return Rules\Password::min((int) config('auth.password_min_length', 8))
+            ->mixedCase()
+            ->numbers()
+            ->symbols();
     }
 
     // Derive a unique username from an email address local part

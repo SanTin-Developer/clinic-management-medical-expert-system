@@ -2,10 +2,11 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { RouterProvider } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { Toaster } from 'sonner'
 import '@fontsource-variable/geist'
 import '@fontsource-variable/kantumruy-pro'
 import { AuthProvider } from './context/AuthProvider.jsx'
+import { ThemeProvider } from './context/ThemeProvider.jsx'
+import ThemedToaster from './components/ui/ThemedToaster.jsx'
 import { router } from './router/index.jsx'
 import './styles/globals.css'
 
@@ -22,10 +23,12 @@ const queryClient = new QueryClient({
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <RouterProvider router={router} />
-        <Toaster position="top-right" richColors closeButton />
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <RouterProvider router={router} />
+          <ThemedToaster />
+        </AuthProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   </StrictMode>,
 )

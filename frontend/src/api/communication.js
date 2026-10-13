@@ -7,6 +7,8 @@ export const conversationApi = {
   get: (id) => api.get(`/conversations/${id}`).then((r) => r.data),
   messages: (id, params) => api.get(`/conversations/${id}/messages`, { params }),
   send: (id, body) => api.post(`/conversations/${id}/messages`, { body }).then((r) => r.data),
+  messageDelivery: (id, messageId) =>
+    api.get(`/conversations/${id}/messages/${messageId}/delivery`).then((r) => r.data),
   markRead: (id, messageId) =>
     api.post(`/conversations/${id}/read`, messageId ? { message_id: messageId } : {}),
   addParticipants: (id, participantIds) =>

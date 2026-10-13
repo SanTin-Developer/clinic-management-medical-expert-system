@@ -5,7 +5,7 @@ const BASE = 'RoyalCare'
 
 export const TAB_TITLE = (title) => (title ? `${BASE} - ${title}` : BASE)
 
-const PAGE_TITLES = [
+export const PAGE_TITLES = [
   { match: /^\/patients\/.+/, title: 'Patient' },
   { match: /^\/appointments\/.+/, title: 'Appointment' },
   { match: /^\/prescriptions\/.+/, title: 'Prescription' },
@@ -21,6 +21,13 @@ const PAGE_TITLES = [
   { match: /^\/users/, title: 'Users & Roles' },
   { match: /^\/settings/, title: 'Settings' },
   { match: /^\/expert-system/, title: 'Expert System' },
+  { match: /^\/queue/, title: 'Queue Management' },
+  { match: /^\/inventory/, title: 'Inventory & Supplies' },
+  { match: /^\/attendance/, title: 'Staff Attendance' },
+  { match: /^\/scheduling/, title: 'Staff Scheduling' },
+  { match: /^\/leave/, title: 'Leave Management' },
+  { match: /^\/announcements/, title: 'Announcements' },
+  { match: /^\/audit-logs/, title: 'Audit Logs' },
   { match: /^\/forbidden/, title: 'Access Denied' },
   { match: /^\/login\/verify/, title: 'Two-Factor Verification' },
   { match: /^\/login/, title: 'Sign In' },
@@ -31,6 +38,11 @@ const PAGE_TITLES = [
   { match: /^\/$/, title: 'Dashboard' },
 ]
 
+export function pageTitleFor(pathname) {
+  const match = PAGE_TITLES.find(({ match: re }) => re.test(pathname))
+  return match?.title ?? ''
+}
+
 export function usePageTitle(title) {
   useEffect(() => {
     document.title = TAB_TITLE(title)
@@ -39,7 +51,6 @@ export function usePageTitle(title) {
 
 export default function DocumentTitle() {
   const { pathname } = useLocation()
-  const match = PAGE_TITLES.find(({ match: re }) => re.test(pathname))
-  usePageTitle(match?.title)
+  usePageTitle(pageTitleFor(pathname))
   return null
 }

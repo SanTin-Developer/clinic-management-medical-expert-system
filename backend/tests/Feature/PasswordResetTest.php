@@ -79,11 +79,11 @@ class PasswordResetTest extends TestCase
         $this->postJson('/api/v1/auth/reset-password', [
             'email' => $user->email,
             'reset_token' => $resetToken,
-            'password' => 'NewSecret123',
-            'password_confirmation' => 'NewSecret123',
+            'password' => 'NewSecret@123',
+            'password_confirmation' => 'NewSecret@123',
         ])->assertOk();
 
-        $this->assertTrue(Hash::check('NewSecret123', $user->fresh()->password));
+        $this->assertTrue(Hash::check('NewSecret@123', $user->fresh()->password));
         $this->assertDatabaseCount('personal_access_tokens', 0);
         $this->assertDatabaseCount('trusted_devices', 0);
         Notification::assertSentTo($user, PasswordChangedNotification::class);
@@ -97,15 +97,15 @@ class PasswordResetTest extends TestCase
         $this->postJson('/api/v1/auth/reset-password', [
             'email' => $user->email,
             'reset_token' => $resetToken,
-            'password' => 'NewSecret123',
-            'password_confirmation' => 'NewSecret123',
+            'password' => 'NewSecret@123',
+            'password_confirmation' => 'NewSecret@123',
         ])->assertOk();
 
         $this->postJson('/api/v1/auth/reset-password', [
             'email' => $user->email,
             'reset_token' => $resetToken,
-            'password' => 'AnotherSecret123',
-            'password_confirmation' => 'AnotherSecret123',
+            'password' => 'AnotherSecret@123',
+            'password_confirmation' => 'AnotherSecret@123',
         ])->assertStatus(422)->assertJsonValidationErrors('reset_token');
     }
 
@@ -118,8 +118,8 @@ class PasswordResetTest extends TestCase
         $this->postJson('/api/v1/auth/reset-password', [
             'email' => $user->email,
             'reset_token' => $resetToken,
-            'password' => 'NewSecret123',
-            'password_confirmation' => 'NewSecret123',
+            'password' => 'NewSecret@123',
+            'password_confirmation' => 'NewSecret@123',
         ])->assertOk();
 
         $this->postJson('/api/v1/auth/reset-password/verify-code', [
@@ -170,6 +170,28 @@ class PasswordResetTest extends TestCase
             'reset_token' => $resetToken,
             'password' => 'short',
             'password_confirmation' => 'mismatch',
+        ])->assertStatus(422)->assertJsonValidationErrors('password');
+    }
+
+    public function test_password_reset_rejects_passwords_missing_complexity(): void
+    {
+        $user = $this->userWithRole('Doctor');
+        $resetToken = $this->captureResetToken($user);
+
+        // Long enough with mixed case and numbers, but no special character.
+        $this->postJson('/api/v1/auth/reset-password', [
+            'email' => $user->email,
+            'reset_token' => $resetToken,
+            'password' => 'NoSymbol123',
+            'password_confirmation' => 'NoSymbol123',
+        ])->assertStatus(422)->assertJsonValidationErrors('password');
+
+        // Has numbers and a symbol, but no uppercase letter.
+        $this->postJson('/api/v1/auth/reset-password', [
+            'email' => $user->email,
+            'reset_token' => $resetToken,
+            'password' => 'nosymbol@123',
+            'password_confirmation' => 'nosymbol@123',
         ])->assertStatus(422)->assertJsonValidationErrors('password');
     }
 

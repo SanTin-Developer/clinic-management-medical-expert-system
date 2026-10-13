@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Check, Copy, Link2, Send, Unlink, Webhook } from 'lucide-react'
+import { Check, Copy, Link2, RefreshCw, Send, Unlink, Webhook } from 'lucide-react'
 import Card from '../ui/Card.jsx'
 import Button from '../ui/Button.jsx'
 import Badge from '../ui/Badge.jsx'
@@ -49,10 +49,17 @@ export default function TelegramSettingsPanel() {
   const queryClient = useQueryClient()
   const [linking, setLinking] = useState(false)
   const [linkResult, setLinkResult] = useState(null)
+  const [pollUntil, setPollUntil] = useState(0)
 
   const status = useQuery({
     queryKey: ['telegram', 'status'],
     queryFn: telegramApi.status,
+    // While a freshly generated link is pending, poll so the panel flips to
+    // "Linked" as soon as the backend confirms via the webhook/poller.
+    refetchInterval: (query) => {
+      if (query.state.data?.linked) return false
+      return pollUntil > Date.now() ? 4000 : false
+    },
   })
 
   const groupConfig = useQuery({
@@ -74,11 +81,22 @@ export default function TelegramSettingsPanel() {
     }
   }, [groupConfig.data])
 
+  // Stop polling and clear the pending link once the backend reports success.
+  useEffect(() => {
+    if (status.data?.linked && linkResult) {
+      setLinkResult(null)
+      setPollUntil(0)
+      toast.success('Telegram account linked.')
+    }
+  }, [status.data?.linked, linkResult])
+
   const startLink = async () => {
     setLinking(true)
     try {
       const result = await telegramApi.link()
       setLinkResult(result)
+      const expiry = result?.expires_at ? new Date(result.expires_at).getTime() : NaN
+      setPollUntil(Number.isFinite(expiry) ? expiry + 60_000 : Date.now() + 16 * 60_000)
     } catch (err) {
       toast.error(err.message)
     } finally {
@@ -164,7 +182,7 @@ export default function TelegramSettingsPanel() {
         ) : data.linked ? (
           <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <span className="grid size-10 place-items-center rounded-xl bg-emerald-100 text-emerald-600">
+              <span className="grid size-10 place-items-center rounded-xl bg-emerald-100 text-emerald-600 dark:text-emerald-300">
                 <Send className="size-5" aria-hidden />
               </span>
               <div>
@@ -218,6 +236,14 @@ export default function TelegramSettingsPanel() {
                     </code>
                     <CopyButton value={`/start ${linkResult.token}`} />
                   </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" onClick={() => status.refetch()}>
+                    <RefreshCw className="size-4" aria-hidden /> Check status
+                  </Button>
+                  <span className="text-xs text-ink-muted">
+                    Waiting for the bot to confirm… this updates automatically.
+                  </span>
                 </div>
               </div>
             ) : null}

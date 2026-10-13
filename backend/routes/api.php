@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\PatientController;
 use App\Http\Controllers\Api\PasswordResetController;
 use App\Http\Controllers\Api\PrescriptionController;
 use App\Http\Controllers\Api\ReportController;
+use App\Http\Controllers\Api\SearchController;
 use App\Http\Controllers\Api\StockMovementController;
 use App\Http\Controllers\Api\SymptomController;
 use App\Http\Controllers\Api\TelegramController;
@@ -45,7 +46,7 @@ Route::prefix('v1')->group(function () {
         ->name('verification.verify');
 
     // Telegram webhook (public; authenticated via the X-Telegram-Bot-Api-Secret-Token header)
-    Route::post('/telegram/webhook', [TelegramController::class, 'webhook'])->middleware('throttle:api');
+    Route::post('/telegram/webhook', [TelegramController::class, 'webhook'])->middleware('throttle:telegram-webhook');
 
     // Protected routes
     $protectedMiddleware = ['auth:sanctum', 'throttle:api'];
@@ -61,6 +62,9 @@ Route::prefix('v1')->group(function () {
     Route::middleware($protectedMiddleware)->group(function () {
         Route::post('/auth/logout', [AuthController::class, 'logout']);
         Route::get('/auth/me', [AuthController::class, 'me']);
+
+        // Global search (permission-aware per resource)
+        Route::get('/search', [SearchController::class, 'index']);
 
         // Trusted devices ("remember this device")
         Route::get('/auth/devices', [AuthController::class, 'devices']);
@@ -184,6 +188,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/conversations/{conversation}', [ConversationController::class, 'show']);
         Route::get('/conversations/{conversation}/messages', [ConversationController::class, 'messages']);
         Route::post('/conversations/{conversation}/messages', [ConversationController::class, 'sendMessage']);
+        Route::get('/conversations/{conversation}/messages/{message}/delivery', [ConversationController::class, 'messageDelivery']);
         Route::post('/conversations/{conversation}/read', [ConversationController::class, 'markRead']);
         Route::post('/conversations/{conversation}/participants', [ConversationController::class, 'addParticipants']);
         Route::delete('/conversations/{conversation}/participants/{user}', [ConversationController::class, 'removeParticipant']);
@@ -202,6 +207,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/telegram/link', [TelegramController::class, 'link']);
         Route::delete('/telegram/link', [TelegramController::class, 'unlink']);
         Route::post('/telegram/webhook/register', [TelegramController::class, 'linkWebhook']);
+        Route::delete('/telegram/webhook/register', [TelegramController::class, 'unregisterWebhook']);
         Route::get('/telegram/group-config', [TelegramController::class, 'groupConfig']);
         Route::put('/telegram/group-config', [TelegramController::class, 'updateGroupConfig']);
 

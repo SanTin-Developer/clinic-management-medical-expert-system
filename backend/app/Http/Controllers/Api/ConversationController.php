@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Conversation;
 use App\Models\ConversationMessage;
+use App\Models\TelegramDeliveryLog;
 use App\Models\User;
 use App\Services\Communication\ConversationService;
 use Illuminate\Http\JsonResponse;
@@ -109,6 +110,27 @@ class ConversationController extends Controller
             ->through(fn (ConversationMessage $message) => $this->serializeMessage($message));
 
         return response()->json($paginated);
+    }
+
+    public function messageDelivery(Request $request, Conversation $conversation, ConversationMessage $message): JsonResponse
+    {
+        $this->authorize('view', $conversation);
+
+        abort_unless($message->conversation_id === $conversation->id, 404);
+
+        $logs = TelegramDeliveryLog::query()
+            ->where('conversation_message_id', $message->id)
+            ->orderBy('id')
+            ->get()
+            ->map(fn (TelegramDeliveryLog $log) => [
+                'recipient_user_id' => $log->user_id,
+                'channel' => 'telegram',
+                'status' => $log->status,
+                'attempts' => $log->attempts,
+                'updated_at' => $log->updated_at?->toIso8601String(),
+            ]);
+
+        return response()->json(['data' => $logs]);
     }
 
     public function sendMessage(Request $request, Conversation $conversation): JsonResponse
@@ -219,6 +241,7 @@ class ConversationController extends Controller
                 'id' => $participant->user->id,
                 'name' => $participant->user->name,
                 'username' => $participant->user->username,
+                'last_read_message_id' => $participant->last_read_message_id,
             ])
             ->values();
 
@@ -255,6 +278,7 @@ class ConversationController extends Controller
             'id' => $message->id,
             'conversation_id' => $message->conversation_id,
             'body' => $message->body,
+            'source' => $message->source,
             'sender_id' => $message->sender_id,
             'sender' => [
                 'id' => $message->sender?->id,

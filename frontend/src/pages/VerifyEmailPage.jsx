@@ -46,7 +46,7 @@ export default function VerifyEmailPage() {
 
         {status === 'success' ? (
           <>
-            <span className="grid size-14 place-items-center rounded-2xl bg-emerald-50 text-emerald-600">
+            <span className="grid size-14 place-items-center rounded-2xl bg-emerald-50 text-emerald-600 dark:text-emerald-300">
               <CheckCircle2 className="size-7" aria-hidden />
             </span>
             <p role="status" className="text-sm text-ink">
@@ -58,7 +58,7 @@ export default function VerifyEmailPage() {
 
         {status === 'error' ? (
           <>
-            <span className="grid size-14 place-items-center rounded-2xl bg-red-50 text-red-600">
+            <span className="grid size-14 place-items-center rounded-2xl bg-red-50 text-red-600 dark:text-red-400">
               <XCircle className="size-7" aria-hidden />
             </span>
             <p role="alert" className="text-sm font-medium text-red-700">
@@ -72,7 +72,7 @@ export default function VerifyEmailPage() {
 
         {status === 'missing' ? (
           <>
-            <span className="grid size-14 place-items-center rounded-2xl bg-amber-50 text-amber-600">
+            <span className="grid size-14 place-items-center rounded-2xl bg-amber-50 text-amber-600 dark:text-amber-300">
               <MailWarning className="size-7" aria-hidden />
             </span>
             <p role="alert" className="text-sm font-medium text-amber-800">

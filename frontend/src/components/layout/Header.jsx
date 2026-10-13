@@ -1,10 +1,14 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { ChevronDown, LogOut, Menu, Settings } from 'lucide-react'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { ChevronDown, LogOut, Menu, PanelLeft, UserRound } from 'lucide-react'
 import Dropdown, { DropdownItem } from '../ui/Dropdown.jsx'
 import NotificationBell from '../communication/NotificationBell.jsx'
+import GlobalSearch from '../search/GlobalSearch.jsx'
+import MessagesButton from './MessagesButton.jsx'
+import ThemeToggle from './ThemeToggle.jsx'
 import { Spinner } from '../ui/Skeleton.jsx'
 import { useAuth } from '../../hooks/useAuth.js'
+import { pageTitleFor } from '../../hooks/usePageTitle.js'
 
 function initials(name = '') {
   return name
@@ -15,12 +19,14 @@ function initials(name = '') {
     .join('')
 }
 
-export default function Header({ onMenu }) {
+export default function Header({ onMenu, onToggleSidebar }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const { pathname } = useLocation()
   const [signingOut, setSigningOut] = useState(false)
 
   const role = user?.roles?.[0] ?? ''
+  const title = pageTitleFor(pathname)
 
   const handleSignOut = async () => {
     setSigningOut(true)
@@ -37,29 +43,45 @@ export default function Header({ onMenu }) {
         <div
           role="status"
           aria-live="polite"
-          className="fixed inset-0 z-[100] grid place-items-center bg-white/80 backdrop-blur-sm"
+          className="fixed inset-0 z-[100] grid place-items-center bg-surface/80 backdrop-blur-sm"
         >
           <Spinner label="Signing you out…" />
         </div>
       ) : null}
       <header className="flex h-16 shrink-0 items-center justify-between gap-3 border-b border-line bg-surface px-4 print:hidden sm:px-6">
-        <button
-          type="button"
-          onClick={onMenu}
-          aria-label="Open navigation"
-          className="grid size-10 place-items-center rounded-lg text-ink-muted transition-colors hover:bg-canvas md:hidden"
-        >
-          <Menu className="size-5" aria-hidden />
-        </button>
+        <div className="flex min-w-0 items-center gap-1.5">
+          <button
+            type="button"
+            onClick={onMenu}
+            aria-label="Open navigation"
+            className="grid size-10 place-items-center rounded-lg text-ink-muted transition-colors hover:bg-canvas md:hidden"
+          >
+            <Menu className="size-5" aria-hidden />
+          </button>
+          <button
+            type="button"
+            onClick={onToggleSidebar}
+            aria-label="Toggle navigation"
+            className="hidden size-10 place-items-center rounded-lg text-ink-muted transition-colors hover:bg-canvas hover:text-ink md:grid"
+          >
+            <PanelLeft className="size-5" aria-hidden />
+          </button>
+          <h1 className="hidden truncate text-base font-semibold text-ink sm:block">{title}</h1>
+        </div>
 
-        <div />
-        <div className="flex items-center gap-3">
+        <div className="flex flex-1 justify-center px-1">
+          <GlobalSearch />
+        </div>
+
+        <div className="flex items-center gap-0.5 sm:gap-1.5">
           <NotificationBell />
+          <MessagesButton />
+          <ThemeToggle />
           <Dropdown
             trigger={
               <button
                 type="button"
-                className="flex items-center gap-2 rounded-xl border border-line bg-surface px-2 py-1.5 transition-colors hover:bg-canvas sm:px-3"
+                className="flex items-center gap-2 rounded-xl border border-line bg-surface px-1.5 py-1.5 transition-colors hover:bg-canvas sm:px-2.5"
               >
                 <span className="grid size-8 shrink-0 place-items-center rounded-full bg-brand text-sm font-bold text-white">
                   {initials(user?.name)}
@@ -75,11 +97,11 @@ export default function Header({ onMenu }) {
             }
           >
             <DropdownItem onClick={() => navigate('/settings')}>
-              <Settings className="size-4" aria-hidden /> Settings
+              <UserRound className="size-4" aria-hidden /> Profile
             </DropdownItem>
             <div className="mx-2 my-1 border-t border-line" />
             <DropdownItem danger onClick={handleSignOut} disabled={signingOut}>
-              <LogOut className="size-4" aria-hidden /> Sign out
+              <LogOut className="size-4" aria-hidden /> Log out
             </DropdownItem>
           </Dropdown>
         </div>

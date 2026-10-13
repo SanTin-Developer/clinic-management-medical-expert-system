@@ -3,6 +3,7 @@
 namespace App\Services\Communication;
 
 use App\Events\MessageSent;
+use App\Events\MessagesRead;
 use App\Jobs\SendTelegramMessage;
 use App\Models\Conversation;
 use App\Models\ConversationMessage;
@@ -12,6 +13,7 @@ use App\Models\TelegramGroupConfig;
 use App\Models\User;
 use App\Notifications\NewMessageNotification;
 use App\Services\Telegram\TelegramClient;
+use App\Services\Telegram\TelegramMessages;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -115,10 +117,59 @@ class ConversationService
 
     public function sendMessage(Conversation $conversation, User $sender, string $body): ConversationMessage
     {
-        $message = DB::transaction(function () use ($conversation, $sender, $body) {
+        return $this->createMessage(
+            $conversation,
+            $sender,
+            $body,
+            ConversationMessage::SOURCE_WEB,
+        );
+    }
+
+    /**
+     * Record a message that originated from an inbound Telegram reply.
+     *
+     * The Telegram chat/message identifiers are persisted so that a retried
+     * webhook delivery can never store the same inbound message twice.
+     */
+    public function sendTelegramReply(
+        Conversation $conversation,
+        User $sender,
+        string $body,
+        int|string $telegramChatId,
+        ?int $telegramMessageId = null,
+    ): ConversationMessage {
+        return $this->createMessage(
+            $conversation,
+            $sender,
+            $body,
+            ConversationMessage::SOURCE_TELEGRAM,
+            $telegramChatId,
+            $telegramMessageId,
+        );
+    }
+
+    private function createMessage(
+        Conversation $conversation,
+        User $sender,
+        string $body,
+        string $source,
+        int|string|null $telegramChatId = null,
+        ?int $telegramMessageId = null,
+    ): ConversationMessage {
+        $message = DB::transaction(function () use (
+            $conversation,
+            $sender,
+            $body,
+            $source,
+            $telegramChatId,
+            $telegramMessageId,
+        ) {
             $message = $conversation->messages()->create([
                 'sender_id' => $sender->id,
                 'body' => $body,
+                'source' => $source,
+                'telegram_chat_id' => $telegramChatId,
+                'telegram_message_id' => $telegramMessageId,
             ]);
 
             $conversation->participants()
@@ -145,13 +196,22 @@ class ConversationService
             return;
         }
 
-        $conversation->participants()
+        $participant = $conversation->participants()
             ->where('user_id', $user->id)
-            ->where(function ($query) use ($messageId) {
-                $query->whereNull('last_read_message_id')
-                    ->orWhere('last_read_message_id', '<', $messageId);
-            })
-            ->update(['last_read_message_id' => $messageId]);
+            ->first();
+
+        if ($participant === null) {
+            return;
+        }
+
+        if ($participant->last_read_message_id !== null
+            && $participant->last_read_message_id >= $messageId) {
+            return;
+        }
+
+        $participant->update(['last_read_message_id' => $messageId]);
+
+        event(new MessagesRead($conversation->id, $user->id, $messageId));
     }
 
     public function unreadCount(Conversation $conversation, User $user): int
@@ -234,6 +294,8 @@ class ConversationService
             eventType: 'new_message',
             subject: $conversation->isGroup() ? $conversation->title : $sender->name,
             idempotencyKey: 'message:'.$message->id.':user:'.$recipient->id,
+            conversationId: $conversation->id,
+            conversationMessageId: $message->id,
         );
     }
 
@@ -259,15 +321,17 @@ class ConversationService
             eventType: 'new_message',
             subject: $conversation->isGroup() ? $conversation->title : 'Direct message',
             idempotencyKey: 'message:'.$message->id.':group',
+            conversationId: $conversation->id,
+            conversationMessageId: $message->id,
         );
     }
 
     private function telegramText(Conversation $conversation, ConversationMessage $message, User $sender): string
     {
-        $context = $conversation->isGroup()
-            ? ' in <b>'.e((string) $conversation->title).'</b>'
-            : '';
-
-        return '<b>'.e($sender->name).'</b>'.$context.': '.e(Str::limit($message->body, 500));
+        return TelegramMessages::newMessage(
+            $sender->name,
+            $conversation->isGroup() ? (string) $conversation->title : null,
+            Str::limit($message->body, 500),
+        );
     }
 }

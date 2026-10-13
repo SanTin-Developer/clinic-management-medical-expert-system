@@ -4,7 +4,9 @@ import { toast } from 'sonner'
 import Button from '../components/ui/Button.jsx'
 import Field from '../components/ui/Field.jsx'
 import Input from '../components/ui/Input.jsx'
+import PasswordChecklist from '../components/ui/PasswordChecklist.jsx'
 import { resetPassword } from '../api/auth.js'
+import { passwordError } from '../utils/password.js'
 import { usePageTitle } from '../hooks/usePageTitle.js'
 import AuthShell from './auth/AuthShell.jsx'
 
@@ -29,8 +31,8 @@ export default function NewPasswordPage() {
     const next = {}
     if (!resetToken) next.form = 'This reset session is missing. Verify your code again first.'
     if (!EMAIL_RE.test(email.trim())) next.email = 'Enter a valid email address.'
-    if (password.length < 8) next.password = 'Password must be at least 8 characters.'
-    else if (!/\d/.test(password) || !/[a-zA-Z]/.test(password)) next.password = 'Password must contain letters and numbers.'
+    const pwdError = passwordError(password)
+    if (pwdError) next.password = pwdError
     if (password !== confirm) next.confirm = 'Passwords do not match.'
     setErrors(next)
     if (Object.keys(next).length) return
@@ -80,9 +82,10 @@ export default function NewPasswordPage() {
             invalid={Boolean(errors.email)}
           />
         </Field>
-        <Field label="New password" htmlFor="new-password" required error={errors.password} hint="At least 8 characters, with letters and numbers.">
-          <Input id="new-password" type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} invalid={Boolean(errors.password)} />
+        <Field label="New password" htmlFor="new-password" required error={errors.password}>
+          <Input id="new-password" type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} invalid={Boolean(errors.password)} aria-describedby="new-password-requirements" />
         </Field>
+        <PasswordChecklist id="new-password-requirements" value={password} />
         <Field label="Confirm password" htmlFor="new-confirm" required error={errors.confirm}>
           <Input id="new-confirm" type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} invalid={Boolean(errors.confirm)} />
         </Field>

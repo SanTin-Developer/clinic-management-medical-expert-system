@@ -15,6 +15,10 @@ width: 100% !important;
 .footer {
 width: 100% !important;
 }
+
+.content-cell {
+padding: 28px 24px !important;
+}
 }
 
 @media only screen and (max-width: 500px) {
@@ -29,14 +33,18 @@ width: 100% !important;
 
 <table class="wrapper" width="100%" cellpadding="0" cellspacing="0" role="presentation">
 <tr>
-<td align="center">
+<td align="center" style="padding: 32px 14px;">
 <table class="content" width="100%" cellpadding="0" cellspacing="0" role="presentation">
 {!! $header ?? '' !!}
 
 <!-- Email Body -->
 <tr>
-<td class="body" width="100%" cellpadding="0" cellspacing="0" style="border: hidden !important;">
+<td class="body" width="100%" cellpadding="0" cellspacing="0">
 <table class="inner-body" align="center" width="570" cellpadding="0" cellspacing="0" role="presentation">
+<!-- Accent -->
+<tr>
+<td class="accent" height="6" style="background-color: #2563eb; font-size: 0; line-height: 6px; height: 6px;">&nbsp;</td>
+</tr>
 <!-- Body content -->
 <tr>
 <td class="content-cell">

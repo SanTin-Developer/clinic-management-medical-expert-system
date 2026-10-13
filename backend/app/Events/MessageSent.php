@@ -38,6 +38,7 @@ class MessageSent implements ShouldBroadcast
             'id' => $message->id,
             'conversation_id' => $message->conversation_id,
             'body' => $message->body,
+            'source' => $message->source,
             'created_at' => $message->created_at?->toIso8601String(),
             'sender' => [
                 'id' => $message->sender?->id,
