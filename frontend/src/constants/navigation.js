@@ -9,6 +9,7 @@ import {
   FolderHeart,
   LayoutDashboard,
   ListOrdered,
+  MailPlus,
   Megaphone,
   MessageSquare,
   PackageSearch,
@@ -118,6 +119,7 @@ export const NAV_SECTIONS = [
     label: 'Administration',
     items: [
       { to: '/users', label: 'Users & Roles', icon: ShieldCheck, permissions: ['users.view'] },
+      { to: '/invitations', label: 'Staff Invitations', icon: MailPlus, permissions: ['users.invite'] },
       {
         to: '/audit-logs',
         label: 'Audit Logs',

@@ -31,6 +31,22 @@ class UserPolicy
     }
 
     /**
+     * Determine whether the user can invite staff members.
+     */
+    public function invite(User $user): bool
+    {
+        return $user->can('users.invite');
+    }
+
+    /**
+     * Determine whether the user can suspend, reactivate or disable accounts.
+     */
+    public function suspend(User $user): bool
+    {
+        return $user->can('users.suspend');
+    }
+
+    /**
      * Determine whether the user can update the user.
      */
     public function update(User $user, User $model): bool

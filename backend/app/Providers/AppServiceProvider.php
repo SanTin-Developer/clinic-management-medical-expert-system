@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\User;
+use App\Services\Auth\TotpService;
 use App\Services\Files\ClamAvFileScanner;
 use App\Services\Files\CloudinaryClient;
 use App\Services\Files\CloudinaryStorage;
@@ -54,6 +55,15 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(TelegramLinkService::class, function (): TelegramLinkService {
             return new TelegramLinkService((array) config('communication.telegram', []));
         });
+
+        $this->app->singleton(TotpService::class, function (): TotpService {
+            return new TotpService(
+                (int) config('auth.two_factor.period', 30),
+                (int) config('auth.two_factor.digits', 6),
+                'sha1',
+                (int) config('auth.two_factor.window', 1),
+            );
+        });
     }
 
     /**
@@ -92,6 +102,20 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('password-reset', function (Request $request) {
             return Limit::perMinute(5)->by(
                 (string) $request->input('email').'|'.$request->ip()
+            );
+        });
+
+        // Limit two-factor challenge verification attempts per challenge + IP.
+        RateLimiter::for('two-factor', function (Request $request) {
+            return Limit::perMinute(5)->by(
+                (string) $request->input('challenge_token').'|'.$request->ip()
+            );
+        });
+
+        // Limit invitation acceptance and lookup attempts per token + IP.
+        RateLimiter::for('invitation', function (Request $request) {
+            return Limit::perMinute(10)->by(
+                (string) $request->input('token').'|'.$request->ip()
             );
         });
 

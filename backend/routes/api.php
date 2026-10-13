@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AppointmentController;
+use App\Http\Controllers\Api\AccountSecurityController;
 use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ConsultationController;
@@ -13,6 +14,7 @@ use App\Http\Controllers\Api\ExpertRuleController;
 use App\Http\Controllers\Api\ExpertSystemController;
 use App\Http\Controllers\Api\InventoryItemController;
 use App\Http\Controllers\Api\InvoiceController;
+use App\Http\Controllers\Api\InvitationController;
 use App\Http\Controllers\Api\MedicalRecordController;
 use App\Http\Controllers\Api\MedicineController;
 use App\Http\Controllers\Api\NotificationController;
@@ -21,9 +23,11 @@ use App\Http\Controllers\Api\PasswordResetController;
 use App\Http\Controllers\Api\PrescriptionController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\SearchController;
+use App\Http\Controllers\Api\StaffInvitationController;
 use App\Http\Controllers\Api\StockMovementController;
 use App\Http\Controllers\Api\SymptomController;
 use App\Http\Controllers\Api\TelegramController;
+use App\Http\Controllers\Api\TwoFactorController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\VitalSignController;
 use Illuminate\Support\Facades\Route;
@@ -34,6 +38,13 @@ Route::prefix('v1')->group(function () {
     Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:login');
     Route::post('/auth/otp/verify', [AuthController::class, 'verifyOtp'])->middleware('throttle:otp');
     Route::post('/auth/otp/resend', [AuthController::class, 'resendOtp'])->middleware('throttle:otp');
+
+    // Two-factor challenge (issued after a valid password when mandatory)
+    Route::post('/auth/2fa/verify', [AuthController::class, 'verifyTwoFactor'])->middleware('throttle:two-factor');
+
+    // Staff invitation acceptance (public; the token is delivered by email)
+    Route::post('/auth/invitation/lookup', [InvitationController::class, 'lookup'])->middleware('throttle:invitation');
+    Route::post('/auth/invitation/accept', [InvitationController::class, 'accept'])->middleware('throttle:invitation');
 
     // Password reset
     Route::post('/auth/forgot-password', [PasswordResetController::class, 'forgot'])->middleware('throttle:password-reset');
@@ -49,7 +60,7 @@ Route::prefix('v1')->group(function () {
     Route::post('/telegram/webhook', [TelegramController::class, 'webhook'])->middleware('throttle:telegram-webhook');
 
     // Protected routes
-    $protectedMiddleware = ['auth:sanctum', 'throttle:api'];
+    $protectedMiddleware = ['auth:sanctum', 'throttle:api', 'account.active', 'password.current'];
 
     if (config('auth.require_verified_email')) {
         $protectedMiddleware[] = 'verified';
@@ -59,9 +70,33 @@ Route::prefix('v1')->group(function () {
         $protectedMiddleware[] = 'device.trust';
     }
 
+    if (config('auth.two_factor.mandatory')) {
+        $protectedMiddleware[] = '2fa.enrolled';
+    }
+
     Route::middleware($protectedMiddleware)->group(function () {
         Route::post('/auth/logout', [AuthController::class, 'logout']);
         Route::get('/auth/me', [AuthController::class, 'me']);
+
+        // Account security: password change, two-stage email change, step-up
+        Route::put('/auth/password', [AccountSecurityController::class, 'changePassword']);
+        Route::post('/auth/email/change', [AccountSecurityController::class, 'requestEmailChange']);
+        Route::post('/auth/email/change/confirm', [AccountSecurityController::class, 'confirmEmailChange']);
+        Route::post('/auth/step-up', [AccountSecurityController::class, 'stepUp']);
+        Route::get('/auth/security-events', [AccountSecurityController::class, 'securityEvents']);
+
+        // Two-factor (TOTP) management
+        Route::get('/auth/2fa/status', [TwoFactorController::class, 'status']);
+        Route::post('/auth/2fa/enroll', [TwoFactorController::class, 'enroll']);
+        Route::post('/auth/2fa/confirm', [TwoFactorController::class, 'confirm']);
+        Route::delete('/auth/2fa', [TwoFactorController::class, 'disable']);
+        Route::post('/auth/2fa/recovery-codes', [TwoFactorController::class, 'regenerateRecoveryCodes']);
+
+        // Staff provisioning
+        Route::get('/staff/invitations', [StaffInvitationController::class, 'index']);
+        Route::post('/staff/invitations', [StaffInvitationController::class, 'store']);
+        Route::post('/staff/invitations/{invitation}/resend', [StaffInvitationController::class, 'resend']);
+        Route::delete('/staff/invitations/{invitation}', [StaffInvitationController::class, 'destroy']);
 
         // Global search (permission-aware per resource)
         Route::get('/search', [SearchController::class, 'index']);
@@ -76,6 +111,9 @@ Route::prefix('v1')->group(function () {
 
         // User
         Route::apiResource('users', UserController::class);
+        Route::post('/users/{user}/suspend', [UserController::class, 'suspend'])->middleware('step.up:users.suspend');
+        Route::post('/users/{user}/activate', [UserController::class, 'activate']);
+        Route::post('/users/{user}/disable', [UserController::class, 'disable'])->middleware('step.up:users.suspend');
 
         // Patient
         Route::apiResource('patients', PatientController::class);

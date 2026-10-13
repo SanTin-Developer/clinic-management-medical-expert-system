@@ -36,6 +36,13 @@ export default function LoginPage() {
         })
         return
       }
+      if (result?.two_factor_required) {
+        navigate('/login/2fa', {
+          replace: true,
+          state: { challengeToken: result.challenge_token },
+        })
+        return
+      }
       navigate('/', { replace: true })
     } catch (err) {
       setErrors({ form: err.message })

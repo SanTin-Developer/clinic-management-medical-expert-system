@@ -3,7 +3,7 @@ import { Spinner } from '../components/ui/Skeleton.jsx'
 import { useAuth } from '../hooks/useAuth.js'
 
 export default function ProtectedRoute({ children }) {
-  const { isAuthenticated, isLoading } = useAuth()
+  const { isAuthenticated, isLoading, user } = useAuth()
   const location = useLocation()
 
   if (isLoading) {
@@ -16,6 +16,10 @@ export default function ProtectedRoute({ children }) {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location.pathname }} replace />
+  }
+
+  if (user?.must_change_password && location.pathname !== '/settings') {
+    return <Navigate to="/settings" replace />
   }
 
   return children

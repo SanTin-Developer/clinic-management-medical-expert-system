@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Staff\SuspendUserRequest;
 use App\Models\User;
+use App\Services\Auth\AccountSecurityService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -12,6 +14,10 @@ use Illuminate\Validation\Rules;
 
 class UserController extends Controller
 {
+    public function __construct(
+        private readonly AccountSecurityService $accounts,
+    ) {}
+
     // Display a paginated list of users
     public function index(Request $request): JsonResponse
     {
@@ -139,6 +145,45 @@ class UserController extends Controller
         ]);
     }
 
+    // Suspend an account and revoke its sessions/devices
+    public function suspend(SuspendUserRequest $request, User $user): JsonResponse
+    {
+        $this->authorize('suspend', User::class);
+
+        $this->accounts->suspend($user, $request->validated()['reason'] ?? null, $request);
+
+        return response()->json([
+            'message' => 'User suspended successfully.',
+            'user' => $this->userData($user->fresh()),
+        ]);
+    }
+
+    // Reactivate a suspended or pending account
+    public function activate(Request $request, User $user): JsonResponse
+    {
+        $this->authorize('suspend', User::class);
+
+        $this->accounts->activate($user, $request);
+
+        return response()->json([
+            'message' => 'User activated successfully.',
+            'user' => $this->userData($user->fresh()),
+        ]);
+    }
+
+    // Disable an account and revoke its sessions/devices
+    public function disable(Request $request, User $user): JsonResponse
+    {
+        $this->authorize('suspend', User::class);
+
+        $this->accounts->disable($user, $request);
+
+        return response()->json([
+            'message' => 'User disabled successfully.',
+            'user' => $this->userData($user->fresh()),
+        ]);
+    }
+
     // Shared password complexity rule (8+, upper, lower, number, symbol)
     private function passwordRule(): Rules\Password
     {
@@ -175,6 +220,11 @@ class UserController extends Controller
             'name' => $user->name,
             'username' => $user->username,
             'email' => $user->email,
+            'staff_id' => $user->staff_id,
+            'phone' => $user->phone,
+            'account_status' => $user->account_status,
+            'two_factor_enabled' => $user->hasTwoFactorEnabled(),
+            'last_login_at' => $user->last_login_at,
             'roles' => $user->getRoleNames(),
             'permissions' => $user->getAllPermissions()->pluck('name'),
         ];

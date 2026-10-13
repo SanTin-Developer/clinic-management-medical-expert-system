@@ -1,6 +1,10 @@
 <?php
 
+use App\Http\Middleware\EnsureAccountIsActive;
+use App\Http\Middleware\EnsurePasswordIsCurrent;
+use App\Http\Middleware\EnsureStepUp;
 use App\Http\Middleware\EnsureTrustedDevice;
+use App\Http\Middleware\EnsureTwoFactorEnrolled;
 use App\Http\Middleware\SecurityHeaders;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Application;
@@ -22,6 +26,10 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'device.trust' => EnsureTrustedDevice::class,
+            'account.active' => EnsureAccountIsActive::class,
+            'password.current' => EnsurePasswordIsCurrent::class,
+            '2fa.enrolled' => EnsureTwoFactorEnrolled::class,
+            'step.up' => EnsureStepUp::class,
         ]);
 
         $middleware->append(SecurityHeaders::class);

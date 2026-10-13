@@ -33,11 +33,18 @@ export default function OtpVerifyPage() {
 
     setLoading(true)
     try {
-      await verifyOtp({
+      const result = await verifyOtp({
         challenge_token: challengeToken,
         code,
         remember_device: rememberDevice,
       })
+      if (result?.two_factor_required) {
+        navigate('/login/2fa', {
+          replace: true,
+          state: { challengeToken: result.challenge_token, from: location.state?.from ?? '/' },
+        })
+        return
+      }
       const from = location.state?.from ?? '/'
       navigate(from, { replace: true })
     } catch (err) {

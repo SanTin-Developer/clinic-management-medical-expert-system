@@ -179,4 +179,89 @@ return [
         'token_expire_minutes' => (int) env('AUTH_RESET_TOKEN_EXPIRE_MINUTES', 10),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Two-Factor Authentication (TOTP)
+    |--------------------------------------------------------------------------
+    |
+    | When "mandatory" is true, staff accounts that have enrolled in TOTP are
+    | required to present a valid code before an API token is issued. Accounts
+    | that have not yet enrolled are flagged as needing to set it up. Disabled
+    | by default so existing deployments and automated flows keep working until
+    | the rollout is enabled per environment.
+    |
+    */
+
+    'two_factor' => [
+        'mandatory' => (bool) env('AUTH_2FA_MANDATORY', false),
+        'issuer' => env('AUTH_2FA_ISSUER', env('APP_NAME', 'RoyalCare Clinic')),
+        'digits' => (int) env('AUTH_2FA_DIGITS', 6),
+        'period' => (int) env('AUTH_2FA_PERIOD', 30),
+        'window' => (int) env('AUTH_2FA_WINDOW', 1),
+        'challenge_expire_minutes' => (int) env('AUTH_2FA_CHALLENGE_EXPIRE_MINUTES', 10),
+        'challenge_max_attempts' => (int) env('AUTH_2FA_CHALLENGE_MAX_ATTEMPTS', 5),
+        'recovery_codes' => (int) env('AUTH_2FA_RECOVERY_CODES', 8),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Account Lockout
+    |--------------------------------------------------------------------------
+    |
+    | Optional progressive lockout after repeated failed password attempts for
+    | the same account. Disabled by default; the login route is always subject
+    | to per-email + per-IP rate limiting regardless of this setting.
+    |
+    */
+
+    'lockout' => [
+        'enabled' => (bool) env('AUTH_LOCKOUT_ENABLED', false),
+        'max_attempts' => (int) env('AUTH_LOCKOUT_MAX_ATTEMPTS', 10),
+        'decay_minutes' => (int) env('AUTH_LOCKOUT_DECAY_MINUTES', 15),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Staff Invitations
+    |--------------------------------------------------------------------------
+    |
+    | Admin-issued invitations to provision a staff account. Only a hash of the
+    | token is stored; the plaintext token is delivered by email once.
+    |
+    */
+
+    'invitation' => [
+        'expire_hours' => (int) env('AUTH_INVITATION_EXPIRE_HOURS', 72),
+        'frontend_path' => env('AUTH_INVITATION_PATH', '/accept-invitation'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Step-Up Authorization
+    |--------------------------------------------------------------------------
+    |
+    | Sensitive actions require the user to prove their identity again. A
+    | short-lived grant is bound to the user and the specific action.
+    |
+    */
+
+    'step_up' => [
+        'ttl_minutes' => (int) env('AUTH_STEP_UP_TTL_MINUTES', 10),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Email Change (two-stage)
+    |--------------------------------------------------------------------------
+    |
+    | Changing an account email requires confirming a code sent to the new
+    | address. A code is never returned to the client.
+    |
+    */
+
+    'email_change' => [
+        'expire_minutes' => (int) env('AUTH_EMAIL_CHANGE_EXPIRE_MINUTES', 15),
+        'max_attempts' => (int) env('AUTH_EMAIL_CHANGE_MAX_ATTEMPTS', 5),
+    ],
+
 ];

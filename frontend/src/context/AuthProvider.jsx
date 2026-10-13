@@ -70,6 +70,17 @@ export function AuthProvider({ children }) {
     [applySession],
   )
 
+  const verifyTwoFactor = useCallback(
+    async (payload) => applySession(await authApi.verifyTwoFactor(payload)),
+    [applySession],
+  )
+
+  const refreshUser = useCallback(async () => {
+    const current = await authApi.me()
+    setUser(current)
+    return current
+  }, [])
+
   const logout = useCallback(async () => {
     try {
       await authApi.logout()
@@ -96,11 +107,14 @@ export function AuthProvider({ children }) {
       isAuthenticated: Boolean(user),
       login,
       verifyOtp,
+      verifyTwoFactor,
+      refreshUser,
       logout,
+      endSession: clearSession,
       can,
       hasRole,
     }),
-    [user, isLoading, login, verifyOtp, logout, can, hasRole],
+    [user, isLoading, login, verifyOtp, verifyTwoFactor, refreshUser, logout, clearSession, can, hasRole],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

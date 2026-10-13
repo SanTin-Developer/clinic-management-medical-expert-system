@@ -30,6 +30,8 @@ class UserFactory extends Factory
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
+            'account_status' => User::STATUS_ACTIVE,
+            'activated_at' => now(),
         ];
     }
 
@@ -40,6 +42,41 @@ class UserFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'email_verified_at' => null,
+        ]);
+    }
+
+    /**
+     * An invited staff account that has not yet been activated.
+     */
+    public function pending(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'account_status' => User::STATUS_PENDING,
+            'activated_at' => null,
+        ]);
+    }
+
+    /**
+     * A suspended account.
+     */
+    public function suspended(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'account_status' => User::STATUS_SUSPENDED,
+            'suspended_at' => now(),
+        ]);
+    }
+
+    /**
+     * An account with a confirmed TOTP secret (base32, plaintext in the factory).
+     */
+    public function withTwoFactor(string $secret): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'two_factor_secret' => $secret,
+            'two_factor_enabled' => true,
+            'two_factor_confirmed_at' => now(),
+            'two_factor_last_step' => null,
         ]);
     }
 }

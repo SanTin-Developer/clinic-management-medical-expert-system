@@ -9,6 +9,8 @@ import { Spinner } from '../components/ui/Skeleton.jsx'
 
 const LoginPage = lazy(() => import('../pages/LoginPage.jsx'))
 const OtpVerifyPage = lazy(() => import('../pages/OtpVerifyPage.jsx'))
+const TwoFactorVerifyPage = lazy(() => import('../pages/TwoFactorVerifyPage.jsx'))
+const AcceptInvitationPage = lazy(() => import('../pages/AcceptInvitationPage.jsx'))
 const ForgotPasswordPage = lazy(() => import('../pages/ForgotPasswordPage.jsx'))
 const ResetPasswordPage = lazy(() => import('../pages/ResetPasswordPage.jsx'))
 const NewPasswordPage = lazy(() => import('../pages/NewPasswordPage.jsx'))
@@ -26,6 +28,7 @@ const InvoiceListPage = lazy(() => import('../pages/InvoiceListPage.jsx'))
 const InvoiceDetailPage = lazy(() => import('../pages/InvoiceDetailPage.jsx'))
 const ReportsPage = lazy(() => import('../pages/ReportsPage.jsx'))
 const UsersPage = lazy(() => import('../pages/UsersPage.jsx'))
+const StaffInvitationsPage = lazy(() => import('../pages/StaffInvitationsPage.jsx'))
 const SettingsPage = lazy(() => import('../pages/SettingsPage.jsx'))
 const ExpertSystemPage = lazy(() => import('../pages/ExpertSystemPage.jsx'))
 const ChatPage = lazy(() => import('../pages/ChatPage.jsx'))
@@ -53,6 +56,8 @@ export const router = createBrowserRouter([
     children: [
       { path: 'login', element: withSuspense(<LoginPage />) },
       { path: 'login/verify', element: withSuspense(<OtpVerifyPage />) },
+      { path: 'login/2fa', element: withSuspense(<TwoFactorVerifyPage />) },
+      { path: 'accept-invitation', element: withSuspense(<AcceptInvitationPage />) },
       { path: 'forgot-password', element: withSuspense(<ForgotPasswordPage />) },
       { path: 'reset-password', element: withSuspense(<ResetPasswordPage />) },
       { path: 'reset-password/new', element: withSuspense(<NewPasswordPage />) },
@@ -161,6 +166,14 @@ export const router = createBrowserRouter([
         element: withSuspense(
           <Guard permission="users.view">
             <UsersPage />
+          </Guard>,
+        ),
+      },
+      {
+        path: 'invitations',
+        element: withSuspense(
+          <Guard permission="users.invite">
+            <StaffInvitationsPage />
           </Guard>,
         ),
       },

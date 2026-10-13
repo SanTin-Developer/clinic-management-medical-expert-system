@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Monitor, Trash2, UserRound } from 'lucide-react'
+import { Monitor, ShieldCheck, Trash2 } from 'lucide-react'
 import { listDevices, revokeDevice, revokeAllDevices, resendVerificationEmail } from '../api/auth.js'
 import { useAuth } from '../hooks/useAuth.js'
 import PageHeader from '../components/ui/PageHeader.jsx'
@@ -14,11 +14,15 @@ import { CardSkeleton } from '../components/ui/Skeleton.jsx'
 import { EmptyState, ErrorState } from '../components/ui/State.jsx'
 import NotificationPreferencesPanel from '../components/communication/NotificationPreferencesPanel.jsx'
 import TelegramSettingsPanel from '../components/communication/TelegramSettingsPanel.jsx'
+import TwoFactorSettingsPanel from '../components/security/TwoFactorSettingsPanel.jsx'
+import PasswordChangePanel from '../components/security/PasswordChangePanel.jsx'
+import EmailChangePanel from '../components/security/EmailChangePanel.jsx'
+import SecurityActivityPanel from '../components/security/SecurityActivityPanel.jsx'
 import { formatDateTime } from '../utils/format.js'
 
 export default function SettingsPage() {
   const { user, can } = useAuth()
-  const [tab, setTab] = useState('profile')
+  const [tab, setTab] = useState(() => (user?.must_change_password ? 'security' : 'profile'))
   const [revokingAll, setRevokingAll] = useState(false)
 
   const devices = useQuery({
@@ -131,19 +135,17 @@ export default function SettingsPage() {
           <Card title="Security settings" className="lg:col-span-2">
             <div className="flex items-start gap-3">
               <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand">
-                <UserRound className="size-5" aria-hidden />
+                <ShieldCheck className="size-5" aria-hidden />
               </span>
               <div>
-                <p className="text-sm font-medium text-ink">Password &amp; profile changes</p>
+                <p className="text-sm font-medium text-ink">Password, email &amp; two-factor</p>
                 <p className="mt-1 text-sm text-ink-muted">
-                  The current API does not expose endpoints to update your own profile, email or
-                  password. To change these details, contact an administrator or request a password
-                  reset from the sign-in screen.
+                  Change your password, update your email address, and manage two-factor
+                  authentication and trusted devices from the Security tab.
                 </p>
-                <ul className="mt-3 list-inside list-disc space-y-1 text-sm text-ink-muted">
-                  <li>Password reset: use the "Forgot password" flow on the sign-in page.</li>
-                  <li>Email / name changes: ask an administrator with user management access.</li>
-                </ul>
+                <Button className="mt-3" variant="outline" size="sm" onClick={() => setTab('security')}>
+                  Go to Security
+                </Button>
               </div>
             </div>
           </Card>
@@ -151,10 +153,14 @@ export default function SettingsPage() {
       ) : null}
 
       {tab === 'security' ? (
-        <Card
-          title="Trusted devices"
-          subtitle="Devices you've allowed to skip email verification for 30 days."
-          actions={
+        <div className="space-y-6">
+          <PasswordChangePanel />
+          <EmailChangePanel />
+          <TwoFactorSettingsPanel />
+          <Card
+            title="Trusted devices"
+            subtitle="Devices you've allowed to skip email verification for 30 days."
+            actions={
             devices.data?.length ? (
               <Button variant="outline" size="sm" onClick={() => setRevokingAll(true)} loading={revokingAll}>
                 <Trash2 className="size-4" aria-hidden /> Revoke all
@@ -212,6 +218,8 @@ export default function SettingsPage() {
             </ul>
           )}
         </Card>
+          <SecurityActivityPanel />
+        </div>
       ) : null}
 
       {tab === 'communication' ? (

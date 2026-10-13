@@ -15,6 +15,7 @@ import SearchInput from '../components/ui/SearchInput.jsx'
 import { RowSkeleton } from '../components/ui/Skeleton.jsx'
 import { EmptyState } from '../components/ui/State.jsx'
 import UserFormModal from '../components/users/UserFormModal.jsx'
+import UserStatusActions from '../components/users/UserStatusActions.jsx'
 import { formatDate } from '../utils/format.js'
 
 const ROLE_TONES = {
@@ -24,6 +25,13 @@ const ROLE_TONES = {
   Receptionist: 'amber',
   Pharmacist: 'green',
   Patient: 'gray',
+}
+
+const STATUS_META = {
+  pending: { label: 'Pending', tone: 'amber' },
+  active: { label: 'Active', tone: 'green' },
+  suspended: { label: 'Suspended', tone: 'red' },
+  disabled: { label: 'Disabled', tone: 'gray' },
 }
 
 function roleName(role) {
@@ -111,13 +119,15 @@ export default function UsersPage() {
         ) : items.length === 0 ? (
           <EmptyState title="No matches" message="No users match your search." />
         ) : (
-          <Table minWidth="min-w-[840px]">
+          <Table minWidth="min-w-[1040px]">
             <THead>
               <Tr>
                 <Th>Name</Th>
                 <Th>Username</Th>
                 <Th>Email</Th>
                 <Th>Role</Th>
+                <Th>Status</Th>
+                <Th>2FA</Th>
                 <Th>Email verified</Th>
                 <Th>Joined</Th>
                 <Th><span className="sr-only">Actions</span></Th>
@@ -143,6 +153,19 @@ export default function UsersPage() {
                       </span>
                     </Td>
                     <Td>
+                      {(() => {
+                        const meta = STATUS_META[u.account_status] ?? STATUS_META.active
+                        return <Badge tone={meta.tone}>{meta.label}</Badge>
+                      })()}
+                    </Td>
+                    <Td>
+                      {u.two_factor_enabled ? (
+                        <Badge tone="green">On</Badge>
+                      ) : (
+                        <Badge tone="gray">Off</Badge>
+                      )}
+                    </Td>
+                    <Td>
                       {verified ? (
                         <Badge tone="green">Verified</Badge>
                       ) : (
@@ -152,6 +175,9 @@ export default function UsersPage() {
                     <Td className="text-ink-muted">{formatDate(u.created_at)}</Td>
                     <Td>
                       <div className="flex justify-end gap-1">
+                        {can('users.suspend') ? (
+                          <UserStatusActions user={u} onChanged={() => query.refetch()} />
+                        ) : null}
                         {canManage ? (
                           <button
                             type="button"
