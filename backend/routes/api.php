@@ -1,11 +1,12 @@
 <?php
 
-use App\Http\Controllers\Api\AppointmentController;
 use App\Http\Controllers\Api\AccountSecurityController;
+use App\Http\Controllers\Api\AppointmentController;
 use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ConsultationController;
 use App\Http\Controllers\Api\ConversationController;
+use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\DiagnosisController;
 use App\Http\Controllers\Api\DiseaseController;
 use App\Http\Controllers\Api\DocumentController;
@@ -13,16 +14,19 @@ use App\Http\Controllers\Api\EmailVerificationController;
 use App\Http\Controllers\Api\ExpertRuleController;
 use App\Http\Controllers\Api\ExpertSystemController;
 use App\Http\Controllers\Api\InventoryItemController;
-use App\Http\Controllers\Api\InvoiceController;
 use App\Http\Controllers\Api\InvitationController;
+use App\Http\Controllers\Api\InvoiceController;
 use App\Http\Controllers\Api\MedicalRecordController;
 use App\Http\Controllers\Api\MedicineController;
 use App\Http\Controllers\Api\NotificationController;
-use App\Http\Controllers\Api\PatientController;
 use App\Http\Controllers\Api\PasswordResetController;
+use App\Http\Controllers\Api\PatientController;
 use App\Http\Controllers\Api\PrescriptionController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\SearchController;
+use App\Http\Controllers\Api\StaffApprovalController;
+use App\Http\Controllers\Api\StaffController;
+use App\Http\Controllers\Api\StaffDocumentController;
 use App\Http\Controllers\Api\StaffInvitationController;
 use App\Http\Controllers\Api\StockMovementController;
 use App\Http\Controllers\Api\SymptomController;
@@ -98,6 +102,9 @@ Route::prefix('v1')->group(function () {
         Route::post('/staff/invitations/{invitation}/resend', [StaffInvitationController::class, 'resend']);
         Route::delete('/staff/invitations/{invitation}', [StaffInvitationController::class, 'destroy']);
 
+        // Staff registration approval queue (pending_approval accounts)
+        Route::get('/staff/approvals', [StaffApprovalController::class, 'index']);
+
         // Global search (permission-aware per resource)
         Route::get('/search', [SearchController::class, 'index']);
 
@@ -114,6 +121,23 @@ Route::prefix('v1')->group(function () {
         Route::post('/users/{user}/suspend', [UserController::class, 'suspend'])->middleware('step.up:users.suspend');
         Route::post('/users/{user}/activate', [UserController::class, 'activate']);
         Route::post('/users/{user}/disable', [UserController::class, 'disable'])->middleware('step.up:users.suspend');
+        Route::post('/users/{user}/approve', [StaffApprovalController::class, 'approve'])->middleware('step.up:users.approve');
+        Route::post('/users/{user}/reject', [StaffApprovalController::class, 'reject'])->middleware('step.up:users.approve');
+
+        // Staff Directory
+        Route::get('/staff/departments', [StaffController::class, 'departments']);
+        Route::get('/staff/job-titles', [StaffController::class, 'jobTitles']);
+        Route::get('/staff/available-users', [StaffController::class, 'availableUsers']);
+        Route::apiResource('staff', StaffController::class);
+        Route::post('/staff/{staff}/salary', [StaffController::class, 'updateSalary']);
+        Route::post('/staff/{staff}/link-user', [StaffController::class, 'linkUser']);
+        Route::delete('/staff/{staff}/unlink-user', [StaffController::class, 'unlinkUser']);
+
+        // Staff Documents
+        Route::get('/staff/{staff}/documents', [StaffDocumentController::class, 'index']);
+        Route::post('/staff/{staff}/documents', [StaffDocumentController::class, 'store']);
+        Route::get('/staff-documents/{document}/download', [StaffDocumentController::class, 'download']);
+        Route::delete('/staff-documents/{document}', [StaffDocumentController::class, 'destroy']);
 
         // Patient
         Route::apiResource('patients', PatientController::class);
@@ -198,6 +222,9 @@ Route::prefix('v1')->group(function () {
         Route::post('/invoices/{invoice}/payments', [InvoiceController::class, 'recordPayment']);
         Route::post('/invoices/{invoice}/cancel', [InvoiceController::class, 'cancel']);
         Route::delete('/invoices/{invoice}', [InvoiceController::class, 'destroy']);
+
+        // Dashboard analytics (single endpoint backing the dashboard charts)
+        Route::get('/dashboard/analytics', [DashboardController::class, 'analytics']);
 
         // Reports
         Route::get('/reports/summary', [ReportController::class, 'summary']);

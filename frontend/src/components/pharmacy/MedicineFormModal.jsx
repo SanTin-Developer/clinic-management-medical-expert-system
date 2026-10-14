@@ -9,7 +9,6 @@ import { medicineApi } from '../../api/pharmacy.js'
 
 const FORM_FIELDS = [
   { key: 'name', label: 'Name', required: true, type: 'text' },
-  { key: 'code', label: 'Code', type: 'text', hint: 'Optional; a MED- code is generated if left blank.' },
   { key: 'generic_name', label: 'Generic name', type: 'text' },
   { key: 'category', label: 'Category', type: 'text' },
   { key: 'form', label: 'Form', type: 'text' },
@@ -27,7 +26,6 @@ export default function MedicineFormModal({ open, onClose, initial, onSaved }) {
     initial
       ? { ...initial, is_active: initial.is_active == null ? true : initial.is_active }
       : {
-          code: '',
           name: '',
           generic_name: '',
           category: '',
@@ -58,10 +56,11 @@ export default function MedicineFormModal({ open, onClose, initial, onSaved }) {
     setSaving(true)
     try {
       const payload = { ...form }
+      delete payload.code
       payload.price = payload.price === '' ? null : Number(payload.price)
       payload.reorder_level =
         payload.reorder_level === '' ? null : Number(payload.reorder_level)
-      for (const key of ['code', 'generic_name', 'category', 'form', 'strength', 'unit', 'manufacturer', 'description']) {
+      for (const key of ['generic_name', 'category', 'form', 'strength', 'unit', 'manufacturer', 'description']) {
         if (!payload[key]) payload[key] = null
       }
       if (editing) {

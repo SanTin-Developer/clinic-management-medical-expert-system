@@ -46,9 +46,10 @@ class InvitationController extends Controller
         $user = $this->provisioning->accept($validated['token'], $validated, $request);
 
         return response()->json([
-            'message' => 'Your account has been activated. Sign in and enable two-factor authentication to continue.',
+            'message' => 'Your registration has been submitted. An administrator will review your account and you will be able to sign in once it is approved.',
             'email' => $user->email,
             'username' => $user->username,
+            'account_status' => $user->account_status,
         ]);
     }
 

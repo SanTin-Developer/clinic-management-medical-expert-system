@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { ChevronDown, LogOut, Menu, PanelLeft, UserRound } from 'lucide-react'
 import Dropdown, { DropdownItem } from '../ui/Dropdown.jsx'
 import NotificationBell from '../communication/NotificationBell.jsx'
@@ -8,7 +8,6 @@ import MessagesButton from './MessagesButton.jsx'
 import ThemeToggle from './ThemeToggle.jsx'
 import { Spinner } from '../ui/Skeleton.jsx'
 import { useAuth } from '../../hooks/useAuth.js'
-import { pageTitleFor } from '../../hooks/usePageTitle.js'
 
 function initials(name = '') {
   return name
@@ -22,11 +21,9 @@ function initials(name = '') {
 export default function Header({ onMenu, onToggleSidebar }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
-  const { pathname } = useLocation()
   const [signingOut, setSigningOut] = useState(false)
 
   const role = user?.roles?.[0] ?? ''
-  const title = pageTitleFor(pathname)
 
   const handleSignOut = async () => {
     setSigningOut(true)
@@ -66,7 +63,6 @@ export default function Header({ onMenu, onToggleSidebar }) {
           >
             <PanelLeft className="size-5" aria-hidden />
           </button>
-          <h1 className="hidden truncate text-base font-semibold text-ink sm:block">{title}</h1>
         </div>
 
         <div className="flex flex-1 justify-center px-1">

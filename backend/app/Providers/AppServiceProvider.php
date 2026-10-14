@@ -2,8 +2,20 @@
 
 namespace App\Providers;
 
+use App\Models\Appointment;
+use App\Models\InventoryItem;
+use App\Models\Invoice;
+use App\Models\Medicine;
+use App\Models\Patient;
+use App\Models\Payment;
+use App\Models\Prescription;
+use App\Models\Staff;
+use App\Models\StaffDocument;
 use App\Models\User;
+use App\Policies\StaffDocumentPolicy;
+use App\Policies\StaffPolicy;
 use App\Services\Auth\TotpService;
+use App\Services\Dashboard\DashboardMetricsService;
 use App\Services\Files\ClamAvFileScanner;
 use App\Services\Files\CloudinaryClient;
 use App\Services\Files\CloudinaryStorage;
@@ -73,6 +85,11 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureNotificationUrls();
 
+        Gate::policy(Staff::class, StaffPolicy::class);
+        Gate::policy(StaffDocument::class, StaffDocumentPolicy::class);
+
+        $this->registerDashboardCacheInvalidation();
+
         // API reference (Scramble /docs/api) is restricted to the local environment by
         // default; in other environments only authenticated administrators may view it.
         Gate::define('viewApiDocs', function (?User $user): bool {
@@ -125,6 +142,28 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('telegram-webhook', function (Request $request) {
             return Limit::perMinute(120)->by($request->ip());
         });
+    }
+
+    /**
+     * Every write to a model that feeds the dashboard aggregates flushes the
+     * cached analytics payload and emits a single realtime refresh signal.
+     */
+    private function registerDashboardCacheInvalidation(): void
+    {
+        $models = [
+            Appointment::class,
+            Patient::class,
+            Payment::class,
+            Invoice::class,
+            Prescription::class,
+            Medicine::class,
+            InventoryItem::class,
+        ];
+
+        foreach ($models as $model) {
+            $model::saved(fn () => app(DashboardMetricsService::class)->invalidate());
+            $model::deleted(fn () => app(DashboardMetricsService::class)->invalidate());
+        }
     }
 
     /**

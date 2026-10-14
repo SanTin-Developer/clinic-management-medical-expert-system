@@ -119,17 +119,21 @@ class StaffProvisioningTest extends TestCase
 
         $user = User::where('email', 'new.nurse@clinic.local')->firstOrFail();
 
-        $this->assertTrue($user->isActive());
+        // Acceptance no longer grants access: the account awaits admin approval.
+        $this->assertTrue($user->isPendingApproval());
+        $this->assertFalse($user->isActive());
         $this->assertNotNull($user->email_verified_at);
         $this->assertTrue($user->hasRole('Nurse'));
 
-        // the new account can sign in
+        // The new account cannot sign in until it is approved.
         $this->useWebGuard();
 
         $this->postJson('/api/v1/auth/login', [
             'email' => 'new.nurse@clinic.local',
             'password' => 'Nurse@12345',
-        ])->assertOk()->assertJsonStructure(['token']);
+        ])
+            ->assertStatus(403)
+            ->assertJsonPath('account_status', User::STATUS_PENDING_APPROVAL);
     }
 
     public function test_invalid_invitation_token_is_rejected(): void

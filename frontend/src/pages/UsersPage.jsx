@@ -1,6 +1,7 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
-import { Pencil, Trash2, UserPlus } from 'lucide-react'
+import { MailPlus, Pencil, Trash2, Users, UserCheck, UserX, ShieldAlert, CalendarDays } from 'lucide-react'
 import { userApi } from '../api/users.js'
 import { usePaginated } from '../hooks/usePaginated.js'
 import { useAuth } from '../hooks/useAuth.js'
@@ -8,6 +9,7 @@ import PageHeader from '../components/ui/PageHeader.jsx'
 import Button from '../components/ui/Button.jsx'
 import Card from '../components/ui/Card.jsx'
 import Badge from '../components/ui/Badge.jsx'
+import StatCard from '../components/ui/StatCard.jsx'
 import ConfirmDialog from '../components/ui/ConfirmDialog.jsx'
 import Table, { THead, TBody, Tr, Th, Td } from '../components/ui/Table.jsx'
 import Pagination from '../components/ui/Pagination.jsx'
@@ -29,9 +31,11 @@ const ROLE_TONES = {
 
 const STATUS_META = {
   pending: { label: 'Pending', tone: 'amber' },
+  pending_approval: { label: 'Pending approval', tone: 'amber' },
   active: { label: 'Active', tone: 'green' },
   suspended: { label: 'Suspended', tone: 'red' },
   disabled: { label: 'Disabled', tone: 'gray' },
+  rejected: { label: 'Rejected', tone: 'red' },
 }
 
 function roleName(role) {
@@ -49,6 +53,7 @@ export default function UsersPage() {
   const query = usePaginated(['users'], (params) => userApi.list(params), { page })
 
   const all = query.data?.data ?? []
+  const stats = query.data?.stats ?? {}
   const items = search
     ? all.filter((u) =>
         [u.name, u.username, u.email, ...(u.roles ?? []).map(roleName)]
@@ -57,7 +62,7 @@ export default function UsersPage() {
       )
     : all
 
-  const canManage = can('users.create') || can('users.update')
+  const canManage = can('users.update')
 
   const confirmDelete = async () => {
     if (!deleting) return
@@ -72,24 +77,59 @@ export default function UsersPage() {
   }
 
   return (
-    <div>
+    <div className="space-y-6">
       <PageHeader
         title="Users & Roles"
-        description="Manage staff accounts and their access roles."
+        description="System accounts and authentication roles. Staff records are managed in the Staff Directory."
         breadcrumb={[{ label: 'Users' }]}
         actions={
-          can('users.create') ? (
-            <Button
-              onClick={() => {
-                setEditing(null)
-                setFormOpen(true)
-              }}
-            >
-              <UserPlus className="size-4" aria-hidden /> New user
-            </Button>
+          can('users.invite') ? (
+            <Link to="/invitations">
+              <Button>
+                <MailPlus className="size-4" aria-hidden /> Invite staff
+              </Button>
+            </Link>
           ) : null
         }
       />
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <StatCard
+          label="Total Users"
+          value={stats.total ?? query.data?.total ?? 0}
+          icon={Users}
+          tone="brand"
+          loading={query.isLoading}
+        />
+        <StatCard
+          label="Active"
+          value={stats.active ?? 0}
+          icon={UserCheck}
+          tone="green"
+          loading={query.isLoading}
+        />
+        <StatCard
+          label="Suspended"
+          value={stats.suspended ?? 0}
+          icon={UserX}
+          tone="red"
+          loading={query.isLoading}
+        />
+        <StatCard
+          label="Unverified"
+          value={stats.unverified ?? 0}
+          icon={ShieldAlert}
+          tone="amber"
+          loading={query.isLoading}
+        />
+        <StatCard
+          label="New This Month"
+          value={stats.this_month ?? 0}
+          icon={CalendarDays}
+          tone="blue"
+          loading={query.isLoading}
+        />
+      </div>
 
       <Card>
         <div className="mb-4">
@@ -107,12 +147,14 @@ export default function UsersPage() {
         ) : all.length === 0 ? (
           <EmptyState
             title="No users yet"
-            message="Create a user to get started."
+            message="Staff accounts are provisioned securely via the invitation workflow."
             action={
-              can('users.create') ? (
-                <Button size="sm" onClick={() => setFormOpen(true)}>
-                  New user
-                </Button>
+              can('users.invite') ? (
+                <Link to="/invitations">
+                  <Button size="sm">
+                    <MailPlus className="size-4" aria-hidden /> Invite staff
+                  </Button>
+                </Link>
               ) : null
             }
           />
@@ -123,6 +165,7 @@ export default function UsersPage() {
             <THead>
               <Tr>
                 <Th>Name</Th>
+                <Th>Staff #</Th>
                 <Th>Username</Th>
                 <Th>Email</Th>
                 <Th>Role</Th>
@@ -140,6 +183,13 @@ export default function UsersPage() {
                 return (
                   <Tr key={u.id}>
                     <Td className="font-medium text-ink">{u.name}</Td>
+                    <Td>
+                      {u.staff_id ? (
+                        <Badge tone="blue">{u.staff_id}</Badge>
+                      ) : (
+                        <span className="text-xs text-ink-muted">Unlinked</span>
+                      )}
+                    </Td>
                     <Td className="text-ink-muted">{u.username ?? '—'}</Td>
                     <Td className="text-ink-muted">{u.email}</Td>
                     <Td>

@@ -19,12 +19,29 @@ class AppointmentController extends Controller
         //
         $this->authorize('viewAny', Appointment::class);
 
-        $appointments = Appointment::with(['patient', 'doctor'])
+        $query = Appointment::with(['patient', 'doctor'])
             ->latest('appointment_date')
-            ->latest('appointment_time')
-            ->paginate(15);
+            ->latest('appointment_time');
 
-        return response()->json($appointments);
+        $appointments = $query->paginate(15);
+
+        $today = now()->toDateString();
+
+        $stats = [
+            'total' => $appointments->total(),
+            'today' => (clone $query)->whereDate('appointment_date', $today)->count(),
+            'this_month' => (clone $query)->whereMonth('appointment_date', now()->month)
+                ->whereYear('appointment_date', now()->year)
+                ->count(),
+            'scheduled' => (clone $query)->where('status', 'scheduled')->count(),
+            'confirmed' => (clone $query)->where('status', 'confirmed')->count(),
+            'in_progress' => (clone $query)->where('status', 'in_progress')->count(),
+            'completed' => (clone $query)->where('status', 'completed')->count(),
+            'cancelled' => (clone $query)->where('status', 'cancelled')->count(),
+            'no_show' => (clone $query)->where('status', 'no_show')->count(),
+        ];
+
+        return response()->json(array_merge($appointments->toArray(), ['stats' => $stats]));
     }
 
     /**

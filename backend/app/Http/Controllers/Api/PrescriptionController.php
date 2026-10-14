@@ -17,7 +17,8 @@ class PrescriptionController extends Controller
     {
         $this->authorize('viewAny', Prescription::class);
 
-        $query = Prescription::with(['patient', 'doctor', 'items.medicine']);
+        $base = Prescription::with(['patient', 'doctor', 'items.medicine']);
+        $query = clone $base;
 
         if ($status = $request->query('status')) {
             $query->where('status', $status);
@@ -27,7 +28,19 @@ class PrescriptionController extends Controller
             $query->where('patient_id', $patientId);
         }
 
-        return response()->json($query->latest()->paginate(15));
+        $prescriptions = $query->latest()->paginate(15);
+
+        $stats = [
+            'total' => $prescriptions->total(),
+            'pending' => (clone $base)->where('status', 'pending')->count(),
+            'dispensed' => (clone $base)->where('status', 'dispensed')->count(),
+            'cancelled' => (clone $base)->where('status', 'cancelled')->count(),
+            'this_month' => (clone $base)->whereMonth('created_at', now()->month)
+                ->whereYear('created_at', now()->year)
+                ->count(),
+        ];
+
+        return response()->json(array_merge($prescriptions->toArray(), ['stats' => $stats]));
     }
 
     public function store(Request $request): JsonResponse

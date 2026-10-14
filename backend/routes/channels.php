@@ -18,3 +18,8 @@ Broadcast::channel('conversation.{conversation}', function (User $user, Conversa
 Broadcast::channel('notifications.{user}', function (User $user, User $target) {
     return (int) $user->id === (int) $target->id;
 });
+
+// Clinic-wide dashboard analytics: only users who may view reports subscribe.
+Broadcast::channel('dashboard', function (User $user) {
+    return $user->can('reports.view');
+});

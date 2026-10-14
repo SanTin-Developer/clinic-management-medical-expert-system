@@ -272,6 +272,8 @@ class AuthController extends Controller
     {
         return match (true) {
             $user->isPending() => 'Your account has not been activated yet. Please accept your invitation.',
+            $user->isPendingApproval() => 'Your account is awaiting administrator approval. You will be able to sign in once it has been approved.',
+            $user->isRejected() => 'Your account registration was not approved. Please contact your administrator.',
             $user->isSuspended() => 'Your account has been suspended. Please contact your administrator.',
             $user->isDisabled() => 'Your account has been disabled. Please contact your administrator.',
             default => 'Your account is not permitted to sign in.',

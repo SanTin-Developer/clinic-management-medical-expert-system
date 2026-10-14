@@ -17,7 +17,19 @@ class RolePermissionSeeder extends Seeder
             'users.update',
             'users.delete',
             'users.invite',
+            'users.approve',
             'users.suspend',
+
+            // Staff Directory
+            'staff.view',
+            'staff.create',
+            'staff.update',
+            'staff.delete',
+            'staff.salary.view',
+            'staff.salary.update',
+            'staff.document.view',
+            'staff.document.upload',
+            'staff.document.delete',
 
             // Security
             'security.view',

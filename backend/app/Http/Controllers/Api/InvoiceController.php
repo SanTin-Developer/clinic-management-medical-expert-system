@@ -15,7 +15,8 @@ class InvoiceController extends Controller
     {
         $this->authorize('viewAny', Invoice::class);
 
-        $query = Invoice::with(['patient', 'items']);
+        $base = Invoice::with(['patient', 'items']);
+        $query = clone $base;
 
         if ($status = $request->query('status')) {
             $query->where('status', $status);
@@ -25,7 +26,22 @@ class InvoiceController extends Controller
             $query->where('patient_id', $patientId);
         }
 
-        return response()->json($query->latest()->paginate(15));
+        $invoices = $query->latest()->paginate(15);
+
+        $stats = [
+            'total' => $invoices->total(),
+            'unpaid' => (clone $base)->where('status', 'unpaid')->count(),
+            'partially_paid' => (clone $base)->where('status', 'partially_paid')->count(),
+            'paid' => (clone $base)->where('status', 'paid')->count(),
+            'cancelled' => (clone $base)->where('status', 'cancelled')->count(),
+            'total_revenue' => (clone $base)->where('status', '!=', 'cancelled')->sum('total'),
+            'outstanding' => (clone $base)->whereIn('status', ['unpaid', 'partially_paid'])->sum('balance'),
+            'this_month' => (clone $base)->whereMonth('created_at', now()->month)
+                ->whereYear('created_at', now()->year)
+                ->count(),
+        ];
+
+        return response()->json(array_merge($invoices->toArray(), ['stats' => $stats]));
     }
 
     public function store(Request $request): JsonResponse

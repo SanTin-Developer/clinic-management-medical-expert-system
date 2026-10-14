@@ -23,7 +23,16 @@ class DiagnosisController extends Controller
             ->latest()
             ->paginate(15);
 
-        return response()->json($diagnoses);
+        $stats = [
+            'total' => $diagnoses->total(),
+            'this_month' => Diagnosis::query()->whereMonth('created_at', now()->month)
+                ->whereYear('created_at', now()->year)
+                ->count(),
+            'confirmed' => Diagnosis::query()->where('is_confirmed', true)->count(),
+            'provisional' => Diagnosis::query()->where('is_confirmed', false)->count(),
+        ];
+
+        return response()->json(array_merge($diagnoses->toArray(), ['stats' => $stats]));
     }
 
     public function store(Request $request): JsonResponse

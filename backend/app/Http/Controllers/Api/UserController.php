@@ -23,12 +23,25 @@ class UserController extends Controller
     {
         $this->authorize('viewAny', User::class);
 
-        $users = User::query()
-            ->with('roles:id,name')
-            ->latest()
-            ->paginate(15);
+        $query = User::query()->with('roles:id,name');
+        $base = clone $query;
 
-        return response()->json($users);
+        $users = $query->latest()->paginate(15);
+
+        $stats = [
+            'total' => $users->total(),
+            'active' => (clone $base)->where('account_status', 'active')->count(),
+            'inactive' => (clone $base)->where('account_status', 'inactive')->count(),
+            'suspended' => (clone $base)->where('account_status', 'suspended')->count(),
+            'locked' => (clone $base)->where('account_status', 'locked')->count(),
+            'unverified' => (clone $base)->whereNull('email_verified_at')->count(),
+            'verified' => (clone $base)->whereNotNull('email_verified_at')->count(),
+            'this_month' => (clone $base)->whereMonth('created_at', now()->month)
+                ->whereYear('created_at', now()->year)
+                ->count(),
+        ];
+
+        return response()->json(array_merge($users->toArray(), ['stats' => $stats]));
     }
 
     // Store a new user

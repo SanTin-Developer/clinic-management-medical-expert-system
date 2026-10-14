@@ -78,9 +78,20 @@ class AccountSecurityController extends Controller
             $validated['action'],
             $validated['password'],
             $request,
+            $validated['two_factor_code'] ?? null,
         );
 
         if (! $result['ok']) {
+            // When a second factor is required, tell the client so it can prompt
+            // for the authenticator code and retry with the same password.
+            if ($result['two_factor_required'] ?? false) {
+                return response()->json([
+                    'message' => $result['message'],
+                    'two_factor_required' => true,
+                    'action' => $validated['action'],
+                ], 403);
+            }
+
             return response()->json(['message' => $result['message']], 422);
         }
 
@@ -103,6 +114,7 @@ class AccountSecurityController extends Controller
                 'id' => $event->id,
                 'event' => $event->event,
                 'severity' => $event->severity,
+                'risk_score' => $event->risk_score,
                 'ip_address' => $event->ip_address,
                 'context' => $event->context,
                 'created_at' => $event->created_at,

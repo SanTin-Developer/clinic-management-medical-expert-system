@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { RefreshCw, Send, UserPlus, X } from 'lucide-react'
+import { RefreshCw, Send, UserPlus, X, MailPlus, Clock, CheckCircle2, CalendarClock, CalendarDays } from 'lucide-react'
 import { staffInvitationApi, invitationStatus, INVITATION_STATUS_META } from '../api/staffInvitations.js'
 import { usePaginated } from '../hooks/usePaginated.js'
 import { useAuth } from '../hooks/useAuth.js'
@@ -8,6 +8,7 @@ import PageHeader from '../components/ui/PageHeader.jsx'
 import Button from '../components/ui/Button.jsx'
 import Card from '../components/ui/Card.jsx'
 import Badge from '../components/ui/Badge.jsx'
+import StatCard from '../components/ui/StatCard.jsx'
 import ConfirmDialog from '../components/ui/ConfirmDialog.jsx'
 import Table, { THead, TBody, Tr, Th, Td } from '../components/ui/Table.jsx'
 import Pagination from '../components/ui/Pagination.jsx'
@@ -27,6 +28,7 @@ export default function StaffInvitationsPage() {
 
   const query = usePaginated(['staffInvitations'], (params) => staffInvitationApi.list(params), { page })
   const all = query.data?.data ?? []
+  const stats = query.data?.stats ?? {}
   const items = search
     ? all.filter((inv) =>
         [inv.name, inv.email, inv.role]
@@ -64,7 +66,7 @@ export default function StaffInvitationsPage() {
   }
 
   return (
-    <div>
+    <div className="space-y-6">
       <PageHeader
         title="Staff Invitations"
         description="Invite staff members and track outstanding invitations."
@@ -76,6 +78,44 @@ export default function StaffInvitationsPage() {
           ) : null
         }
       />
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <StatCard
+          label="Total Invitations"
+          value={stats.total ?? query.data?.total ?? 0}
+          icon={MailPlus}
+          tone="brand"
+          loading={query.isLoading}
+        />
+        <StatCard
+          label="Pending"
+          value={stats.pending ?? 0}
+          icon={Clock}
+          tone="amber"
+          loading={query.isLoading}
+        />
+        <StatCard
+          label="Accepted"
+          value={stats.accepted ?? 0}
+          icon={CheckCircle2}
+          tone="green"
+          loading={query.isLoading}
+        />
+        <StatCard
+          label="Expired"
+          value={stats.expired ?? 0}
+          icon={CalendarClock}
+          tone="red"
+          loading={query.isLoading}
+        />
+        <StatCard
+          label="New This Month"
+          value={stats.this_month ?? 0}
+          icon={CalendarDays}
+          tone="blue"
+          loading={query.isLoading}
+        />
+      </div>
 
       <Card bodyClassName="p-0">
         <div className="p-5">
@@ -112,6 +152,7 @@ export default function StaffInvitationsPage() {
             <THead>
               <Tr>
                 <Th>Name</Th>
+                <Th>Target Staff</Th>
                 <Th>Email</Th>
                 <Th>Role</Th>
                 <Th>Status</Th>
@@ -129,6 +170,18 @@ export default function StaffInvitationsPage() {
                 return (
                   <Tr key={invitation.id}>
                     <Td className="font-medium text-ink">{invitation.name}</Td>
+                    <Td>
+                      {invitation.staff ? (
+                        <span className="inline-flex items-center gap-1.5">
+                          <Badge tone="blue">{invitation.staff.staff_number}</Badge>
+                          <span className="text-xs text-ink-muted">
+                            {invitation.staff.first_name} {invitation.staff.last_name}
+                          </span>
+                        </span>
+                      ) : (
+                        <span className="text-xs text-ink-muted">General</span>
+                      )}
+                    </Td>
                     <Td className="text-ink-muted">{invitation.email}</Td>
                     <Td>
                       <Badge tone="brand">{invitation.role}</Badge>

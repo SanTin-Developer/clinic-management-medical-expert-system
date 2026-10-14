@@ -21,12 +21,28 @@ class StaffInvitationController extends Controller
     {
         $this->authorize('viewAny', User::class);
 
-        $invitations = StaffInvitation::query()
-            ->with(['inviter:id,name'])
-            ->latest()
-            ->paginate(15);
+        $query = StaffInvitation::query()
+            ->with(['inviter:id,name', 'staff:id,staff_number,first_name,last_name,department,job_title']);
+        $base = clone $query;
 
-        return response()->json($invitations);
+        $invitations = $query->latest()->paginate(15);
+
+        $stats = [
+            'total' => $invitations->total(),
+            'pending' => (clone $base)->whereNull('accepted_at')->whereNull('revoked_at')
+                ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>=', now()))
+                ->count(),
+            'accepted' => (clone $base)->whereNotNull('accepted_at')->count(),
+            'expired' => (clone $base)->whereNull('accepted_at')->whereNull('revoked_at')
+                ->whereNotNull('expires_at')->where('expires_at', '<', now())
+                ->count(),
+            'revoked' => (clone $base)->whereNull('accepted_at')->whereNotNull('revoked_at')->count(),
+            'this_month' => (clone $base)->whereMonth('created_at', now()->month)
+                ->whereYear('created_at', now()->year)
+                ->count(),
+        ];
+
+        return response()->json(array_merge($invitations->toArray(), ['stats' => $stats]));
     }
 
     // invite a new staff member
@@ -42,6 +58,7 @@ class StaffInvitationController extends Controller
             'message' => 'Invitation sent.',
             'invitation' => [
                 'id' => $invitation->id,
+                'staff_id' => $invitation->staff_id,
                 'email' => $invitation->email,
                 'name' => $invitation->name,
                 'role' => $invitation->role,

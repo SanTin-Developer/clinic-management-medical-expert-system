@@ -11,14 +11,13 @@ import { expertApi } from '../../api/expert.js'
 import { DISEASE_SEVERITY } from '../../utils/status.js'
 import SymptomMultiSelect from './MultiSelector.jsx'
 
-const empties = { code: '', name: '', name_km: '', category: '', description: '', severity_level: '', symptom_ids: [] }
+const empties = { name: '', name_km: '', category: '', description: '', severity_level: '', symptom_ids: [] }
 
 export default function DiseaseFormModal({ open, onClose, initial, onSaved }) {
   const editing = Boolean(initial?.id)
   const [form, setForm] = useState(
     initial
       ? {
-          code: initial.code ?? '',
           name: initial.name ?? '',
           name_km: initial.name_km ?? '',
           category: initial.category ?? '',
@@ -38,7 +37,6 @@ export default function DiseaseFormModal({ open, onClose, initial, onSaved }) {
     event.preventDefault()
     const next = {}
     if (!form.name.trim()) next.name = 'Required.'
-    if (editing && !form.code) next.code = 'Required.'
     setErrors(next)
     if (Object.keys(next).length) return
 
@@ -52,7 +50,6 @@ export default function DiseaseFormModal({ open, onClose, initial, onSaved }) {
         severity_level: form.severity_level || null,
         is_active: form.is_active,
       }
-      if (!editing) payload.code = form.code
       payload.symptom_ids = form.symptom_ids
       if (editing) {
         await expertApi.updateDisease(initial.id, payload)
@@ -94,9 +91,6 @@ export default function DiseaseFormModal({ open, onClose, initial, onSaved }) {
           </div>
         ) : null}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Field label="Code" htmlFor="d-code" required={!editing} error={errors.code} hint={editing ? `Current: ${initial.code}` : 'Auto-generated if blank.'}>
-            <Input id="d-code" value={form.code} onChange={(e) => set('code')(e.target.value)} invalid={Boolean(errors.code)} placeholder="e.g. DIS-FLU" />
-          </Field>
           <Field label="Name" htmlFor="d-name" required error={errors.name}>
             <Input id="d-name" value={form.name} onChange={(e) => set('name')(e.target.value)} invalid={Boolean(errors.name)} />
           </Field>

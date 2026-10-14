@@ -14,20 +14,28 @@ use Illuminate\Validation\ValidationException;
 class MedicalRecordController extends Controller
 {
     //
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
         $this->authorize('viewAny', MedicalRecord::class);
 
-        $record = MedicalRecord::with([
+        $query = MedicalRecord::with([
             'patient',
             'appointment',
             'consultation',
             'doctor',
-        ])
-            ->latest()
-            ->paginate(15);
+        ]);
+        $base = clone $query;
 
-        return response()->json($record);
+        $records = $query->latest()->paginate(15);
+
+        $stats = [
+            'total' => $records->total(),
+            'this_month' => (clone $base)->whereMonth('created_at', now()->month)
+                ->whereYear('created_at', now()->year)
+                ->count(),
+        ];
+
+        return response()->json(array_merge($records->toArray(), ['stats' => $stats]));
     }
 
     public function store(Request $request): JsonResponse

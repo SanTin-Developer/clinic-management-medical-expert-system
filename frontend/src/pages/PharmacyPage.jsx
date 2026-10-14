@@ -6,6 +6,16 @@ import {
   Plus,
   Trash2,
   ArrowLeftRight,
+  Pill,
+  CheckCircle2,
+  XCircle,
+  Boxes,
+  TriangleAlert,
+  CalendarClock,
+  Ban,
+  ArrowDownToLine,
+  ArrowUpFromLine,
+  RefreshCw,
 } from 'lucide-react'
 import { medicineApi, inventoryApi, stockMovementApi } from '../api/pharmacy.js'
 import { usePaginated, useAll } from '../hooks/usePaginated.js'
@@ -14,6 +24,7 @@ import PageHeader from '../components/ui/PageHeader.jsx'
 import Button from '../components/ui/Button.jsx'
 import Card from '../components/ui/Card.jsx'
 import Badge from '../components/ui/Badge.jsx'
+import StatCard from '../components/ui/StatCard.jsx'
 import ConfirmDialog from '../components/ui/ConfirmDialog.jsx'
 import Tabs from '../components/ui/Tabs.jsx'
 import Table, { THead, TBody, Tr, Th, Td } from '../components/ui/Table.jsx'
@@ -73,13 +84,135 @@ export default function PharmacyPage() {
 
   const activeQuery = { medicines, inventory, movements }[tab]
 
+  const medicineStats = medicines.data?.stats ?? {}
+  const inventoryList = inventory.data ?? []
+  const now = Date.now()
+  const soon = now + 30 * 24 * 60 * 60 * 1000
+  const inventoryStats = {
+    total: inventoryList.length,
+    low_stock: inventoryList.filter((i) => i.quantity <= (i.medicine?.reorder_level ?? 0)).length,
+    expiring_soon: inventoryList.filter((i) => {
+      if (!i.expiration_date) return false
+      const t = new Date(i.expiration_date).getTime()
+      return t >= now && t <= soon
+    }).length,
+    expired: inventoryList.filter(
+      (i) => i.expiration_date && new Date(i.expiration_date).getTime() < now,
+    ).length,
+    out_of_stock: inventoryList.filter((i) => i.quantity <= 0).length,
+  }
+  const movementList = movements.data ?? []
+  const movementStats = {
+    total: movementList.length,
+    in: movementList.filter((m) => m.type === 'in').length,
+    out: movementList.filter((m) => m.type === 'out').length,
+    adjustment: movementList.filter((m) => m.type === 'adjustment').length,
+  }
+
   return (
-    <div>
+    <div className="space-y-6">
       <PageHeader
         title="Pharmacy"
         description="Medicines, inventory batches and stock movements."
         breadcrumb={[{ label: 'Pharmacy' }]}
       />
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        {tab === 'medicines' ? (
+          <>
+            <StatCard
+              label="Total Medicines"
+              value={medicineStats.total ?? medicines.data?.total ?? 0}
+              icon={Pill}
+              tone="brand"
+              loading={medicines.isLoading}
+            />
+            <StatCard
+              label="Active"
+              value={medicineStats.active ?? 0}
+              icon={CheckCircle2}
+              tone="green"
+              loading={medicines.isLoading}
+            />
+            <StatCard
+              label="Inactive"
+              value={medicineStats.inactive ?? 0}
+              icon={XCircle}
+              tone="amber"
+              loading={medicines.isLoading}
+            />
+          </>
+        ) : tab === 'inventory' ? (
+          <>
+            <StatCard
+              label="Total Batches"
+              value={inventoryStats.total}
+              icon={Boxes}
+              tone="brand"
+              loading={inventory.isLoading}
+            />
+            <StatCard
+              label="Low Stock"
+              value={inventoryStats.low_stock}
+              icon={TriangleAlert}
+              tone="amber"
+              loading={inventory.isLoading}
+            />
+            <StatCard
+              label="Expiring Soon"
+              value={inventoryStats.expiring_soon}
+              icon={CalendarClock}
+              tone="blue"
+              loading={inventory.isLoading}
+            />
+            <StatCard
+              label="Expired"
+              value={inventoryStats.expired}
+              icon={Ban}
+              tone="red"
+              loading={inventory.isLoading}
+            />
+            <StatCard
+              label="Out of Stock"
+              value={inventoryStats.out_of_stock}
+              icon={XCircle}
+              tone="red"
+              loading={inventory.isLoading}
+            />
+          </>
+        ) : (
+          <>
+            <StatCard
+              label="Total Movements"
+              value={movementStats.total}
+              icon={ArrowLeftRight}
+              tone="brand"
+              loading={movements.isLoading}
+            />
+            <StatCard
+              label="Stock In"
+              value={movementStats.in}
+              icon={ArrowDownToLine}
+              tone="green"
+              loading={movements.isLoading}
+            />
+            <StatCard
+              label="Stock Out"
+              value={movementStats.out}
+              icon={ArrowUpFromLine}
+              tone="red"
+              loading={movements.isLoading}
+            />
+            <StatCard
+              label="Adjustments"
+              value={movementStats.adjustment}
+              icon={RefreshCw}
+              tone="amber"
+              loading={movements.isLoading}
+            />
+          </>
+        )}
+      </div>
 
       <Card className="px-0 pb-0">
         <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-4">

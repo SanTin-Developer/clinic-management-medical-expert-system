@@ -27,7 +27,14 @@ class VitalSignController extends Controller
             ->latest()
             ->paginate(15);
 
-        return response()->json($vitalSigns);
+        $stats = [
+            'total' => $vitalSigns->total(),
+            'this_month' => VitalSign::query()->whereMonth('created_at', now()->month)
+                ->whereYear('created_at', now()->year)
+                ->count(),
+        ];
+
+        return response()->json(array_merge($vitalSigns->toArray(), ['stats' => $stats]));
     }
 
     /**

@@ -8,6 +8,7 @@ import Input from '../ui/Input.jsx'
 import ConfirmDialog from '../ui/ConfirmDialog.jsx'
 import { userApi } from '../../api/users.js'
 import { stepUp } from '../../api/auth.js'
+import { useAuth } from '../../hooks/useAuth.js'
 
 const STATUS_ACTIONS = {
   active: ['suspend', 'disable'],
@@ -23,19 +24,27 @@ const LABELS = {
 }
 
 export default function UserStatusActions({ user, onChanged, disabled = false }) {
+  const { user: currentUser } = useAuth()
   const [action, setAction] = useState(null)
   const [reason, setReason] = useState('')
   const [password, setPassword] = useState('')
+  const [code, setCode] = useState('')
+  const [needsCode, setNeedsCode] = useState(false)
   const [errors, setErrors] = useState({})
   const [busy, setBusy] = useState(false)
 
   const status = user.account_status ?? 'active'
   const actions = STATUS_ACTIONS[status] ?? []
+  // Surface the authenticator-code field up front when the signed-in admin has
+  // TOTP enabled, so they know a second factor may be requested.
+  const adminHasTwoFactor = Boolean(currentUser?.two_factor_enabled)
 
   const close = () => {
     setAction(null)
     setReason('')
     setPassword('')
+    setCode('')
+    setNeedsCode(false)
     setErrors({})
   }
 
@@ -45,9 +54,17 @@ export default function UserStatusActions({ user, onChanged, disabled = false })
       setErrors({ password: 'Enter your account password to confirm.' })
       return
     }
+    if (needsCode && !code.trim()) {
+      setErrors({ code: 'Enter the code from your authenticator app.' })
+      return
+    }
     setBusy(true)
     try {
-      const grant = await stepUp({ action: 'users.suspend', password })
+      const grant = await stepUp({
+        action: 'users.suspend',
+        password,
+        ...(code.trim() ? { two_factor_code: code.trim() } : {}),
+      })
       const stepUpToken = grant.step_up_token
       if (action === 'suspend') {
         await userApi.suspend(user.id, { reason: reason.trim() || undefined, stepUpToken })
@@ -59,7 +76,13 @@ export default function UserStatusActions({ user, onChanged, disabled = false })
       close()
       onChanged?.()
     } catch (err) {
-      setErrors({ form: err.message })
+      // The server asks for a second factor: reveal the code field and retry.
+      if (err?.payload?.two_factor_required) {
+        setNeedsCode(true)
+        setErrors({ form: err.message || 'Enter the code from your authenticator app to continue.' })
+      } else {
+        setErrors({ form: err.message })
+      }
     } finally {
       setBusy(false)
     }
@@ -168,7 +191,8 @@ export default function UserStatusActions({ user, onChanged, disabled = false })
             </Field>
           ) : null}
           <div className="rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800 dark:bg-amber-500/10 dark:text-amber-200">
-            This is a sensitive action. Confirm your identity with your account password.
+            This is a sensitive action. Confirm your identity with your account password
+            {adminHasTwoFactor ? ' and a code from your authenticator app.' : '.'}
           </div>
           <Field label="Your password" htmlFor="suspend-password" required error={errors.password}>
             <Input
@@ -180,6 +204,25 @@ export default function UserStatusActions({ user, onChanged, disabled = false })
               invalid={Boolean(errors.password)}
             />
           </Field>
+          {needsCode || adminHasTwoFactor ? (
+            <Field
+              label="Authenticator code"
+              htmlFor="suspend-code"
+              required={needsCode}
+              error={errors.code}
+              hint={needsCode ? undefined : 'Only required if prompted.'}
+            >
+              <Input
+                id="suspend-code"
+                inputMode="text"
+                autoComplete="one-time-code"
+                placeholder="123456"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                invalid={Boolean(errors.code)}
+              />
+            </Field>
+          ) : null}
         </div>
       </Modal>
     </>

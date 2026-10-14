@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
-import { UserPlus, Trash2, Pencil } from 'lucide-react'
+import { UserPlus, Trash2, Pencil, Users } from 'lucide-react'
 import { patientApi } from '../api/patients.js'
 import { usePaginated } from '../hooks/usePaginated.js'
 import { useAuth } from '../hooks/useAuth.js'
@@ -15,6 +15,7 @@ import Badge from '../components/ui/Badge.jsx'
 import Pagination from '../components/ui/Pagination.jsx'
 import { RowSkeleton } from '../components/ui/Skeleton.jsx'
 import { EmptyState, ErrorState } from '../components/ui/State.jsx'
+import StatCard from '../components/ui/StatCard.jsx'
 import PatientFormModal from '../components/patients/PatientFormModal.jsx'
 import { ageFromDateOfBirth, patientFullName } from '../utils/format.js'
 
@@ -54,8 +55,10 @@ export default function PatientListPage() {
     }
   }
 
+  const stats = query.data?.stats ?? {}
+
   return (
-    <div>
+    <div className="space-y-6">
       <PageHeader
         title="Patients"
         description="Register and manage patient records."
@@ -73,6 +76,14 @@ export default function PatientListPage() {
           ) : null
         }
       />
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <StatCard label="Total Patients" value={stats.total ?? query.data?.total ?? items.length} icon={Users} tone="brand" loading={query.isLoading} />
+        <StatCard label="New This Month" value={stats.new_this_month ?? 0} icon={Users} tone="green" loading={query.isLoading} />
+        <StatCard label="Male" value={stats.male ?? 0} icon={Users} tone="blue" loading={query.isLoading} />
+        <StatCard label="Female" value={stats.female ?? 0} icon={Users} tone="amber" loading={query.isLoading} />
+        <StatCard label="With Allergies" value={stats.with_allergies ?? 0} icon={Users} tone="red" loading={query.isLoading} />
+      </div>
 
       <Card>
         <div className="mb-4">

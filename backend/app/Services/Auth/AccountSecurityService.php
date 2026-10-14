@@ -72,6 +72,16 @@ class AccountSecurityService
 
     public function activate(User $user, Request $request): void
     {
+        // The approval workflow is the only path that moves a freshly
+        // registered ("pending_approval") or previously rejected account into
+        // the active state, so that the reviewing administrator and decision
+        // are always recorded. Route those through approve() instead.
+        if ($user->isPendingApproval() || $user->isRejected()) {
+            throw ValidationException::withMessages([
+                'account' => ['This account must be reviewed through the approval workflow before it can be activated.'],
+            ]);
+        }
+
         $wasSuspended = $user->isSuspended();
 
         $user->forceFill([
@@ -92,6 +102,82 @@ class AccountSecurityService
         );
     }
 
+    /**
+     * Approve a staff account that submitted a registration. This is the only
+     * transition that makes a "pending_approval" (or previously "rejected")
+     * account eligible to authenticate. The reviewing administrator and the
+     * decision timestamp are recorded for audit.
+     */
+    public function approve(User $admin, User $target, Request $request): void
+    {
+        $this->assertNotSelf($admin, $target, 'approve');
+
+        if (! $target->isPendingApproval() && ! $target->isRejected()) {
+            throw ValidationException::withMessages([
+                'account' => ['This account is not awaiting approval.'],
+            ]);
+        }
+
+        $target->forceFill([
+            'account_status' => User::STATUS_ACTIVE,
+            'activated_at' => now(),
+            'approved_at' => now(),
+            'approved_by' => $admin->id,
+            'rejected_at' => null,
+            'rejected_by' => null,
+            'rejection_reason' => null,
+            'suspended_at' => null,
+            'suspended_reason' => null,
+        ])->save();
+
+        // A pending/rejected account could never hold a usable session, but
+        // clear any stale tokens and trusted devices defensively so a grant
+        // issued before this workflow cannot be replayed.
+        $target->tokens()->delete();
+        $target->trustedDevices()->delete();
+
+        $target->notify(new AccountStatusChangedNotification('approved'));
+
+        $this->events->record(SecurityEventService::ACCOUNT_APPROVED, $target, 'info', [
+            'approved_by' => $admin->id,
+        ], $request);
+    }
+
+    /**
+     * Reject a staff account that submitted a registration. A reason is
+     * mandatory. The account is moved to "rejected", which — like every
+     * non-active state — cannot authenticate or use an existing token.
+     */
+    public function reject(User $admin, User $target, string $reason, Request $request): void
+    {
+        $this->assertNotSelf($admin, $target, 'reject');
+
+        if (! $target->isPendingApproval() && ! $target->isRejected()) {
+            throw ValidationException::withMessages([
+                'account' => ['This account is not awaiting approval.'],
+            ]);
+        }
+
+        $target->forceFill([
+            'account_status' => User::STATUS_REJECTED,
+            'rejected_at' => now(),
+            'rejected_by' => $admin->id,
+            'rejection_reason' => $reason,
+            'approved_at' => null,
+            'approved_by' => null,
+        ])->save();
+
+        $target->tokens()->delete();
+        $target->trustedDevices()->delete();
+
+        $target->notify(new AccountStatusChangedNotification('rejected', $reason));
+
+        $this->events->record(SecurityEventService::ACCOUNT_REJECTED, $target, 'warning', [
+            'rejected_by' => $admin->id,
+            'reason' => $reason,
+        ], $request);
+    }
+
     public function disable(User $user, Request $request): void
     {
         $this->assertNotLastActiveAdmin($user);
@@ -107,6 +193,18 @@ class AccountSecurityService
         $user->notify(new AccountStatusChangedNotification('disabled'));
 
         $this->events->record(SecurityEventService::ACCOUNT_DISABLED, $user, 'warning', [], $request);
+    }
+
+    /**
+     * An administrator must not approve or reject their own account.
+     */
+    private function assertNotSelf(User $admin, User $target, string $action): void
+    {
+        if ($admin->id === $target->id) {
+            throw ValidationException::withMessages([
+                'account' => ["You cannot {$action} your own account."],
+            ]);
+        }
     }
 
     /**

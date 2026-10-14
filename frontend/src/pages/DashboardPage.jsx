@@ -6,27 +6,75 @@ import {
   HeartPulse,
   PackageSearch,
   Pill,
+  Stethoscope,
   Users,
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { reportApi } from '../api/reports.js'
+import { dashboardApi } from '../api/dashboard.js'
 import { appointmentApi } from '../api/appointments.js'
 import { prescriptionApi } from '../api/prescriptions.js'
 import { usePaginated } from '../hooks/usePaginated.js'
 import { useAuth } from '../hooks/useAuth.js'
+import { useDashboardRealtime } from '../hooks/useDashboardRealtime.js'
+import { isRealtimeConfigured } from '../lib/echo.js'
 import StatCard from '../components/ui/StatCard.jsx'
 import Card from '../components/ui/Card.jsx'
 import Badge from '../components/ui/Badge.jsx'
 import Table, { THead, TBody, Tr, Th, Td } from '../components/ui/Table.jsx'
 import { CardSkeleton, RowSkeleton } from '../components/ui/Skeleton.jsx'
 import Button from '../components/ui/Button.jsx'
+import TrendAreaChart from '../components/charts/TrendAreaChart.jsx'
+import BarChart from '../components/charts/BarChart.jsx'
+import DonutChart from '../components/charts/DonutChart.jsx'
 import {
   formatCurrency,
   formatDate,
+  formatNumber,
   formatTime,
   patientFullName,
 } from '../utils/format.js'
 import { statusBadgeFor, APPOINTMENT_STATUS, PRESCRIPTION_STATUS } from '../utils/status.js'
+
+const STATUS_COLORS = {
+  scheduled: '#2563eb',
+  confirmed: '#0ea5e9',
+  completed: '#0d9488',
+  cancelled: '#ef4444',
+  no_show: '#f59e0b',
+  rescheduled: '#8b5cf6',
+}
+
+const FALLBACK_COLORS = ['#2563eb', '#0d9488', '#f59e0b', '#8b5cf6', '#ef4444', '#0ea5e9']
+
+const COMPACT_CURRENCY = new Intl.NumberFormat('en-US', {
+  notation: 'compact',
+  style: 'currency',
+  currency: 'USD',
+  maximumFractionDigits: 1,
+})
+
+function compactCurrency(value) {
+  return COMPACT_CURRENCY.format(Number(value ?? 0))
+}
+
+function ChartSkeleton({ height = 200 }) {
+  return (
+    <div
+      className="w-full animate-pulse rounded-xl bg-brand-soft/70"
+      style={{ height }}
+      aria-hidden
+    />
+  )
+}
+
+function ChartError({ message }) {
+  return (
+    <p className="py-10 text-center text-sm text-red-600">
+      {message || 'Unable to load chart data.'}
+    </p>
+  )
+}
 
 function greeting() {
   const hour = new Date().getHours()
@@ -58,6 +106,24 @@ export default function DashboardPage() {
     { enabled: can('prescriptions.view') },
   )
 
+  const live = isRealtimeConfigured()
+
+  const analytics = useQuery({
+    queryKey: ['dashboard-analytics'],
+    queryFn: dashboardApi.analytics,
+    enabled: can('reports.view'),
+    staleTime: 60_000,
+    refetchInterval: live ? false : 60_000,
+  })
+
+  useDashboardRealtime(can('reports.view'))
+
+  const statusData = (analytics.data?.appointments?.by_status ?? []).map((item, index) => ({
+    label: item.status,
+    value: Number(item.total ?? 0),
+    color: STATUS_COLORS[item.status] ?? FALLBACK_COLORS[index % FALLBACK_COLORS.length],
+  }))
+
   const today = new Intl.DateTimeFormat('en-US', {
     weekday: 'long',
     year: 'numeric',
@@ -67,15 +133,56 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-sm font-medium text-brand">{today}</p>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-ink">
-            {greeting()}, {user?.name?.split(' ')[0] ?? 'there'}
-          </h1>
-          <p className="mt-1 text-sm text-ink-muted">
-            Here's what's happening across the clinic today.
-          </p>
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-brand-dark via-brand to-brand-darker px-6 py-7 text-white shadow-[0_24px_50px_-28px_rgb(37_99_235_/_0.95)] ring-1 ring-white/10 sm:px-8 sm:py-9">
+        <div
+          className="pointer-events-none absolute inset-0 auth-grid opacity-50"
+          aria-hidden
+        />
+        <div
+          className="pointer-events-none absolute -right-12 -top-16 size-56 rounded-full bg-white/15 blur-2xl animate-float"
+          aria-hidden
+        />
+        <div
+          className="pointer-events-none absolute -bottom-24 right-24 size-52 rounded-full bg-sky-300/25 blur-2xl animate-float-slow"
+          aria-hidden
+        />
+        <div
+          className="pointer-events-none absolute -left-10 bottom-0 size-40 rounded-full bg-blue-400/20 blur-2xl animate-float-reverse"
+          aria-hidden
+        />
+        <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-blue-50 backdrop-blur-sm">
+              {today}
+            </p>
+            <h1 className="mt-3 text-2xl font-bold tracking-tight text-white sm:text-3xl">
+              {greeting()}, {user?.name?.split(' ')[0] ?? 'there'}
+            </h1>
+            <p className="mt-1.5 max-w-xl text-sm text-blue-50/90">
+              Here's what's happening across the clinic today.
+            </p>
+          </div>
+
+          <div
+            className="relative hidden size-44 shrink-0 items-center justify-center lg:flex"
+            aria-hidden
+          >
+            <span className="absolute inset-0 rounded-full bg-white/10 ring-1 ring-white/20 backdrop-blur-sm" />
+            <span className="absolute inset-5 rounded-full bg-white/10 ring-1 ring-white/15" />
+            <span className="absolute inset-11 rounded-full bg-white/10 ring-1 ring-white/15" />
+            <span className="relative grid size-20 place-items-center rounded-3xl bg-white/20 text-white shadow-lg ring-1 ring-white/30 backdrop-blur-sm animate-float">
+              <Stethoscope className="size-10" aria-hidden />
+            </span>
+            <span className="absolute -top-1 right-3 grid size-11 place-items-center rounded-2xl bg-white/20 text-white shadow-lg ring-1 ring-white/30 backdrop-blur-sm animate-float-slow">
+              <HeartPulse className="size-5" aria-hidden />
+            </span>
+            <span className="absolute bottom-2 -left-1 grid size-11 place-items-center rounded-2xl bg-white/20 text-white shadow-lg ring-1 ring-white/30 backdrop-blur-sm animate-float-reverse">
+              <Pill className="size-5" aria-hidden />
+            </span>
+            <span className="absolute bottom-0 right-1 grid size-10 place-items-center rounded-2xl bg-white/20 text-white shadow-lg ring-1 ring-white/30 backdrop-blur-sm animate-float">
+              <CalendarDays className="size-5" aria-hidden />
+            </span>
+          </div>
         </div>
       </div>
 
@@ -152,6 +259,89 @@ export default function DashboardPage() {
           </div>
         </Card>
       )}
+
+      {can('reports.view') ? (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+            <Card
+              className="xl:col-span-2"
+              title="Appointment volume"
+              subtitle="Daily appointments over the last 14 days"
+              actions={
+                <Badge tone={live ? 'green' : 'gray'}>
+                  <span
+                    className={`size-1.5 rounded-full ${live ? 'bg-emerald-500' : 'bg-slate-400'}`}
+                    aria-hidden
+                  />
+                  {live ? 'Live' : 'Auto-refresh'}
+                </Badge>
+              }
+            >
+              {analytics.isLoading ? (
+                <ChartSkeleton height={220} />
+              ) : analytics.isError ? (
+                <ChartError message={analytics.error.message} />
+              ) : (
+                <TrendAreaChart
+                  data={analytics.data.appointments.trend}
+                  color="#2563eb"
+                  formatValue={formatNumber}
+                />
+              )}
+            </Card>
+
+            <Card title="Appointment status" subtitle="All recorded appointments">
+              {analytics.isLoading ? (
+                <ChartSkeleton height={176} />
+              ) : analytics.isError ? (
+                <ChartError message={analytics.error.message} />
+              ) : (
+                <DonutChart
+                  data={statusData}
+                  centerLabel="Appointments"
+                  formatValue={formatNumber}
+                />
+              )}
+            </Card>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+            <Card
+              className="xl:col-span-2"
+              title="Revenue"
+              subtitle="Collected payments over the last 6 months"
+            >
+              {analytics.isLoading ? (
+                <ChartSkeleton height={220} />
+              ) : analytics.isError ? (
+                <ChartError message={analytics.error.message} />
+              ) : (
+                <BarChart
+                  data={analytics.data.revenue.trend}
+                  color="#0d9488"
+                  formatValue={formatCurrency}
+                  formatAxis={compactCurrency}
+                />
+              )}
+            </Card>
+
+            <Card title="Patient registrations" subtitle="New patients over the last 14 days">
+              {analytics.isLoading ? (
+                <ChartSkeleton height={180} />
+              ) : analytics.isError ? (
+                <ChartError message={analytics.error.message} />
+              ) : (
+                <TrendAreaChart
+                  data={analytics.data.patients.trend}
+                  color="#7c3aed"
+                  height={180}
+                  formatValue={formatNumber}
+                />
+              )}
+            </Card>
+          </div>
+        </div>
+      ) : null}
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
         <div className="xl:col-span-2">

@@ -24,6 +24,7 @@ This work delivers the **backend security core** for all of those areas without 
 |-------|-------|------------|
 | Baseline (before this work) | 227 | 761 |
 | After backend security core | **270** | **892** |
+| After hardening + mandatory staff approval | **296** | **982** |
 
 New test files:
 
@@ -31,9 +32,11 @@ New test files:
 |------|--------|
 | `backend/tests/Unit/TotpServiceTest.php` | RFC 6238 vectors, Base32 round-trip, replay rejection, provisioning URI |
 | `backend/tests/Feature/TwoFactorAuthenticationTest.php` | enroll/confirm/disable, mandatory login gating, replay, recovery codes |
-| `backend/tests/Feature/StaffProvisioningTest.php` | invite, lookup, accept, revoke, suspend + step-up, last-admin safeguard |
+| `backend/tests/Feature/StaffProvisioningTest.php` | invite, lookup, accept (→ pending_approval), revoke, suspend + step-up, last-admin safeguard |
 | `backend/tests/Feature/AccountSecurityTest.php` | password change + session revoke, email change (two-stage), step-up, security events |
 | `backend/tests/Feature/AccountLifecycleTest.php` | pending/suspended/disabled account login blocking, restricted password-change state |
+| `backend/tests/Feature/SecurityHardeningTest.php` | TOTP step-up factor, risk score persistence, critical alerts (see §13) |
+| `backend/tests/Feature/StaffApprovalTest.php` | mandatory staff-admin approval workflow (see §14) |
 
 Measured with `docker exec clinic_backend php artisan test`.
 
@@ -189,28 +192,74 @@ AUTH_EMAIL_CHANGE_EXPIRE_MINUTES, AUTH_EMAIL_CHANGE_MAX_ATTEMPTS
 
 ## 10. Known limitations & blockers (honest)
 
-1. **Email delivery not verified end-to-end.** Notifications are queued; tests use the `array` mailer. Actual inbox delivery (invitations, email-change codes, status notifications) depends on SMTP credentials and was **not** verified in this environment.
-2. **Step-up uses password only.** Accounts with TOTP enabled can complete step-up with the password alone. Requiring a TOTP code as an additional step-up factor is a planned hardening.
-3. **Frontend not yet integrated.** The new backend endpoints have no React UI/wrappers yet (no TOTP enrollment/QR screen, no password/email-change forms, no invitation-accept page). The API is fully usable but not yet surfaced in the SPA.
+1. **Email delivery not verified end-to-end.** Notifications are queued; tests use the `array` mailer. Actual inbox delivery (invitations, email-change codes, status notifications, and the new critical security alerts) depends on SMTP credentials and was **not** verified in this environment.
+2. ~~**Step-up uses password only.**~~ **Resolved (opt-in).** TOTP as a step-up factor is implemented behind `AUTH_STEP_UP_REQUIRE_TWO_FACTOR` (default off) — see §13.
+3. ~~**Frontend not yet integrated.**~~ **Resolved.** The SPA now surfaces all endpoints: TOTP enrollment/QR, recovery codes, login TOTP step, password/email-change forms, invitation-accept page, staff invitation management, security-events view, and suspend/step-up gating with an optional authenticator-code field.
 4. **`2fa.enrolled` not active by default.** It is only registered when `AUTH_2FA_MANDATORY=true` at route-registration time, so changing the flag requires a config/route cache clear and a worker restart.
-5. **Risk score is advisory.** It is logged but does not block or gate anything by itself.
+5. **Risk score is advisory.** It is logged and now surfaced per event, but it still does not block or gate anything by itself (by design).
 6. **Operational:** long-running workers (queue/broadcast) require `docker restart clinic_backend` after class changes; no `supervisorctl` socket is available.
 
 ---
 
 ## 11. Remaining work
 
-- **Frontend:** TOTP enrollment with QR rendering from the `otpauth://` URI, recovery-code display, login TOTP step, password-change and two-stage email-change forms, invitation-accept page, staff invitation management screen, security-events view, and gating UI for suspend/step-up.
-- **Docs:** OpenAPI annotations for the new endpoints, and a short administrator runbook for enabling mandatory 2FA and invitations.
-- **Hardening (optional):** require TOTP as a step-up factor for enrolled users; expose `riskScore` in the security-events response and alert on `critical` severity.
+- ~~**Frontend:** TOTP enrollment with QR rendering from the `otpauth://` URI, recovery-code display, login TOTP step, password-change and two-stage email-change forms, invitation-accept page, staff invitation management screen, security-events view, and gating UI for suspend/step-up.~~ **Done** — shipped in the same change (`frontend/src/components/security/*`, `frontend/src/pages/{AcceptInvitationPage,StaffInvitationsPage,TwoFactorVerifyPage}.jsx`, `SettingsPage`, router).
+- **Docs:** OpenAPI is auto-generated from routes + FormRequests by `dedoc/scramble` (`/docs/api`, `/docs/api.json`), so no manual annotations are required. A short administrator runbook is now provided at `docs/ADMIN_SECURITY_RUNBOOK.md`. **Done.**
+- ~~**Hardening (optional):** require TOTP as a step-up factor for enrolled users; expose `riskScore` in the security-events response and alert on `critical` severity.~~ **Done** — see §13.
+
+---
+
+## 13. Hardening follow-up (completed)
+
+Implemented after the initial backend/frontend delivery, all additive and flag-gated:
+
+1. **TOTP as a step-up factor.** When `AUTH_STEP_UP_REQUIRE_TWO_FACTOR=true`, an account that has TOTP enrolled must present a valid authenticator code (or a single-use recovery code) in addition to the password to obtain a step-up grant. Non-enrolled accounts are unaffected and the flag defaults to **off**. See `StepUpService::authorize`, `StepUpRequest`, `AccountSecurityController::stepUp` (returns `two_factor_required: true` with HTTP 403 when a code is needed).
+2. **Risk score persisted + exposed.** `security_events.risk_score` (nullable, additive migration `2026_10_20_000021`) stores the advisory score computed by `SecurityEventService::riskScore`; `GET /auth/security-events` now returns `risk_score` per event, and the Settings activity list highlights scores ≥ 2.
+3. **Critical-severity alerts.** When `AUTH_SECURITY_ALERTS_ENABLED=true` (default **on**), the account owner is emailed via `SecurityAlertNotification` whenever a `critical` event is recorded (currently `login.locked`). Best-effort: notification failures are caught and never break the request.
+
+**Verification:** new suite `backend/tests/Feature/SecurityHardeningTest.php` — 9 tests / 23 assertions passing. Existing security/auth suites re-run green: `AccountSecurityTest`, `StaffProvisioningTest`, `TwoFactorAuthenticationTest`, `AccountLifecycleTest`, `AuthTest` — 37 passed / 137 assertions. Live PostgreSQL migration applied. Frontend `vite build` succeeds; `oxlint` clean.
+
+---
+
+## 14. Mandatory staff-admin approval workflow (completed)
+
+Accepting an invitation no longer grants application access. The account now enters a new lifecycle state, `pending_approval`, and only an authorized administrator can approve (or reject) it. This reuses the existing single `account_status` column and the existing enforcement points rather than introducing a parallel mechanism.
+
+**Why activation used to permit login:** `StaffProvisioningService::accept()` set `account_status = active` the moment the invitation was accepted. Because `login`, `AuthController::verifyTwoFactor`, and the `EnsureAccountIsActive` middleware all gate on `isActive()`, the account was immediately usable.
+
+**The fix.** `accept()` now sets `account_status = pending_approval` (and records an `account.registration_submitted` security event). Since `pending_approval` and `rejected` are not `active`, they are automatically blocked by **all three existing enforcement points** — no change was needed to the login gate, the 2FA challenge, or the account-active middleware. This also covers existing tokens: a token minted for a pending/rejected account is rejected on every protected route.
+
+**Lifecycle.** `pending` (invited, not yet accepted) → `pending_approval` (accepted, awaiting review) → `active` (approved) **or** `rejected` (blocked). A `rejected` account can later be approved. `pending`, `suspended`, and `disabled` behaviour is unchanged.
+
+**Enforcement & audit.**
+- `AccountSecurityService::approve()` / `reject()` are the **only** transitions into `active`/`rejected` from `pending_approval`. They record `approved_by`/`approved_at` (or `rejected_by`/`rejected_at`/`rejection_reason`) and emit `account.approved` / `account.rejected` security events.
+- The generic `activate()` endpoint was hardened to **refuse** `pending_approval`/`rejected` accounts (HTTP 422), so the workflow cannot be bypassed through the old reactivation path.
+- Rejection requires a reason (`RejectRegistrationRequest`). Both actions are gated by the new `users.approve` permission and server-side step-up (`step.up:users.approve`).
+- An administrator cannot approve or reject their own account (`AccountSecurityService::assertNotSelf`).
+- Approving/rejecting defensively clears the target's tokens and trusted devices so no pre-workflow grant can be replayed.
+
+**Data model.** Additive migration `2026_10_20_000022_add_staff_approval_to_users_table` adds nullable `approved_by`, `approved_at`, `rejected_by`, `rejected_at`, `rejection_reason` to `users`. All columns are nullable, so existing active accounts are untouched. **This migration has been written but NOT yet applied to the live database** (requires explicit approval); the test suite runs it on in-memory SQLite via `RefreshDatabase`.
+
+**Endpoints.**
+| Method | Path | Guard |
+|--------|------|-------|
+| `GET` | `/staff/approvals` | `users.approve` |
+| `POST` | `/users/{user}/approve` | `users.approve` + step-up `users.approve` |
+| `POST` | `/users/{user}/reject` | `users.approve` + step-up `users.approve` (reason required) |
+
+**Frontend.** New `PendingApprovalsPage` (route `/approvals`, nav under Administration, guarded by `users.approve`), `StaffApprovalActions` (approve/reject modal with the same password + optional TOTP step-up flow as suspend), `staffApprovals.js` API client, and `pending_approval`/`rejected` status badges in the Users list. The invitation-accept success screen now tells the user their registration is awaiting approval.
+
+**Verification:** new suite `backend/tests/Feature/StaffApprovalTest.php` — 17 tests covering: accepted invitation lands in `pending_approval` and cannot sign in; pending & rejected tokens cannot reach protected endpoints; admin can approve and the account can then sign in; approve/reject write audit events; rejection requires a reason and blocks access; a rejected account can later be approved; non-admins and users without `users.approve` are refused (including the queue); an admin cannot approve their own account; approve requires step-up; the generic `activate` endpoint refuses pending accounts; the index lists only pending accounts; the full invite → accept → approve → login flow; and receptionist patient creation is unaffected. **Full backend suite: 296 passed / 982 assertions, zero regressions.** Frontend `vite build` succeeds; `oxlint` clean on new files.
+
+**Limitations.** Rejection is terminal from the staff member's side until an admin re-approves; there is no self-service resubmission. The reviewing admin's decision reason is stored and audited but is not currently surfaced back to the rejected user in the SPA (the email notification includes it). The migration is not yet applied to the live database.
 
 ---
 
 ## 12. Files of interest
 
 **Services:** `backend/app/Services/Auth/{TotpService,TwoFactorService,TwoFactorChallengeService,StepUpService,StaffProvisioningService,EmailChangeService,AccountSecurityService,SecurityEventService}.php`, `Services/Auth/Support/Base32.php`
-**Controllers:** `backend/app/Http/Controllers/Api/{AuthController,TwoFactorController,AccountSecurityController,StaffInvitationController,InvitationController,UserController}.php`
+**Controllers:** `backend/app/Http/Controllers/Api/{AuthController,TwoFactorController,AccountSecurityController,StaffInvitationController,StaffApprovalController,InvitationController,UserController}.php`
 **Middleware:** `backend/app/Http/Middleware/{EnsureAccountIsActive,EnsurePasswordIsCurrent,EnsureTwoFactorEnrolled,EnsureStepUp}.php`
 **Models:** `backend/app/Models/{User,StaffInvitation,TwoFactorRecoveryCode,TwoFactorChallenge,StepUpAuthorization,SecurityEvent,EmailChangeRequest}.php`
 **Config/wiring:** `backend/config/auth.php`, `backend/.env.example`, `backend/bootstrap/app.php`, `backend/app/Providers/AppServiceProvider.php`, `backend/app/Policies/UserPolicy.php`, `backend/database/seeders/RolePermissionSeeder.php`, `backend/routes/api.php`
-**Tests:** `backend/tests/Unit/TotpServiceTest.php`, `backend/tests/Feature/{TwoFactorAuthenticationTest,StaffProvisioningTest,AccountSecurityTest,AccountLifecycleTest}.php`
+**Tests:** `backend/tests/Unit/TotpServiceTest.php`, `backend/tests/Feature/{TwoFactorAuthenticationTest,StaffProvisioningTest,StaffApprovalTest,AccountSecurityTest,AccountLifecycleTest,SecurityHardeningTest}.php`

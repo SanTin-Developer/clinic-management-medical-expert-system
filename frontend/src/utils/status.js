@@ -81,6 +81,47 @@ export const ROLES = [
   { value: 'Patient', label: 'Patient' },
 ]
 
+export const EMPLOYMENT_STATUS = {
+  employed: meta('Employed', 'green'),
+  probation: meta('Probation', 'blue'),
+  on_leave: meta('On leave', 'amber'),
+  resigned: meta('Resigned', 'gray'),
+  terminated: meta('Terminated', 'red'),
+}
+
+export const EMPLOYMENT_STATUS_OPTIONS = Object.entries(EMPLOYMENT_STATUS).map(
+  ([value, m]) => ({ value, label: m.label }),
+)
+
+export const EMPLOYMENT_TYPE = {
+  full_time: meta('Full-time', 'brand'),
+  part_time: meta('Part-time', 'blue'),
+  contract: meta('Contract', 'amber'),
+  intern: meta('Intern', 'navy'),
+}
+
+export const EMPLOYMENT_TYPE_OPTIONS = Object.entries(EMPLOYMENT_TYPE).map(
+  ([value, m]) => ({ value, label: m.label }),
+)
+
+export const STAFF_DOCUMENT_CATEGORIES = {
+  cv: meta('CV / Resume', 'blue'),
+  certificate: meta('Certificate', 'brand'),
+  license: meta('Medical License', 'green'),
+  contract: meta('Employment Contract', 'amber'),
+  other: meta('Other Document', 'gray'),
+}
+
+export const STAFF_DOCUMENT_CATEGORY_OPTIONS = Object.entries(
+  STAFF_DOCUMENT_CATEGORIES,
+).map(([value, m]) => ({ value, label: m.label }))
+
+export const PAY_FREQUENCY_OPTIONS = [
+  { value: 'monthly', label: 'Monthly' },
+  { value: 'biweekly', label: 'Bi-weekly' },
+  { value: 'hourly', label: 'Hourly' },
+]
+
 export function statusBadgeFor(map, value) {
   return map[value] ?? meta(value ?? '—', 'gray')
 }

@@ -39,6 +39,14 @@ class UserPolicy
     }
 
     /**
+     * Determine whether the user can approve or reject pending registrations.
+     */
+    public function approve(User $user): bool
+    {
+        return $user->can('users.approve');
+    }
+
+    /**
      * Determine whether the user can suspend, reactivate or disable accounts.
      */
     public function suspend(User $user): bool

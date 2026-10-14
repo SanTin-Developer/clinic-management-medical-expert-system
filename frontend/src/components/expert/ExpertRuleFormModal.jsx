@@ -17,10 +17,9 @@ export default function ExpertRuleFormModal({ open, onClose, initial, onSaved })
   const editing = Boolean(initial?.id)
   const [form, setForm] = useState(() => {
     if (!initial) {
-      return { code: '', name: '', disease_id: '', explanation: '', priority: '', confidence_score: '', is_active: true, conditions: [{ ...defaultCondition }] }
+      return { name: '', disease_id: '', explanation: '', priority: '', confidence_score: '', is_active: true, conditions: [{ ...defaultCondition }] }
     }
     return {
-      code: initial.code ?? '',
       name: initial.name ?? '',
       disease_id: initial.disease_id ?? '',
       explanation: initial.explanation ?? '',
@@ -55,7 +54,6 @@ export default function ExpertRuleFormModal({ open, onClose, initial, onSaved })
     const next = {}
     if (!form.name.trim()) next.name = 'Required.'
     if (!form.disease_id) next.disease_id = 'Select a disease.'
-    if (editing && !form.code) next.code = 'Required.'
     const cleanConditions = form.conditions
       .filter((c) => c.symptom_id)
       .map((c) => ({
@@ -81,7 +79,6 @@ export default function ExpertRuleFormModal({ open, onClose, initial, onSaved })
         is_active: form.is_active,
         conditions: cleanConditions,
       }
-      if (!editing) payload.code = form.code.trim()
       if (editing) {
         await expertApi.updateExpertRule(initial.id, payload)
         toast.success('Expert rule updated.')
@@ -128,9 +125,6 @@ export default function ExpertRuleFormModal({ open, onClose, initial, onSaved })
           </div>
         ) : null}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Field label="Code" htmlFor="r-code" required={!editing} error={errors.code} hint={editing ? `Current: ${initial.code}` : 'Auto-generated if blank.'}>
-            <Input id="r-code" value={form.code} onChange={(e) => set('code')(e.target.value)} invalid={Boolean(errors.code)} placeholder="e.g. RULE-FLU-001" />
-          </Field>
           <Field label="Name" htmlFor="r-name" required error={errors.name}>
             <Input id="r-name" value={form.name} onChange={(e) => set('name')(e.target.value)} invalid={Boolean(errors.name)} />
           </Field>

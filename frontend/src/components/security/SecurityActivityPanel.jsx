@@ -43,6 +43,10 @@ const SEVERITY_TONES = {
   critical: 'red',
 }
 
+// A coarse, advisory risk score (0 = routine). Values at or above this are
+// highlighted so unusual activity stands out. It never blocks anything.
+const RISK_ATTENTION_THRESHOLD = 2
+
 function eventLabel(event) {
   return EVENT_LABELS[event] ?? event
 }
@@ -84,6 +88,9 @@ export default function SecurityActivityPanel() {
                 <p className="flex flex-wrap items-center gap-2 text-sm font-medium text-ink">
                   {eventLabel(event.event)}
                   <Badge tone={SEVERITY_TONES[event.severity] ?? 'gray'}>{event.severity}</Badge>
+                  {typeof event.risk_score === 'number' && event.risk_score >= RISK_ATTENTION_THRESHOLD ? (
+                    <Badge tone="amber">risk {event.risk_score}</Badge>
+                  ) : null}
                 </p>
                 <p className="text-xs text-ink-muted">
                   {formatDateTime(event.created_at)}

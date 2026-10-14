@@ -16,7 +16,6 @@ export default function InventoryFormModal({ open, onClose, initial, onSaved }) 
     initial
       ? {
           medicine_id: String(initial.medicine_id ?? ''),
-          batch_number: initial.batch_number ?? '',
           quantity: String(initial.quantity ?? ''),
           expiration_date: initial.expiration_date ?? '',
           received_date: initial.received_date ?? '',
@@ -24,7 +23,6 @@ export default function InventoryFormModal({ open, onClose, initial, onSaved }) 
         }
       : {
           medicine_id: '',
-          batch_number: '',
           quantity: '',
           expiration_date: '',
           received_date: '',
@@ -50,7 +48,6 @@ export default function InventoryFormModal({ open, onClose, initial, onSaved }) 
       const payload = {
         medicine_id: form.medicine_id,
         quantity: qty,
-        batch_number: form.batch_number || null,
         expiration_date: form.expiration_date || null,
         received_date: form.received_date || null,
         location: form.location || null,
@@ -107,9 +104,6 @@ export default function InventoryFormModal({ open, onClose, initial, onSaved }) 
           </Field>
           <Field label="Quantity" htmlFor="inv-qty" required error={errors.quantity}>
             <Input id="inv-qty" type="number" inputMode="numeric" min="0" value={form.quantity} onChange={(e) => set('quantity')(e.target.value)} invalid={Boolean(errors.quantity)} />
-          </Field>
-          <Field label="Batch number" htmlFor="inv-batch">
-            <Input id="inv-batch" value={form.batch_number} onChange={(e) => set('batch_number')(e.target.value)} />
           </Field>
           <Field label="Expiration date" htmlFor="inv-exp">
             <Input id="inv-exp" type="date" value={form.expiration_date} onChange={(e) => set('expiration_date')(e.target.value)} />

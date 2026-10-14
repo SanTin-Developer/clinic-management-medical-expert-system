@@ -57,6 +57,30 @@ class UserFactory extends Factory
     }
 
     /**
+     * A staff account that accepted its invitation and is awaiting admin review.
+     */
+    public function pendingApproval(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'account_status' => User::STATUS_PENDING_APPROVAL,
+            'activated_at' => null,
+        ]);
+    }
+
+    /**
+     * A staff account whose registration was rejected by an administrator.
+     */
+    public function rejected(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'account_status' => User::STATUS_REJECTED,
+            'activated_at' => null,
+            'rejected_at' => now(),
+            'rejection_reason' => 'Incomplete documentation',
+        ]);
+    }
+
+    /**
      * A suspended account.
      */
     public function suspended(): static

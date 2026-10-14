@@ -28,7 +28,10 @@ const InvoiceListPage = lazy(() => import('../pages/InvoiceListPage.jsx'))
 const InvoiceDetailPage = lazy(() => import('../pages/InvoiceDetailPage.jsx'))
 const ReportsPage = lazy(() => import('../pages/ReportsPage.jsx'))
 const UsersPage = lazy(() => import('../pages/UsersPage.jsx'))
+const StaffListPage = lazy(() => import('../pages/StaffListPage.jsx'))
+const StaffDetailPage = lazy(() => import('../pages/StaffDetailPage.jsx'))
 const StaffInvitationsPage = lazy(() => import('../pages/StaffInvitationsPage.jsx'))
+const PendingApprovalsPage = lazy(() => import('../pages/PendingApprovalsPage.jsx'))
 const SettingsPage = lazy(() => import('../pages/SettingsPage.jsx'))
 const ExpertSystemPage = lazy(() => import('../pages/ExpertSystemPage.jsx'))
 const ChatPage = lazy(() => import('../pages/ChatPage.jsx'))
@@ -170,10 +173,34 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: 'staff',
+        element: withSuspense(
+          <Guard permission="staff.view">
+            <StaffListPage />
+          </Guard>,
+        ),
+      },
+      {
+        path: 'staff/:id',
+        element: withSuspense(
+          <Guard permission="staff.view">
+            <StaffDetailPage />
+          </Guard>,
+        ),
+      },
+      {
         path: 'invitations',
         element: withSuspense(
           <Guard permission="users.invite">
             <StaffInvitationsPage />
+          </Guard>,
+        ),
+      },
+      {
+        path: 'approvals',
+        element: withSuspense(
+          <Guard permission="users.approve">
+            <PendingApprovalsPage />
           </Guard>,
         ),
       },

@@ -147,4 +147,47 @@ class KnowledgeBaseTest extends TestCase
             'name' => 'Doctor symptom',
         ])->assertForbidden();
     }
+
+    public function test_admin_can_create_a_symptom_without_a_code(): void
+    {
+        $this->actingAsRole('Admin');
+
+        $response = $this->postJson('/api/v1/knowledge-base/symptoms', [
+            'name' => 'Auto-coded symptom',
+        ])->assertCreated();
+
+        $this->assertStringStartsWith('SYM-', $response->json('data.code'));
+        $this->assertDatabaseHas('symptoms', ['name' => 'Auto-coded symptom']);
+    }
+
+    public function test_admin_can_create_a_disease_without_a_code(): void
+    {
+        $this->actingAsRole('Admin');
+
+        $response = $this->postJson('/api/v1/knowledge-base/diseases', [
+            'name' => 'Auto-coded disease',
+        ])->assertCreated();
+
+        $this->assertStringStartsWith('DIS-', $response->json('data.code'));
+        $this->assertDatabaseHas('diseases', ['name' => 'Auto-coded disease']);
+    }
+
+    public function test_admin_can_create_an_expert_rule_without_a_code(): void
+    {
+        $this->actingAsRole('Admin');
+
+        $disease = Disease::create(['code' => 'DIS-AUTO', 'name' => 'Auto disease']);
+        $symptom = Symptom::create(['code' => 'SYM-AUTO', 'name' => 'Auto symptom']);
+
+        $response = $this->postJson('/api/v1/knowledge-base/expert-rules', [
+            'name' => 'Auto-coded rule',
+            'disease_id' => $disease->id,
+            'conditions' => [
+                ['symptom_id' => $symptom->id, 'condition_group' => 1],
+            ],
+        ])->assertCreated();
+
+        $this->assertStringStartsWith('RULE-', $response->json('data.code'));
+        $this->assertDatabaseHas('expert_rules', ['name' => 'Auto-coded rule']);
+    }
 }

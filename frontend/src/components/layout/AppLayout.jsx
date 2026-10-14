@@ -15,7 +15,6 @@ export default function AppLayout() {
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         collapsed={collapsed}
-        onToggleCollapsed={() => setCollapsed((current) => !current)}
       />
       <div className="flex min-w-0 flex-1 flex-col">
         <Header

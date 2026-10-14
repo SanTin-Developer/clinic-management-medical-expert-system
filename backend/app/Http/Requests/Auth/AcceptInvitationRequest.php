@@ -2,8 +2,9 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Models\StaffInvitation;
+use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules;
 
 class AcceptInvitationRequest extends FormRequest
@@ -23,7 +24,14 @@ class AcceptInvitationRequest extends FormRequest
                 'min:3',
                 'max:50',
                 'regex:/^[A-Za-z0-9._-]+$/',
-                Rule::unique('users', 'username'),
+                function ($attribute, $value, $fail) {
+                    $token = (string) $this->input('token');
+                    $invitation = StaffInvitation::where('token_hash', hash('sha256', $token))->first();
+                    $ignoreId = $invitation?->user_id;
+                    if (User::where('username', strtolower($value))->where('id', '!=', $ignoreId)->exists()) {
+                        $fail('The username has already been taken.');
+                    }
+                },
             ],
             'password' => [
                 'required',

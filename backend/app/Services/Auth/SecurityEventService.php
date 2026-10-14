@@ -4,8 +4,10 @@ namespace App\Services\Auth;
 
 use App\Models\SecurityEvent;
 use App\Models\User;
+use App\Notifications\SecurityAlertNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Throwable;
 
 /**
  * Records authentication and account security events. The log is append-only
@@ -13,6 +15,12 @@ use Illuminate\Support\Str;
  */
 class SecurityEventService
 {
+    public const SEVERITY_INFO = 'info';
+
+    public const SEVERITY_WARNING = 'warning';
+
+    public const SEVERITY_CRITICAL = 'critical';
+
     public const LOGIN_SUCCEEDED = 'login.succeeded';
 
     public const LOGIN_FAILED = 'login.failed';
@@ -53,6 +61,12 @@ class SecurityEventService
 
     public const ACCOUNT_ACTIVATED = 'account.activated';
 
+    public const ACCOUNT_REGISTRATION_SUBMITTED = 'account.registration_submitted';
+
+    public const ACCOUNT_APPROVED = 'account.approved';
+
+    public const ACCOUNT_REJECTED = 'account.rejected';
+
     public const ACCOUNT_SUSPENDED = 'account.suspended';
 
     public const ACCOUNT_REACTIVATED = 'account.reactivated';
@@ -64,6 +78,24 @@ class SecurityEventService
     public const STEP_UP_DENIED = 'step_up.denied';
 
     public const STEP_UP_USED = 'step_up.used';
+
+    public const STAFF_CREATED = 'staff.created';
+
+    public const STAFF_UPDATED = 'staff.updated';
+
+    public const STAFF_DELETED = 'staff.deleted';
+
+    public const STAFF_USER_LINKED = 'staff.user_linked';
+
+    public const STAFF_USER_UNLINKED = 'staff.user_unlinked';
+
+    public const STAFF_SALARY_UPDATED = 'staff.salary_updated';
+
+    public const STAFF_DOCUMENT_UPLOADED = 'staff.document_uploaded';
+
+    public const STAFF_DOCUMENT_DELETED = 'staff.document_deleted';
+
+    public const STAFF_DOCUMENT_DOWNLOADED = 'staff.document_downloaded';
 
     /**
      * Severity assigned to each event family when not overridden.
@@ -79,6 +111,7 @@ class SecurityEventService
         self::RECOVERY_CODE_USED => 'warning',
         self::ACCOUNT_SUSPENDED => 'warning',
         self::ACCOUNT_DISABLED => 'warning',
+        self::ACCOUNT_REJECTED => 'warning',
         self::EMAIL_CHANGED => 'warning',
         self::STEP_UP_DENIED => 'warning',
     ];
@@ -92,18 +125,40 @@ class SecurityEventService
         string $severity = 'info',
         array $context = [],
         ?Request $request = null,
+        ?int $riskScore = null,
     ): SecurityEvent {
         $severity = self::SEVERITY[$event] ?? $severity;
 
-        return SecurityEvent::create([
+        // Compute an advisory risk score from the request when one is available
+        // and the caller did not supply an explicit value. This never gates
+        // authorization; it is only logged and shown to the account owner.
+        $riskScore ??= $request !== null ? $this->riskScore($request, $user) : null;
+
+        $securityEvent = SecurityEvent::create([
             'user_id' => $user?->id,
             'event' => $event,
             'severity' => $severity,
+            'risk_score' => $riskScore,
             'ip_address' => $request?->ip(),
             'user_agent' => $request ? Str::limit((string) $request->userAgent(), 1000, '') : null,
             'context' => $context === [] ? null : $this->sanitize($context),
             'created_at' => now(),
         ]);
+
+        // Alert the account owner on critical events (e.g. account lockout) so
+        // suspicious activity is surfaced promptly. Best-effort: notification
+        // failures must never break the request that produced the event.
+        if ($severity === self::SEVERITY_CRITICAL && $user !== null
+            && (bool) config('auth.security_alerts.enabled', true)) {
+            try {
+                $user->notify(new SecurityAlertNotification($securityEvent));
+            } catch (Throwable $e) {
+                report($e);
+            }
+
+        }
+
+        return $securityEvent;
     }
 
     /**

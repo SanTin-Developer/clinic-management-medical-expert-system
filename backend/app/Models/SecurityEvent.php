@@ -13,6 +13,7 @@ class SecurityEvent extends Model
         'user_id',
         'event',
         'severity',
+        'risk_score',
         'ip_address',
         'user_agent',
         'context',
@@ -22,6 +23,7 @@ class SecurityEvent extends Model
     {
         return [
             'context' => 'array',
+            'risk_score' => 'integer',
             'created_at' => 'datetime',
         ];
     }

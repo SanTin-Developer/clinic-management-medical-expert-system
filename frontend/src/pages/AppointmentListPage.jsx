@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
-import { CalendarPlus, Trash2, Pencil } from 'lucide-react'
+import { CalendarPlus, Calendar, CalendarClock, CheckCircle2, Clock, Pencil, Trash2 } from 'lucide-react'
+import StatCard from '../components/ui/StatCard.jsx'
 import { appointmentApi } from '../api/appointments.js'
 import { usePaginated } from '../hooks/usePaginated.js'
 import { useAuth } from '../hooks/useAuth.js'
@@ -33,6 +34,7 @@ export default function AppointmentListPage() {
   })
 
   const all = query.data?.data ?? []
+  const stats = query.data?.stats ?? {}
   const items = status === 'all' ? all : all.filter((a) => a.status === status)
   const counts = {
     all: all.length,
@@ -55,7 +57,7 @@ export default function AppointmentListPage() {
   }
 
   return (
-    <div>
+    <div className="space-y-6">
       <PageHeader
         title="Appointments"
         description="Schedule, reschedule and track doctor appointments."
@@ -73,6 +75,44 @@ export default function AppointmentListPage() {
           ) : null
         }
       />
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <StatCard
+          label="Total Appointments"
+          value={stats.total ?? query.data?.total ?? 0}
+          icon={Calendar}
+          tone="brand"
+          loading={query.isLoading}
+        />
+        <StatCard
+          label="Today"
+          value={stats.today ?? 0}
+          icon={CalendarClock}
+          tone="blue"
+          loading={query.isLoading}
+        />
+        <StatCard
+          label="This Month"
+          value={stats.this_month ?? 0}
+          icon={CalendarPlus}
+          tone="green"
+          loading={query.isLoading}
+        />
+        <StatCard
+          label="Scheduled"
+          value={stats.scheduled ?? 0}
+          icon={Clock}
+          tone="amber"
+          loading={query.isLoading}
+        />
+        <StatCard
+          label="Completed"
+          value={stats.completed ?? 0}
+          icon={CheckCircle2}
+          tone="green"
+          loading={query.isLoading}
+        />
+      </div>
 
       <Card className="px-0 pb-0">
         <div className="px-5 pt-4">

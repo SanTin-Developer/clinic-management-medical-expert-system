@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
-import { Pill, Trash2 } from 'lucide-react'
+import { Pill, Trash2, ClipboardCheck, Clock, Calendar, XCircle } from 'lucide-react'
+import StatCard from '../components/ui/StatCard.jsx'
 import { prescriptionApi } from '../api/prescriptions.js'
 import { usePaginated } from '../hooks/usePaginated.js'
 import { useAuth } from '../hooks/useAuth.js'
@@ -30,6 +31,7 @@ export default function PrescriptionListPage() {
   const query = usePaginated(['prescriptions'], (params) => prescriptionApi.list(params), { page })
 
   const all = query.data?.data ?? []
+  const stats = query.data?.stats ?? {}
   const items = status === 'all' ? all : all.filter((p) => p.status === status)
 
   const confirmDelete = async () => {
@@ -45,7 +47,7 @@ export default function PrescriptionListPage() {
   }
 
   return (
-    <div>
+    <div className="space-y-6">
       <PageHeader
         title="Prescriptions"
         description="Create and track medication prescriptions."
@@ -58,6 +60,44 @@ export default function PrescriptionListPage() {
           ) : null
         }
       />
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <StatCard
+          label="Total Prescriptions"
+          value={stats.total ?? query.data?.total ?? 0}
+          icon={Pill}
+          tone="brand"
+          loading={query.isLoading}
+        />
+        <StatCard
+          label="Pending"
+          value={stats.pending ?? 0}
+          icon={Clock}
+          tone="amber"
+          loading={query.isLoading}
+        />
+        <StatCard
+          label="Dispensed"
+          value={stats.dispensed ?? 0}
+          icon={ClipboardCheck}
+          tone="green"
+          loading={query.isLoading}
+        />
+        <StatCard
+          label="Cancelled"
+          value={stats.cancelled ?? 0}
+          icon={XCircle}
+          tone="red"
+          loading={query.isLoading}
+        />
+        <StatCard
+          label="This Month"
+          value={stats.this_month ?? 0}
+          icon={Calendar}
+          tone="blue"
+          loading={query.isLoading}
+        />
+      </div>
 
       <Card className="px-0 pb-0">
         <div className="px-5 pt-4">

@@ -14,6 +14,7 @@ class InventoryItemController extends Controller
         $this->authorize('viewAny', InventoryItem::class);
 
         $query = InventoryItem::with('medicine');
+        $base = clone $query;
 
         if ($medicineId = $request->query('medicine_id')) {
             $query->where('medicine_id', $medicineId);
@@ -31,9 +32,24 @@ class InventoryItemController extends Controller
                 ->whereDate('expiration_date', '>=', now());
         }
 
-        return response()->json(
-            $query->orderBy('expiration_date')->paginate(15)
-        );
+        $items = $query->orderBy('expiration_date')->paginate(15);
+
+        $stats = [
+            'total' => $items->total(),
+            'low_stock' => (clone $base)->whereRaw(
+                'quantity <= (select reorder_level from medicines where medicines.id = inventory_items.medicine_id)'
+            )->count(),
+            'expiring_soon' => (clone $base)->whereNotNull('expiration_date')
+                ->whereDate('expiration_date', '<=', now()->addDays(30))
+                ->whereDate('expiration_date', '>=', now())
+                ->count(),
+            'expired' => (clone $base)->whereNotNull('expiration_date')
+                ->whereDate('expiration_date', '<', now())
+                ->count(),
+            'out_of_stock' => (clone $base)->where('quantity', '<=', 0)->count(),
+        ];
+
+        return response()->json(array_merge($items->toArray(), ['stats' => $stats]));
     }
 
     public function store(Request $request): JsonResponse

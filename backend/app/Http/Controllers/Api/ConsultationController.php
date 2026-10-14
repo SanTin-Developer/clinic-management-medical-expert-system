@@ -24,7 +24,14 @@ class ConsultationController extends Controller
             ->latest()
             ->paginate(15);
 
-        return response()->json($consultations);
+        $stats = [
+            'total' => $consultations->total(),
+            'this_month' => Consultation::query()->whereMonth('created_at', now()->month)
+                ->whereYear('created_at', now()->year)
+                ->count(),
+        ];
+
+        return response()->json(array_merge($consultations->toArray(), ['stats' => $stats]));
     }
 
     public function store(Request $request): JsonResponse

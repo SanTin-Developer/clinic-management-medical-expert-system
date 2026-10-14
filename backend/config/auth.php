@@ -247,6 +247,27 @@ return [
 
     'step_up' => [
         'ttl_minutes' => (int) env('AUTH_STEP_UP_TTL_MINUTES', 10),
+        // When true, accounts with TOTP enrolled must also present a valid
+        // authenticator (or recovery) code in addition to the password when
+        // obtaining a step-up grant. Disabled by default so existing flows and
+        // non-enrolled accounts keep working.
+        'require_two_factor' => (bool) env('AUTH_STEP_UP_REQUIRE_TWO_FACTOR', false),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Security Alerts
+    |--------------------------------------------------------------------------
+    |
+    | When enabled, the account owner is emailed whenever a critical security
+    | event is recorded on their account (for example, an account lockout after
+    | repeated failed sign-ins). The alert is best-effort and never contains
+    | secrets.
+    |
+    */
+
+    'security_alerts' => [
+        'enabled' => (bool) env('AUTH_SECURITY_ALERTS_ENABLED', true),
     ],
 
     /*

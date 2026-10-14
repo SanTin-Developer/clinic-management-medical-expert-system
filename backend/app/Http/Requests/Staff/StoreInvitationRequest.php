@@ -13,6 +13,7 @@ class StoreInvitationRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'staff_id' => ['nullable', 'integer', Rule::exists('staff', 'id')],
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255'],
             'role' => ['required', 'string', Rule::exists('roles', 'name')],

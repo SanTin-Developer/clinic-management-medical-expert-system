@@ -15,11 +15,24 @@ class PatientController extends Controller
     {
         $this->authorize('viewAny', Patient::class);
 
-        $patients = Patient::query()
-            ->latest()
-            ->paginate(15);
+        $query = Patient::query();
 
-        return response()->json($patients);
+        $patients = $query->latest()->paginate(15);
+
+        $stats = [
+            'total' => $patients->total(),
+            'new_this_month' => (clone $query)->whereMonth('created_at', now()->month)
+                ->whereYear('created_at', now()->year)
+                ->count(),
+            'male' => (clone $query)->where('gender', 'male')->count(),
+            'female' => (clone $query)->where('gender', 'female')->count(),
+            'other' => (clone $query)->where('gender', 'other')->count(),
+            'with_allergies' => (clone $query)->whereNotNull('allergies')
+                ->where('allergies', '!=', '')
+                ->count(),
+        ];
+
+        return response()->json(array_merge($patients->toArray(), ['stats' => $stats]));
     }
 
     // Create new patient

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2, Receipt, Clock, TriangleAlert, CircleDollarSign, CheckCircle2 } from 'lucide-react'
 import { invoiceApi } from '../api/billing.js'
 import { usePaginated } from '../hooks/usePaginated.js'
 import { useAuth } from '../hooks/useAuth.js'
@@ -9,6 +9,7 @@ import PageHeader from '../components/ui/PageHeader.jsx'
 import Button from '../components/ui/Button.jsx'
 import Card from '../components/ui/Card.jsx'
 import Badge from '../components/ui/Badge.jsx'
+import StatCard from '../components/ui/StatCard.jsx'
 import ConfirmDialog from '../components/ui/ConfirmDialog.jsx'
 import Tabs from '../components/ui/Tabs.jsx'
 import Table, { THead, TBody, Tr, Th, Td } from '../components/ui/Table.jsx'
@@ -30,6 +31,7 @@ export default function InvoiceListPage() {
   const query = usePaginated(['invoices'], (params) => invoiceApi.list(params), { page })
 
   const all = query.data?.data ?? []
+  const stats = query.data?.stats ?? {}
   const items = status === 'all' ? all : all.filter((i) => i.status === status)
 
   const confirmDelete = async () => {
@@ -45,7 +47,7 @@ export default function InvoiceListPage() {
   }
 
   return (
-    <div>
+    <div className="space-y-6">
       <PageHeader
         title="Billing & Payments"
         description="Invoices, payments and outstanding balances."
@@ -58,6 +60,44 @@ export default function InvoiceListPage() {
           ) : null
         }
       />
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <StatCard
+          label="Total Invoices"
+          value={stats.total ?? query.data?.total ?? 0}
+          icon={Receipt}
+          tone="brand"
+          loading={query.isLoading}
+        />
+        <StatCard
+          label="Unpaid"
+          value={stats.unpaid ?? 0}
+          icon={Clock}
+          tone="amber"
+          loading={query.isLoading}
+        />
+        <StatCard
+          label="Outstanding"
+          value={formatCurrency(stats.outstanding ?? 0)}
+          icon={TriangleAlert}
+          tone="red"
+          loading={query.isLoading}
+        />
+        <StatCard
+          label="Revenue (all time)"
+          value={formatCurrency(stats.total_revenue ?? 0)}
+          icon={CircleDollarSign}
+          tone="green"
+          loading={query.isLoading}
+        />
+        <StatCard
+          label="Paid"
+          value={stats.paid ?? 0}
+          icon={CheckCircle2}
+          tone="blue"
+          loading={query.isLoading}
+        />
+      </div>
 
       <Card className="px-0 pb-0">
         <div className="px-5 pt-4">

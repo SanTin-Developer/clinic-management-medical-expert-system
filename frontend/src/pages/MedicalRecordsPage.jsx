@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { Activity, FileText, Microscope, Plus, Stethoscope, Trash2 } from 'lucide-react'
+import { Activity, FileText, Microscope, Plus, Stethoscope, Trash2, CalendarDays, CheckCircle2, Clock } from 'lucide-react'
 import { medicalRecordApi, consultationApi, diagnosisApi, vitalSignApi } from '../api/clinical.js'
 import { usePaginated } from '../hooks/usePaginated.js'
 import { useAuth } from '../hooks/useAuth.js'
@@ -8,6 +8,7 @@ import PageHeader from '../components/ui/PageHeader.jsx'
 import Button from '../components/ui/Button.jsx'
 import Card from '../components/ui/Card.jsx'
 import Badge from '../components/ui/Badge.jsx'
+import StatCard from '../components/ui/StatCard.jsx'
 import ConfirmDialog from '../components/ui/ConfirmDialog.jsx'
 import Tabs from '../components/ui/Tabs.jsx'
 import Table, { THead, TBody, Tr, Th, Td } from '../components/ui/Table.jsx'
@@ -39,6 +40,7 @@ export default function MedicalRecordsPage() {
 
   const active = { records, consultations, diagnoses, vitals }[tab]
   const activeItems = active.data?.data ?? []
+  const stats = active.data?.stats ?? {}
 
   const canCreateTab =
     (tab === 'records' && can('medical-records.create')) ||
@@ -145,7 +147,7 @@ export default function MedicalRecordsPage() {
   }
 
   return (
-    <div>
+    <div className="space-y-6">
       <PageHeader
         title="Medical Records"
         description="Clinical records, consultations, diagnoses and vital signs."
@@ -158,6 +160,92 @@ export default function MedicalRecordsPage() {
           ) : null
         }
       />
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        {tab === 'records' ? (
+          <>
+            <StatCard
+              label="Total Records"
+              value={stats.total ?? active.data?.total ?? 0}
+              icon={FileText}
+              tone="brand"
+              loading={active.isLoading}
+            />
+            <StatCard
+              label="New This Month"
+              value={stats.this_month ?? 0}
+              icon={CalendarDays}
+              tone="blue"
+              loading={active.isLoading}
+            />
+          </>
+        ) : tab === 'consultations' ? (
+          <>
+            <StatCard
+              label="Total Consultations"
+              value={stats.total ?? active.data?.total ?? 0}
+              icon={Stethoscope}
+              tone="brand"
+              loading={active.isLoading}
+            />
+            <StatCard
+              label="New This Month"
+              value={stats.this_month ?? 0}
+              icon={CalendarDays}
+              tone="blue"
+              loading={active.isLoading}
+            />
+          </>
+        ) : tab === 'diagnoses' ? (
+          <>
+            <StatCard
+              label="Total Diagnoses"
+              value={stats.total ?? active.data?.total ?? 0}
+              icon={Microscope}
+              tone="brand"
+              loading={active.isLoading}
+            />
+            <StatCard
+              label="Confirmed"
+              value={stats.confirmed ?? 0}
+              icon={CheckCircle2}
+              tone="green"
+              loading={active.isLoading}
+            />
+            <StatCard
+              label="Provisional"
+              value={stats.provisional ?? 0}
+              icon={Clock}
+              tone="amber"
+              loading={active.isLoading}
+            />
+            <StatCard
+              label="New This Month"
+              value={stats.this_month ?? 0}
+              icon={CalendarDays}
+              tone="blue"
+              loading={active.isLoading}
+            />
+          </>
+        ) : (
+          <>
+            <StatCard
+              label="Total Vital Sign Records"
+              value={stats.total ?? active.data?.total ?? 0}
+              icon={Activity}
+              tone="brand"
+              loading={active.isLoading}
+            />
+            <StatCard
+              label="New This Month"
+              value={stats.this_month ?? 0}
+              icon={CalendarDays}
+              tone="blue"
+              loading={active.isLoading}
+            />
+          </>
+        )}
+      </div>
 
       <Card className="px-0 pb-0">
         <div className="px-5 pt-4">

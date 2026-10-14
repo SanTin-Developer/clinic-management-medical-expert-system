@@ -20,6 +20,7 @@ class ExpertRuleController extends Controller
             'disease:id,code,name',
             'conditions.symptom:id,code,name',
         ]);
+        $base = clone $query;
 
         if ($diseaseId = $request->query('disease_id')) {
             $query->where('disease_id', $diseaseId);
@@ -29,7 +30,17 @@ class ExpertRuleController extends Controller
             $query->where('is_active', $request->boolean('is_active'));
         }
 
-        return response()->json($query->latest()->paginate(15));
+        $rules = $query->latest()->paginate(15);
+
+        $stats = [
+            'total' => $rules->total(),
+            'active' => (clone $base)->where('is_active', true)->count(),
+            'inactive' => (clone $base)->where('is_active', false)->count(),
+            'high_confidence' => (clone $base)->where('confidence_threshold', '>=', 0.8)->count(),
+            'medium_confidence' => (clone $base)->whereBetween('confidence_threshold', [0.6, 0.7999])->count(),
+        ];
+
+        return response()->json(array_merge($rules->toArray(), ['stats' => $stats]));
     }
 
     public function store(Request $request): JsonResponse
@@ -37,6 +48,7 @@ class ExpertRuleController extends Controller
         $this->authorize('create', ExpertRule::class);
 
         $validated = $request->validate($this->rules());
+        $validated['code'] = $validated['code'] ?? $this->generateCode();
 
         $this->assertNoDuplicateConditions($validated['conditions'] ?? []);
 
@@ -76,6 +88,10 @@ class ExpertRuleController extends Controller
         $this->authorize('update', $expertRule);
 
         $validated = $request->validate($this->rules($expertRule));
+
+        if (($validated['code'] ?? null) === null) {
+            unset($validated['code']);
+        }
 
         if (array_key_exists('conditions', $validated)) {
             $this->assertNoDuplicateConditions($validated['conditions']);
@@ -147,7 +163,8 @@ class ExpertRuleController extends Controller
 
         return [
             'code' => [
-                $required,
+                'sometimes',
+                'nullable',
                 'string',
                 'max:255',
                 Rule::unique('expert_rules', 'code')->ignore($rule?->id),
@@ -164,5 +181,14 @@ class ExpertRuleController extends Controller
             'conditions.*.expected_value' => ['sometimes', 'boolean'],
             'conditions.*.condition_group' => ['sometimes', 'integer', 'min:1'],
         ];
+    }
+
+    private function generateCode(): string
+    {
+        do {
+            $code = 'RULE-'.strtoupper(bin2hex(random_bytes(3)));
+        } while (ExpertRule::where('code', $code)->exists());
+
+        return $code;
     }
 }

@@ -7,6 +7,7 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -21,11 +22,15 @@ class User extends Authenticatable implements MustVerifyEmail
 {
     public const STATUS_PENDING = 'pending';
 
+    public const STATUS_PENDING_APPROVAL = 'pending_approval';
+
     public const STATUS_ACTIVE = 'active';
 
     public const STATUS_SUSPENDED = 'suspended';
 
     public const STATUS_DISABLED = 'disabled';
+
+    public const STATUS_REJECTED = 'rejected';
 
     /**
      * @use HasFactory<UserFactory>
@@ -49,6 +54,8 @@ class User extends Authenticatable implements MustVerifyEmail
             'must_change_password' => 'boolean',
             'failed_login_attempts' => 'integer',
             'activated_at' => 'datetime',
+            'approved_at' => 'datetime',
+            'rejected_at' => 'datetime',
             'suspended_at' => 'datetime',
             'last_login_at' => 'datetime',
             'password_changed_at' => 'datetime',
@@ -64,6 +71,20 @@ class User extends Authenticatable implements MustVerifyEmail
     public function isPending(): bool
     {
         return $this->account_status === self::STATUS_PENDING;
+    }
+
+    /**
+     * An invitation has been accepted and credentials set, but an authorized
+     * administrator has not yet approved the account. Cannot authenticate.
+     */
+    public function isPendingApproval(): bool
+    {
+        return $this->account_status === self::STATUS_PENDING_APPROVAL;
+    }
+
+    public function isRejected(): bool
+    {
+        return $this->account_status === self::STATUS_REJECTED;
     }
 
     public function isSuspended(): bool
@@ -89,6 +110,26 @@ class User extends Authenticatable implements MustVerifyEmail
     public function staffInvitations(): HasMany
     {
         return $this->hasMany(StaffInvitation::class);
+    }
+
+    public function staffProfile(): HasOne
+    {
+        return $this->hasOne(Staff::class);
+    }
+
+    public function staff(): HasOne
+    {
+        return $this->hasOne(Staff::class);
+    }
+
+    public function approvedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    public function rejectedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'rejected_by');
     }
 
     public function twoFactorRecoveryCodes(): HasMany

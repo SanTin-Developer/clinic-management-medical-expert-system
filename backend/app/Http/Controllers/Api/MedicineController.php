@@ -15,6 +15,7 @@ class MedicineController extends Controller
         $this->authorize('viewAny', Medicine::class);
 
         $query = Medicine::query();
+        $base = clone $query;
 
         if ($search = $request->query('search')) {
             $query->where(function ($builder) use ($search) {
@@ -32,7 +33,16 @@ class MedicineController extends Controller
             $query->where('category', $category);
         }
 
-        return response()->json($query->latest()->paginate(15));
+        $medicines = $query->latest()->paginate(15);
+
+        $stats = [
+            'total' => $medicines->total(),
+            'active' => (clone $base)->where('is_active', true)->count(),
+            'inactive' => (clone $base)->where('is_active', false)->count(),
+            'by_category' => (clone $base)->selectRaw('category, COUNT(*) as count')->groupBy('category')->pluck('count', 'category'),
+        ];
+
+        return response()->json(array_merge($medicines->toArray(), ['stats' => $stats]));
     }
 
     public function store(Request $request): JsonResponse

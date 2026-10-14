@@ -16,6 +16,7 @@ class DiseaseController extends Controller
         $this->authorize('viewAny', Disease::class);
 
         $query = Disease::with('symptoms:id,code,name')->withCount('symptoms');
+        $base = clone $query;
 
         if ($search = $request->query('search')) {
             $query->where(function ($builder) use ($search) {
@@ -33,7 +34,16 @@ class DiseaseController extends Controller
             $query->where('category', $category);
         }
 
-        return response()->json($query->latest()->paginate(15));
+        $diseases = $query->latest()->paginate(15);
+
+        $stats = [
+            'total' => $diseases->total(),
+            'active' => (clone $base)->where('is_active', true)->count(),
+            'inactive' => (clone $base)->where('is_active', false)->count(),
+            'by_category' => (clone $base)->selectRaw('category, COUNT(*) as count')->groupBy('category')->pluck('count', 'category'),
+        ];
+
+        return response()->json(array_merge($diseases->toArray(), ['stats' => $stats]));
     }
 
     public function store(Request $request): JsonResponse
@@ -41,6 +51,7 @@ class DiseaseController extends Controller
         $this->authorize('create', Disease::class);
 
         $validated = $request->validate($this->rules());
+        $validated['code'] = $validated['code'] ?? $this->generateCode();
 
         $symptomIds = $validated['symptom_ids'] ?? null;
         unset($validated['symptom_ids']);
@@ -78,6 +89,10 @@ class DiseaseController extends Controller
         $this->authorize('update', $disease);
 
         $validated = $request->validate($this->rules($disease));
+
+        if (($validated['code'] ?? null) === null) {
+            unset($validated['code']);
+        }
 
         $symptomIds = $validated['symptom_ids'] ?? null;
         unset($validated['symptom_ids']);
@@ -122,7 +137,8 @@ class DiseaseController extends Controller
 
         return [
             'code' => [
-                $required,
+                'sometimes',
+                'nullable',
                 'string',
                 'max:255',
                 Rule::unique('diseases', 'code')->ignore($disease?->id),
@@ -136,5 +152,14 @@ class DiseaseController extends Controller
             'symptom_ids' => ['sometimes', 'array'],
             'symptom_ids.*' => ['integer', 'exists:symptoms,id'],
         ];
+    }
+
+    private function generateCode(): string
+    {
+        do {
+            $code = 'DIS-'.strtoupper(bin2hex(random_bytes(3)));
+        } while (Disease::where('code', $code)->exists());
+
+        return $code;
     }
 }

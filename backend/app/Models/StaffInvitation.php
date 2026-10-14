@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class StaffInvitation extends Model
 {
     protected $fillable = [
+        'staff_id',
         'user_id',
         'invited_by',
         'email',
@@ -30,6 +31,11 @@ class StaffInvitation extends Model
             'accepted_at' => 'datetime',
             'revoked_at' => 'datetime',
         ];
+    }
+
+    public function staff(): BelongsTo
+    {
+        return $this->belongsTo(Staff::class);
     }
 
     public function user(): BelongsTo
