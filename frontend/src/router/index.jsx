@@ -21,6 +21,11 @@ const PatientDetailPage = lazy(() => import('../pages/PatientDetailPage.jsx'))
 const AppointmentListPage = lazy(() => import('../pages/AppointmentListPage.jsx'))
 const AppointmentDetailPage = lazy(() => import('../pages/AppointmentDetailPage.jsx'))
 const MedicalRecordsPage = lazy(() => import('../pages/MedicalRecordsPage.jsx'))
+const WardListPage = lazy(() => import('../pages/WardListPage.jsx'))
+const AdmissionListPage = lazy(() => import('../pages/AdmissionListPage.jsx'))
+const NursingTaskListPage = lazy(() => import('../pages/NursingTaskListPage.jsx'))
+const MarPage = lazy(() => import('../pages/MarPage.jsx'))
+const AssignmentListPage = lazy(() => import('../pages/AssignmentListPage.jsx'))
 const PrescriptionListPage = lazy(() => import('../pages/PrescriptionListPage.jsx'))
 const PrescriptionDetailPage = lazy(() => import('../pages/PrescriptionDetailPage.jsx'))
 const PharmacyPage = lazy(() => import('../pages/PharmacyPage.jsx'))
@@ -129,6 +134,46 @@ export const router = createBrowserRouter([
         element: withSuspense(
           <Guard permission="prescriptions.view">
             <PrescriptionDetailPage />
+          </Guard>,
+        ),
+      },
+      {
+        path: 'wards',
+        element: withSuspense(
+          <Guard any={['wards.view', 'beds.view']}>
+            <WardListPage />
+          </Guard>,
+        ),
+      },
+      {
+        path: 'admissions',
+        element: withSuspense(
+          <Guard permission="admissions.view">
+            <AdmissionListPage />
+          </Guard>,
+        ),
+      },
+      {
+        path: 'nursing-tasks',
+        element: withSuspense(
+          <Guard permission="nursing-tasks.view">
+            <NursingTaskListPage />
+          </Guard>,
+        ),
+      },
+      {
+        path: 'mar',
+        element: withSuspense(
+          <Guard permission="medications.view">
+            <MarPage />
+          </Guard>,
+        ),
+      },
+      {
+        path: 'assignments',
+        element: withSuspense(
+          <Guard permission="assignments.view">
+            <AssignmentListPage />
           </Guard>,
         ),
       },

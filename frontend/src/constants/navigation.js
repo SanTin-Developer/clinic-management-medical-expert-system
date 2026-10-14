@@ -74,6 +74,36 @@ export const NAV_SECTIONS = [
         permissions: ["prescriptions.view"],
       },
       {
+        to: "/wards",
+        label: "Wards & Beds",
+        icon: LayoutDashboard,
+        permissions: ["wards.view", "beds.view"],
+      },
+      {
+        to: "/admissions",
+        label: "Admissions",
+        icon: UserCheck,
+        permissions: ["admissions.view"],
+      },
+      {
+        to: "/nursing-tasks",
+        label: "Nursing Tasks",
+        icon: CalendarCheck,
+        permissions: ["nursing-tasks.view"],
+      },
+      {
+        to: "/mar",
+        label: "MAR",
+        icon: Pill,
+        permissions: ["medications.view"],
+      },
+      {
+        to: "/assignments",
+        label: "Nurse Assignments",
+        icon: Users,
+        permissions: ["assignments.view"],
+      },
+      {
         to: "/expert-system",
         label: "Expert System",
         icon: BrainCircuit,

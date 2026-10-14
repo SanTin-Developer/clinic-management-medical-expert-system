@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\InventoryItem;
 use App\Models\Prescription;
 use App\Models\StockMovement;
+use App\Services\Nursing\PatientAccessService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -13,11 +14,15 @@ use RuntimeException;
 
 class PrescriptionController extends Controller
 {
-    public function index(Request $request): JsonResponse
+    public function index(Request $request, PatientAccessService $access): JsonResponse
     {
         $this->authorize('viewAny', Prescription::class);
 
         $base = Prescription::with(['patient', 'doctor', 'items.medicine']);
+
+        // Frontline nurses only ever see prescriptions for assigned patients.
+        $access->scopeByPatientColumn($base, $request->user());
+
         $query = clone $base;
 
         if ($status = $request->query('status')) {

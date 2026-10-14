@@ -182,6 +182,26 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(VitalSign::class, 'nurse_id');
     }
 
+    public function patientAssignments(): HasMany
+    {
+        return $this->hasMany(PatientAssignment::class, 'nurse_id');
+    }
+
+    public function assignedNursingTasks(): HasMany
+    {
+        return $this->hasMany(NursingTask::class, 'assigned_nurse_id');
+    }
+
+    public function administeredMedications(): HasMany
+    {
+        return $this->hasMany(MedicationAdministration::class, 'administered_by');
+    }
+
+    public function attendingAdmissions(): HasMany
+    {
+        return $this->hasMany(Admission::class, 'attending_doctor_id');
+    }
+
     public function doctorConsultations(): HasMany
     {
         return $this->hasMany(Consultation::class, 'doctor_id');

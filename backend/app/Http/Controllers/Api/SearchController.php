@@ -8,9 +8,11 @@ use App\Models\Invoice;
 use App\Models\Medicine;
 use App\Models\Patient;
 use App\Models\Prescription;
+use App\Services\Nursing\PatientAccessService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 
 class SearchController extends Controller
 {
@@ -19,7 +21,7 @@ class SearchController extends Controller
     /**
      * Search across every record type the authenticated user is permitted to view.
      */
-    public function index(Request $request): JsonResponse
+    public function index(Request $request, PatientAccessService $access): JsonResponse
     {
         $validated = $request->validate([
             'q' => ['required', 'string', 'min:2', 'max:100'],
@@ -27,13 +29,19 @@ class SearchController extends Controller
 
         $term = trim($validated['q']);
         $user = $request->user();
+
+        // A restricted nurse may only ever find patients they are assigned to.
+        $scopedPatientIds = $access->isRestricted($user)
+            ? $access->assignedPatientIds($user)
+            : null;
+
         $groups = [];
 
         if ($user->can('viewAny', Patient::class)) {
             $groups[] = [
                 'type' => 'patients',
                 'label' => 'Patients',
-                'items' => $this->patients($term),
+                'items' => $this->patients($term, $scopedPatientIds),
             ];
         }
 
@@ -41,7 +49,7 @@ class SearchController extends Controller
             $groups[] = [
                 'type' => 'appointments',
                 'label' => 'Appointments',
-                'items' => $this->appointments($term),
+                'items' => $this->appointments($term, $scopedPatientIds),
             ];
         }
 
@@ -49,7 +57,7 @@ class SearchController extends Controller
             $groups[] = [
                 'type' => 'prescriptions',
                 'label' => 'Prescriptions',
-                'items' => $this->prescriptions($term),
+                'items' => $this->prescriptions($term, $scopedPatientIds),
             ];
         }
 
@@ -78,9 +86,10 @@ class SearchController extends Controller
     /**
      * @return array<int, array<string, mixed>>
      */
-    private function patients(string $term): array
+    private function patients(string $term, ?Collection $scopedPatientIds = null): array
     {
         return Patient::query()
+            ->when($scopedPatientIds !== null, fn (Builder $query) => $query->whereIn('id', $scopedPatientIds))
             ->where(function (Builder $query) use ($term) {
                 $query->where('first_name', 'like', "%{$term}%")
                     ->orWhere('last_name', 'like', "%{$term}%")
@@ -104,10 +113,11 @@ class SearchController extends Controller
     /**
      * @return array<int, array<string, mixed>>
      */
-    private function appointments(string $term): array
+    private function appointments(string $term, ?Collection $scopedPatientIds = null): array
     {
         return Appointment::query()
             ->with('patient')
+            ->when($scopedPatientIds !== null, fn (Builder $query) => $query->whereIn('patient_id', $scopedPatientIds))
             ->where(function (Builder $query) use ($term) {
                 $query->where('appointment_number', 'like', "%{$term}%")
                     ->orWhere('reason', 'like', "%{$term}%")
@@ -132,10 +142,11 @@ class SearchController extends Controller
     /**
      * @return array<int, array<string, mixed>>
      */
-    private function prescriptions(string $term): array
+    private function prescriptions(string $term, ?Collection $scopedPatientIds = null): array
     {
         return Prescription::query()
             ->with('patient')
+            ->when($scopedPatientIds !== null, fn (Builder $query) => $query->whereIn('patient_id', $scopedPatientIds))
             ->where(function (Builder $query) use ($term) {
                 $query->where('prescription_number', 'like', "%{$term}%")
                     ->orWhere('status', 'like', "%{$term}%")

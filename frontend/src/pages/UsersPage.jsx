@@ -24,6 +24,7 @@ const ROLE_TONES = {
   Admin: 'navy',
   Doctor: 'blue',
   Nurse: 'brand',
+  'Head Nurse': 'blue',
   Receptionist: 'amber',
   Pharmacist: 'green',
   Patient: 'gray',

@@ -4,9 +4,12 @@ namespace App\Policies;
 
 use App\Models\Patient;
 use App\Models\User;
+use App\Services\Nursing\PatientAccessService;
 
 class PatientPolicy
 {
+    public function __construct(private readonly PatientAccessService $access) {}
+
     /**
      * Determine whether the user can view any patients.
      */
@@ -16,11 +19,13 @@ class PatientPolicy
     }
 
     /**
-     * Determine whether the user can view a patient.
+     * Determine whether the user can view a patient. Frontline nurses may only
+     * view patients they are currently assigned to.
      */
     public function view(User $user, Patient $patient): bool
     {
-        return $user->can('patients.view');
+        return $user->can('patients.view')
+            && $this->access->canAccessPatient($user, $patient->id);
     }
 
     /**
@@ -36,7 +41,8 @@ class PatientPolicy
      */
     public function update(User $user, Patient $patient): bool
     {
-        return $user->can('patients.update');
+        return $user->can('patients.update')
+            && $this->access->canAccessPatient($user, $patient->id);
     }
 
     /**
@@ -44,7 +50,8 @@ class PatientPolicy
      */
     public function delete(User $user, Patient $patient): bool
     {
-        return $user->can('patients.delete');
+        return $user->can('patients.delete')
+            && $this->access->canAccessPatient($user, $patient->id);
     }
 
     /**
@@ -52,7 +59,8 @@ class PatientPolicy
      */
     public function restore(User $user, Patient $patient): bool
     {
-        return $user->can('patients.restore');
+        return $user->can('patients.restore')
+            && $this->access->canAccessPatient($user, $patient->id);
     }
 
     /**
@@ -60,6 +68,7 @@ class PatientPolicy
      */
     public function forceDelete(User $user, Patient $patient): bool
     {
-        return $user->can('patients.forceDelete');
+        return $user->can('patients.forceDelete')
+            && $this->access->canAccessPatient($user, $patient->id);
     }
 }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Patient;
+use App\Services\Nursing\PatientAccessService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -11,11 +12,14 @@ use Illuminate\Validation\Rule;
 class PatientController extends Controller
 {
     // Display a paginated list of patients
-    public function index(Request $request): JsonResponse
+    public function index(Request $request, PatientAccessService $access): JsonResponse
     {
         $this->authorize('viewAny', Patient::class);
 
         $query = Patient::query();
+
+        // Frontline nurses only ever see patients they are assigned to.
+        $access->scopePatientQuery($query, $request->user());
 
         $patients = $query->latest()->paginate(15);
 

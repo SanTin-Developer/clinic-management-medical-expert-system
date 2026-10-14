@@ -76,6 +76,7 @@ export const ROLES = [
   { value: 'Admin', label: 'Admin' },
   { value: 'Doctor', label: 'Doctor' },
   { value: 'Nurse', label: 'Nurse' },
+  { value: 'Head Nurse', label: 'Head Nurse' },
   { value: 'Receptionist', label: 'Receptionist' },
   { value: 'Pharmacist', label: 'Pharmacist' },
   { value: 'Patient', label: 'Patient' },
@@ -121,6 +122,125 @@ export const PAY_FREQUENCY_OPTIONS = [
   { value: 'biweekly', label: 'Bi-weekly' },
   { value: 'hourly', label: 'Hourly' },
 ]
+
+export const WARD_TYPES = {
+  general: meta('General', 'brand'),
+  icu: meta('ICU', 'red'),
+  maternity: meta('Maternity', 'blue'),
+  pediatric: meta('Pediatric', 'amber'),
+  surgical: meta('Surgical', 'navy'),
+  isolation: meta('Isolation', 'red'),
+}
+
+export const WARD_TYPE_OPTIONS = Object.entries(WARD_TYPES).map(([value, m]) => ({
+  value,
+  label: m.label,
+}))
+
+export const ROOM_TYPES = {
+  general: meta('General', 'gray'),
+  private: meta('Private', 'brand'),
+  semi_private: meta('Semi-private', 'blue'),
+  isolation: meta('Isolation', 'red'),
+}
+
+export const ROOM_TYPE_OPTIONS = Object.entries(ROOM_TYPES).map(([value, m]) => ({
+  value,
+  label: m.label,
+}))
+
+export const ROOM_TYPE_PRICES = {
+  general: 15,
+  semi_private: 30,
+  private: 55,
+  isolation: 80,
+}
+
+export const BED_STATUS = {
+  available: meta('Available', 'green'),
+  occupied: meta('Occupied', 'blue'),
+  reserved: meta('Reserved', 'amber'),
+  cleaning: meta('Cleaning', 'amber'),
+  maintenance: meta('Maintenance', 'red'),
+}
+
+export const BED_STATUS_OPTIONS = Object.entries(BED_STATUS).map(([value, m]) => ({
+  value,
+  label: m.label,
+}))
+
+export const ADMISSION_STATUS = {
+  admitted: meta('Admitted', 'blue'),
+  discharged: meta('Discharged', 'green'),
+  transferred: meta('Transferred', 'amber'),
+  cancelled: meta('Cancelled', 'red'),
+}
+
+export const NURSING_TASK_STATUS = {
+  pending: meta('Pending', 'amber'),
+  in_progress: meta('In progress', 'blue'),
+  completed: meta('Completed', 'green'),
+  cancelled: meta('Cancelled', 'red'),
+}
+
+export const NURSING_TASK_TYPES = {
+  vital_signs: meta('Vital signs', 'blue'),
+  medication: meta('Medication', 'brand'),
+  wound_care: meta('Wound care', 'red'),
+  mobility: meta('Mobility', 'navy'),
+  hygiene: meta('Hygiene', 'gray'),
+  observation: meta('Observation', 'amber'),
+  procedure: meta('Procedure', 'navy'),
+  education: meta('Education', 'green'),
+  other: meta('Other', 'gray'),
+}
+
+export const NURSING_TASK_TYPE_OPTIONS = Object.entries(NURSING_TASK_TYPES).map(
+  ([value, m]) => ({ value, label: m.label }),
+)
+
+export const TASK_PRIORITY = {
+  low: meta('Low', 'gray'),
+  normal: meta('Normal', 'blue'),
+  high: meta('High', 'amber'),
+  urgent: meta('Urgent', 'red'),
+}
+
+export const TASK_PRIORITY_OPTIONS = Object.entries(TASK_PRIORITY).map(
+  ([value, m]) => ({ value, label: m.label }),
+)
+
+export const MEDICATION_STATUS = {
+  scheduled: meta('Scheduled', 'amber'),
+  administered: meta('Administered', 'green'),
+  held: meta('Held', 'navy'),
+  refused: meta('Refused', 'red'),
+  missed: meta('Missed', 'red'),
+  cancelled: meta('Cancelled', 'gray'),
+}
+
+export const MEDICATION_STATUS_OPTIONS = Object.entries(MEDICATION_STATUS).map(
+  ([value, m]) => ({ value, label: m.label }),
+)
+
+export const MEDICATION_ROUTES = {
+  oral: meta('Oral', 'blue'),
+  iv: meta('IV', 'red'),
+  im: meta('IM', 'amber'),
+  sc: meta('SC', 'navy'),
+  topical: meta('Topical', 'green'),
+  inhalation: meta('Inhalation', 'brand'),
+  other: meta('Other', 'gray'),
+}
+
+export const MEDICATION_ROUTE_OPTIONS = Object.entries(MEDICATION_ROUTES).map(
+  ([value, m]) => ({ value, label: m.label }),
+)
+
+export const ASSIGNMENT_STATUS = {
+  active: meta('Active', 'green'),
+  ended: meta('Ended', 'gray'),
+}
 
 export function statusBadgeFor(map, value) {
   return map[value] ?? meta(value ?? '—', 'gray')

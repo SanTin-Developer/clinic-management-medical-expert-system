@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Appointment;
 use App\Models\User;
 use App\Models\VitalSign;
+use App\Services\Nursing\PatientAccessService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -14,22 +15,25 @@ class VitalSignController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(): JsonResponse
+    public function index(Request $request, PatientAccessService $access): JsonResponse
     {
         //
         $this->authorize('viewAny', VitalSign::class);
 
-        $vitalSigns = VitalSign::with([
+        $query = VitalSign::with([
             'patient',
             'appointment',
             'nurse',
-        ])
-            ->latest()
-            ->paginate(15);
+        ]);
+
+        // Frontline nurses only ever see vitals for patients they are assigned to.
+        $access->scopeByPatientColumn($query, $request->user());
+
+        $vitalSigns = (clone $query)->latest()->paginate(15);
 
         $stats = [
             'total' => $vitalSigns->total(),
-            'this_month' => VitalSign::query()->whereMonth('created_at', now()->month)
+            'this_month' => (clone $query)->whereMonth('created_at', now()->month)
                 ->whereYear('created_at', now()->year)
                 ->count(),
         ];
@@ -40,7 +44,7 @@ class VitalSignController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request): JsonResponse
+    public function store(Request $request, PatientAccessService $access): JsonResponse
     {
         //
         $this->authorize('create', VitalSign::class);
@@ -122,6 +126,20 @@ class VitalSignController extends Controller
                 'string',
             ],
         ]);
+
+        $actor = $request->user();
+
+        // A frontline nurse may only chart vitals for a patient they are
+        // assigned to, and always records as themselves.
+        if ($access->isRestricted($actor)) {
+            abort_unless(
+                $access->canAccessPatient($actor, (int) $validated['patient_id']),
+                403,
+                'You are not assigned to this patient.',
+            );
+
+            $validated['nurse_id'] = $actor->id;
+        }
 
         $nurse = User::query()
             ->role('Nurse')

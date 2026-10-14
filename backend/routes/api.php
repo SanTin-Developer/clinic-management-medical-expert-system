@@ -34,6 +34,13 @@ use App\Http\Controllers\Api\TelegramController;
 use App\Http\Controllers\Api\TwoFactorController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\VitalSignController;
+use App\Http\Controllers\Api\WardController;
+use App\Http\Controllers\Api\RoomController;
+use App\Http\Controllers\Api\BedController;
+use App\Http\Controllers\Api\AdmissionController;
+use App\Http\Controllers\Api\PatientAssignmentController;
+use App\Http\Controllers\Api\NursingTaskController;
+use App\Http\Controllers\Api\MedicationAdministrationController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -257,6 +264,35 @@ Route::prefix('v1')->group(function () {
         Route::post('/conversations/{conversation}/read', [ConversationController::class, 'markRead']);
         Route::post('/conversations/{conversation}/participants', [ConversationController::class, 'addParticipants']);
         Route::delete('/conversations/{conversation}/participants/{user}', [ConversationController::class, 'removeParticipant']);
+
+        // Inpatient: wards/rooms/beds
+        Route::apiResource('wards', WardController::class);
+        Route::apiResource('rooms', RoomController::class);
+        Route::apiResource('beds', BedController::class);
+        Route::post('/beds/{bed}/status', [BedController::class, 'updateStatus']);
+
+        // Admissions
+        Route::apiResource('admissions', AdmissionController::class);
+        Route::post('/admissions/{admission}/discharge', [AdmissionController::class, 'discharge']);
+        Route::post('/admissions/{admission}/transfer', [AdmissionController::class, 'transfer']);
+        Route::post('/admissions/{admission}/cancel', [AdmissionController::class, 'cancel']);
+
+        // Nurse-patient assignments
+        Route::get('/assignments', [PatientAssignmentController::class, 'index']);
+        Route::post('/assignments', [PatientAssignmentController::class, 'store']);
+        Route::get('/assignments/{assignment}', [PatientAssignmentController::class, 'show']);
+        Route::post('/assignments/{assignment}/end', [PatientAssignmentController::class, 'end']);
+        Route::delete('/assignments/{assignment}', [PatientAssignmentController::class, 'end']);
+        Route::get('/nursing/my-patients', [PatientAssignmentController::class, 'myPatients']);
+
+        // Nursing tasks
+        Route::apiResource('nursing-tasks', NursingTaskController::class)->parameters(['nursing-tasks' => 'nursingTask']);
+        Route::post('/nursing-tasks/{nursingTask}/complete', [NursingTaskController::class, 'complete']);
+
+        // Medication administration (MAR)
+        Route::apiResource('medication-administrations', MedicationAdministrationController::class);
+        Route::post('/medication-administrations/{medicationAdministration}/administer', [MedicationAdministrationController::class, 'administer']);
+        Route::post('/medication-administrations/{medicationAdministration}/status', [MedicationAdministrationController::class, 'updateStatus']);
 
         // In-app notifications
         Route::get('/notifications', [NotificationController::class, 'index']);

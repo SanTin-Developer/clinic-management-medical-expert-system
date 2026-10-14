@@ -13,6 +13,7 @@ class DemoUsersSeeder extends Seeder
         $demoUsers = [
             ['name' => 'Demo Doctor', 'username' => 'doctor', 'email' => 'doctor@clinic.local', 'role' => 'Doctor'],
             ['name' => 'Demo Nurse', 'username' => 'nurse', 'email' => 'nurse@clinic.local', 'role' => 'Nurse'],
+            ['name' => 'Demo Head Nurse', 'username' => 'headnurse', 'email' => 'headnurse@clinic.local', 'role' => 'Head Nurse'],
             ['name' => 'Demo Receptionist', 'username' => 'receptionist', 'email' => 'receptionist@clinic.local', 'role' => 'Receptionist'],
             ['name' => 'Demo Patient', 'username' => 'patient', 'email' => 'patient@clinic.local', 'role' => 'Patient'],
         ];

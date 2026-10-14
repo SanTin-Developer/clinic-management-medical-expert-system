@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Appointment;
 use App\Models\User;
+use App\Services\Nursing\PatientAccessService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -14,7 +15,7 @@ class AppointmentController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(): JsonResponse
+    public function index(Request $request, PatientAccessService $access): JsonResponse
     {
         //
         $this->authorize('viewAny', Appointment::class);
@@ -23,7 +24,10 @@ class AppointmentController extends Controller
             ->latest('appointment_date')
             ->latest('appointment_time');
 
-        $appointments = $query->paginate(15);
+        // Frontline nurses only ever see appointments for assigned patients.
+        $access->scopeByPatientColumn($query, $request->user());
+
+        $appointments = (clone $query)->paginate(15);
 
         $today = now()->toDateString();
 

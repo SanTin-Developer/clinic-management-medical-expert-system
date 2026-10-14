@@ -7,6 +7,7 @@ use App\Models\Patient;
 use App\Models\PatientDocument;
 use App\Services\Files\DocumentStorage;
 use App\Services\Files\PatientDocumentService;
+use App\Services\Nursing\PatientAccessService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -26,11 +27,18 @@ class DocumentController extends Controller
     public function __construct(
         private readonly PatientDocumentService $documents,
         private readonly DocumentStorage $storage,
+        private readonly PatientAccessService $access,
     ) {}
 
-    public function index(Patient $patient): JsonResponse
+    public function index(Request $request, Patient $patient): JsonResponse
     {
         $this->authorize('viewAny', PatientDocument::class);
+
+        abort_unless(
+            $this->access->canAccessPatient($request->user(), $patient->id),
+            403,
+            'You are not assigned to this patient.',
+        );
 
         return response()->json([
             'data' => $patient->documents()
@@ -43,6 +51,12 @@ class DocumentController extends Controller
     public function store(Request $request, Patient $patient): JsonResponse
     {
         $this->authorize('create', PatientDocument::class);
+
+        abort_unless(
+            $this->access->canAccessPatient($request->user(), $patient->id),
+            403,
+            'You are not assigned to this patient.',
+        );
 
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],

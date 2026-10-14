@@ -75,4 +75,32 @@ class Patient extends Model
     {
         return $this->hasMany(PatientDocument::class);
     }
+
+    public function admissions(): HasMany
+    {
+        return $this->hasMany(Admission::class);
+    }
+
+    public function assignments(): HasMany
+    {
+        return $this->hasMany(PatientAssignment::class);
+    }
+
+    public function nursingTasks(): HasMany
+    {
+        return $this->hasMany(NursingTask::class);
+    }
+
+    public function medicationAdministrations(): HasMany
+    {
+        return $this->hasMany(MedicationAdministration::class);
+    }
+
+    public function currentAdmission(): ?Admission
+    {
+        return $this->admissions()
+            ->where('status', Admission::STATUS_ADMITTED)
+            ->latest('admitted_at')
+            ->first();
+    }
 }

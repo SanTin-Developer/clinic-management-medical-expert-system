@@ -7,6 +7,7 @@ use App\Models\Appointment;
 use App\Models\Consultation;
 use App\Models\MedicalRecord;
 use App\Models\User;
+use App\Services\Nursing\PatientAccessService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -14,7 +15,7 @@ use Illuminate\Validation\ValidationException;
 class MedicalRecordController extends Controller
 {
     //
-    public function index(Request $request): JsonResponse
+    public function index(Request $request, PatientAccessService $access): JsonResponse
     {
         $this->authorize('viewAny', MedicalRecord::class);
 
@@ -24,6 +25,10 @@ class MedicalRecordController extends Controller
             'consultation',
             'doctor',
         ]);
+
+        // Frontline nurses only ever see records for patients they are assigned to.
+        $access->scopeByPatientColumn($query, $request->user());
+
         $base = clone $query;
 
         $records = $query->latest()->paginate(15);
@@ -38,7 +43,7 @@ class MedicalRecordController extends Controller
         return response()->json(array_merge($records->toArray(), ['stats' => $stats]));
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(Request $request, PatientAccessService $access): JsonResponse
     {
         $this->authorize('create', MedicalRecord::class);
 
@@ -81,6 +86,14 @@ class MedicalRecordController extends Controller
                 'string',
             ],
         ]);
+
+        if ($access->isRestricted($request->user())) {
+            abort_unless(
+                $access->canAccessPatient($request->user(), (int) $validated['patient_id']),
+                403,
+                'You are not assigned to this patient.',
+            );
+        }
 
         $appointment = null;
         $consultation = null;
