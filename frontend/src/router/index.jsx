@@ -44,6 +44,8 @@ const AnnouncementListPage = lazy(() => import('../pages/AnnouncementListPage.js
 const LeaveListPage = lazy(() => import('../pages/LeaveListPage.jsx'))
 const QueueListPage = lazy(() => import('../pages/QueueListPage.jsx'))
 const AttendancePage = lazy(() => import('../pages/AttendancePage.jsx'))
+const AttendanceScanPage = lazy(() => import('../pages/AttendanceScanPage.jsx'))
+const AttendanceKioskPage = lazy(() => import('../pages/AttendanceKioskPage.jsx'))
 const SchedulingPage = lazy(() => import('../pages/SchedulingPage.jsx'))
 const SettingsPage = lazy(() => import('../pages/SettingsPage.jsx'))
 const ExpertSystemPage = lazy(() => import('../pages/ExpertSystemPage.jsx'))
@@ -322,6 +324,14 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: 'attendance/scan',
+        element: withSuspense(
+          <Guard permission="attendance.clock">
+            <AttendanceScanPage />
+          </Guard>,
+        ),
+      },
+      {
         path: 'scheduling',
         element: withSuspense(
           <Guard permission="scheduling.view">
@@ -362,6 +372,18 @@ export const router = createBrowserRouter([
       })),
       { path: 'forbidden', element: withSuspense(<ForbiddenPage />) },
     ],
+  },
+  {
+    path: '/attendance/kiosk/:sessionId',
+    element: (
+      <ProtectedRoute>
+        {withSuspense(
+          <Guard permission="attendance.session">
+            <AttendanceKioskPage />
+          </Guard>,
+        )}
+      </ProtectedRoute>
+    ),
   },
   { path: '*', element: withSuspense(<NotFoundPage />) },
 ])

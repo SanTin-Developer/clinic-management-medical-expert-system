@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\NursingTask;
+use App\Services\Nursing\MedicationAdministrationService;
 use App\Services\Nursing\NursingTaskService;
 use App\Services\Nursing\PatientAccessService;
 use Illuminate\Http\JsonResponse;
@@ -14,6 +15,7 @@ class NursingTaskController extends Controller
 {
     public function __construct(
         private readonly NursingTaskService $tasks,
+        private readonly MedicationAdministrationService $medications,
         private readonly PatientAccessService $access,
     ) {}
 
@@ -95,9 +97,24 @@ class NursingTaskController extends Controller
     {
         $this->authorize('view', $nursingTask);
 
-        return response()->json([
-            'data' => $nursingTask->load(['patient', 'assignedNurse', 'completer', 'admission']),
-        ]);
+        $nursingTask->load(['patient', 'assignedNurse', 'completer', 'admission', 'vitalSign', 'medicationAdministration.medicine']);
+
+        if ($nursingTask->requiresMedicationAdministration()) {
+            $resolved = $this->medications->resolveForTask($nursingTask);
+            $resolved?->loadMissing('medicine');
+
+            $nursingTask->setAttribute('scheduled_dose', $resolved === null ? null : [
+                'id' => $resolved->id,
+                'status' => $resolved->status,
+                'dose' => $resolved->dose,
+                'route' => $resolved->route,
+                'route_detail' => $resolved->route_detail,
+                'scheduled_at' => $resolved->scheduled_at?->toIso8601String(),
+                'medicine_name' => $resolved->medicine?->name,
+            ]);
+        }
+
+        return response()->json(['data' => $nursingTask]);
     }
 
     public function update(Request $request, NursingTask $nursingTask): JsonResponse
@@ -133,11 +150,44 @@ class NursingTaskController extends Controller
     {
         $this->authorize('complete', $nursingTask);
 
-        $validated = $request->validate([
-            'notes' => ['nullable', 'string'],
-        ]);
+        $outcomeOptions = $nursingTask->requiresMedicationAdministration()
+            ? MedicationAdministrationService::OUTCOMES
+            : NursingTaskService::OUTCOMES;
 
-        $task = $this->tasks->complete($nursingTask, $request->user(), $validated['notes'] ?? null);
+        $rules = [
+            'outcome' => ['nullable', Rule::in($outcomeOptions)],
+            'notes' => ['nullable', 'string'],
+            'care_provided' => ['nullable', 'string'],
+            'reason' => ['nullable', 'string'],
+            'medication_administration_id' => ['nullable', 'integer', 'exists:medication_administrations,id'],
+        ];
+
+        if ($nursingTask->requiresVitalSigns()) {
+            $rules = array_merge($rules, [
+                'admission_id' => ['nullable', 'integer', 'exists:admissions,id'],
+                'temperature' => ['nullable', 'numeric', 'between:30,45'],
+                'blood_pressure_systolic' => ['nullable', 'integer', 'between:50,250'],
+                'blood_pressure_diastolic' => ['nullable', 'integer', 'between:30,150'],
+                'heart_rate' => ['nullable', 'integer', 'between:30,250'],
+                'respiratory_rate' => ['nullable', 'integer', 'between:5,60'],
+                'oxygen_saturation' => ['nullable', 'numeric', 'between:50,100'],
+                'weight' => ['nullable', 'numeric', 'between:1,500'],
+                'height' => ['nullable', 'numeric', 'between:30,250'],
+                'symptoms' => ['nullable', 'string'],
+            ]);
+        }
+
+        if ($nursingTask->requiresMedicationAdministration()) {
+            $rules = array_merge($rules, [
+                'dose' => ['nullable', 'string', 'max:255'],
+                'route' => ['nullable', Rule::in(MedicationAdministrationService::ROUTES)],
+                'route_detail' => ['nullable', 'string', 'max:100'],
+            ]);
+        }
+
+        $validated = $request->validate($rules);
+
+        $task = $this->tasks->complete($nursingTask, $request->user(), $validated);
 
         return response()->json([
             'message' => 'Nursing task marked complete.',

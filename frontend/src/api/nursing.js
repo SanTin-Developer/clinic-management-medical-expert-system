@@ -41,6 +41,7 @@ export const assignmentApi = {
   list: (params) => api.get('/assignments', { params }),
   get: (id) => withData(api.get(`/assignments/${id}`)),
   create: (data) => withData(api.post('/assignments', data)),
+  update: (id, data) => withData(api.put(`/assignments/${id}`, data)),
   end: (id, data) => withData(api.post(`/assignments/${id}/end`, data ?? {})),
   myPatients: () => withData(api.get('/nursing/my-patients')),
 }

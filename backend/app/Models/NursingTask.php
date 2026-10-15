@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class NursingTask extends Model
@@ -38,6 +39,25 @@ class NursingTask extends Model
 
     public const TYPE_OTHER = 'other';
 
+    public const OUTCOME_COMPLETED = 'completed';
+
+    public const OUTCOME_PARTIALLY_COMPLETED = 'partially_completed';
+
+    public const OUTCOME_HELD = 'held';
+
+    public const OUTCOME_REFUSED = 'refused';
+
+    public const OUTCOME_NOT_COMPLETED = 'not_completed';
+
+    /**
+     * Task types whose completion requires a structured clinical record rather
+     * than just an outcome and notes.
+     */
+    public const MEASUREMENT_TYPES = [
+        self::TYPE_VITAL_SIGNS,
+        self::TYPE_MEDICATION,
+    ];
+
     protected $fillable = [
         'patient_id',
         'admission_id',
@@ -51,6 +71,8 @@ class NursingTask extends Model
         'completed_at',
         'completed_by',
         'status',
+        'outcome',
+        'outcome_reason',
         'notes',
         'created_by',
     ];
@@ -94,6 +116,16 @@ class NursingTask extends Model
         return $this->belongsTo(User::class, 'completed_by');
     }
 
+    public function vitalSign(): HasOne
+    {
+        return $this->hasOne(VitalSign::class, 'nursing_task_id');
+    }
+
+    public function medicationAdministration(): HasOne
+    {
+        return $this->hasOne(MedicationAdministration::class, 'nursing_task_id');
+    }
+
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
@@ -102,6 +134,16 @@ class NursingTask extends Model
     public function isCompleted(): bool
     {
         return $this->status === self::STATUS_COMPLETED;
+    }
+
+    public function requiresVitalSigns(): bool
+    {
+        return $this->task_type === self::TYPE_VITAL_SIGNS;
+    }
+
+    public function requiresMedicationAdministration(): bool
+    {
+        return $this->task_type === self::TYPE_MEDICATION;
     }
 
     public function isOverdue(): bool

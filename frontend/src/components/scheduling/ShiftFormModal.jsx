@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import Modal from '../ui/Modal.jsx'
 import Button from '../ui/Button.jsx'
@@ -6,8 +7,10 @@ import Field from '../ui/Field.jsx'
 import Input from '../ui/Input.jsx'
 import Select from '../ui/Select.jsx'
 import Textarea from '../ui/Textarea.jsx'
+import Toggle from '../ui/Toggle.jsx'
 import { userApi } from '../../api/users.js'
 import { shiftApi } from '../../api/shifts.js'
+import { shiftTemplateApi } from '../../api/shiftTemplates.js'
 import { useAll } from '../../hooks/usePaginated.js'
 import { toIsoDate } from '../../utils/format.js'
 import { SHIFT_STATUS_OPTIONS, SHIFT_TYPE_OPTIONS } from '../../utils/status.js'
@@ -17,14 +20,22 @@ const today = toIsoDate(new Date())
 export default function ShiftFormModal({ open, onClose, shift, onSaved }) {
   const editing = Boolean(shift?.id)
   const staff = useAll(['users', 'all'], (params) => userApi.list(params))
+  const templatesQuery = useQuery({
+    queryKey: ['shift-templates'],
+    queryFn: () => shiftTemplateApi.list(),
+    enabled: open,
+  })
+  const templates = templatesQuery.data ?? []
 
   const [form, setForm] = useState(
     shift
       ? {
           user_id: shift.user_id ?? '',
           shift_date: toIsoDate(shift.shift_date),
+          shift_template_id: shift.shift_template_id ? String(shift.shift_template_id) : '',
           start_time: (shift.start_time ?? '').slice(0, 5),
           end_time: (shift.end_time ?? '').slice(0, 5),
+          crosses_midnight: Boolean(shift.crosses_midnight),
           type: shift.type ?? 'day',
           status: shift.status ?? 'scheduled',
           notes: shift.notes ?? '',
@@ -32,8 +43,10 @@ export default function ShiftFormModal({ open, onClose, shift, onSaved }) {
       : {
           user_id: '',
           shift_date: today,
+          shift_template_id: '',
           start_time: '08:00',
           end_time: '16:00',
+          crosses_midnight: false,
           type: 'day',
           status: 'scheduled',
           notes: '',
@@ -44,13 +57,29 @@ export default function ShiftFormModal({ open, onClose, shift, onSaved }) {
 
   const set = (key) => (value) => setForm((f) => ({ ...f, [key]: value }))
 
+  const usingTemplate = Boolean(form.shift_template_id)
+
+  const onTemplateChange = (value) => {
+    const template = templates.find((t) => String(t.id) === value)
+    setForm((f) => ({
+      ...f,
+      shift_template_id: value,
+      start_time: template ? String(template.start_time).slice(0, 5) : f.start_time,
+      end_time: template ? String(template.end_time).slice(0, 5) : f.end_time,
+      type: template ? template.type : f.type,
+      crosses_midnight: template ? Boolean(template.crosses_midnight) : f.crosses_midnight,
+    }))
+  }
+
   const handleSubmit = async (event) => {
     event.preventDefault()
     const next = {}
     if (!form.user_id) next.user_id = 'Select a staff member.'
     if (!form.shift_date) next.shift_date = 'Required.'
-    if (!/^\d{2}:\d{2}$/.test(form.start_time)) next.start_time = 'Use HH:MM.'
-    if (!/^\d{2}:\d{2}$/.test(form.end_time)) next.end_time = 'Use HH:MM.'
+    if (!usingTemplate) {
+      if (!/^\d{2}:\d{2}$/.test(form.start_time)) next.start_time = 'Use HH:MM.'
+      if (!/^\d{2}:\d{2}$/.test(form.end_time)) next.end_time = 'Use HH:MM.'
+    }
     setErrors(next)
     if (Object.keys(next).length) return
 
@@ -59,8 +88,10 @@ export default function ShiftFormModal({ open, onClose, shift, onSaved }) {
       const payload = {
         user_id: form.user_id,
         shift_date: form.shift_date,
+        shift_template_id: form.shift_template_id || null,
         start_time: form.start_time,
         end_time: form.end_time,
+        crosses_midnight: form.crosses_midnight,
         type: form.type,
         status: form.status,
         notes: form.notes || null,
@@ -129,26 +160,46 @@ export default function ShiftFormModal({ open, onClose, shift, onSaved }) {
               invalid={Boolean(errors.shift_date)}
             />
           </Field>
-          <Field label="Start time" htmlFor="shift-start" required error={errors.start_time} hint="24-hour format.">
+          <Field
+            label="Shift template"
+            htmlFor="shift-template"
+            hint="Templates set the shift times and type automatically."
+            className="sm:col-span-2"
+          >
+            <Select
+              id="shift-template"
+              value={form.shift_template_id}
+              onChange={(e) => onTemplateChange(e.target.value)}
+              disabled={templatesQuery.isLoading}
+            >
+              <option value="">Custom times</option>
+              {templates.map((t) => (
+                <option key={t.id} value={t.id}>{t.name}</option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Start time" htmlFor="shift-start" required={!usingTemplate} error={errors.start_time} hint={usingTemplate ? 'From template.' : '24-hour format.'}>
             <Input
               id="shift-start"
               type="time"
               value={form.start_time}
               onChange={(e) => set('start_time')(e.target.value)}
               invalid={Boolean(errors.start_time)}
+              disabled={usingTemplate}
             />
           </Field>
-          <Field label="End time" htmlFor="shift-end" required error={errors.end_time} hint="24-hour format.">
+          <Field label="End time" htmlFor="shift-end" required={!usingTemplate} error={errors.end_time} hint={usingTemplate ? 'From template.' : '24-hour format.'}>
             <Input
               id="shift-end"
               type="time"
               value={form.end_time}
               onChange={(e) => set('end_time')(e.target.value)}
               invalid={Boolean(errors.end_time)}
+              disabled={usingTemplate}
             />
           </Field>
           <Field label="Shift type" htmlFor="shift-type">
-            <Select id="shift-type" value={form.type} onChange={(e) => set('type')(e.target.value)}>
+            <Select id="shift-type" value={form.type} onChange={(e) => set('type')(e.target.value)} disabled={usingTemplate}>
               {SHIFT_TYPE_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>{o.label}</option>
               ))}
@@ -161,6 +212,15 @@ export default function ShiftFormModal({ open, onClose, shift, onSaved }) {
               ))}
             </Select>
           </Field>
+          {!usingTemplate ? (
+            <Toggle
+              className="sm:col-span-2"
+              label="Crosses midnight"
+              hint="Enable when the shift ends on the following day."
+              checked={form.crosses_midnight}
+              onChange={set('crosses_midnight')}
+            />
+          ) : null}
           <Field label="Notes" htmlFor="shift-notes" className="sm:col-span-2">
             <Textarea id="shift-notes" rows={2} value={form.notes} onChange={(e) => set('notes')(e.target.value)} />
           </Field>

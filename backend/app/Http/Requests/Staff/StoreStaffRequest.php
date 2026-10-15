@@ -64,6 +64,7 @@ class StoreStaffRequest extends FormRequest
             'allowances' => ['nullable', 'numeric', 'min:0'],
             'user_id' => ['nullable', 'integer', 'exists:users,id'],
             'cv' => ['nullable', 'file', 'max:'.(int) config('documents.max_size_kb', 10240)],
+            'photo' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp', 'max:'.(int) config('documents.max_size_kb', 10240)],
         ];
     }
 }

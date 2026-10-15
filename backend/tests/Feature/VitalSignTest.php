@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Appointment;
 use App\Models\Patient;
+use App\Models\PatientAssignment;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\PermissionRegistrar;
@@ -34,12 +35,23 @@ class VitalSignTest extends TestCase
         ]);
     }
 
+    private function assignNurseTo(Patient $patient, int $nurseId): PatientAssignment
+    {
+        return PatientAssignment::create([
+            'nurse_id' => $nurseId,
+            'patient_id' => $patient->id,
+            'status' => PatientAssignment::STATUS_ACTIVE,
+            'starts_at' => now(),
+        ]);
+    }
+
     public function test_nurse_can_record_vital_signs(): void
     {
         $nurse = $this->actingAsRole('Nurse');
         $doctor = $this->userWithRole('Doctor');
         $patient = Patient::factory()->create();
         $appointment = $this->appointmentFor($patient, $doctor->id);
+        $this->assignNurseTo($patient, $nurse->id);
 
         $this->postJson('/api/v1/vital-signs', [
             'appointment_id' => $appointment->id,
@@ -58,6 +70,7 @@ class VitalSignTest extends TestCase
         $doctor = $this->userWithRole('Doctor');
         $appointment = $this->appointmentFor(Patient::factory()->create(), $doctor->id);
         $otherPatient = Patient::factory()->create();
+        $this->assignNurseTo($otherPatient, $nurse->id);
 
         $this->postJson('/api/v1/vital-signs', [
             'appointment_id' => $appointment->id,

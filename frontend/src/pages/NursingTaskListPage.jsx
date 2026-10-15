@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { toast } from 'sonner'
 import { CircleCheckBig, ClipboardList, Clock, ListChecks, Plus, XCircle } from 'lucide-react'
 import StatCard from '../components/ui/StatCard.jsx'
 import PageHeader from '../components/ui/PageHeader.jsx'
@@ -7,7 +6,6 @@ import Button from '../components/ui/Button.jsx'
 import Card from '../components/ui/Card.jsx'
 import Badge from '../components/ui/Badge.jsx'
 import Tabs from '../components/ui/Tabs.jsx'
-import ConfirmDialog from '../components/ui/ConfirmDialog.jsx'
 import Table, { THead, TBody, Tr, Th, Td } from '../components/ui/Table.jsx'
 import Pagination from '../components/ui/Pagination.jsx'
 import { RowSkeleton } from '../components/ui/Skeleton.jsx'
@@ -18,6 +16,7 @@ import { useAuth } from '../hooks/useAuth.js'
 import { formatDateTime, patientFullName } from '../utils/format.js'
 import { NURSING_TASK_STATUS, NURSING_TASK_TYPES, TASK_PRIORITY, statusBadgeFor } from '../utils/status.js'
 import NursingTaskFormModal from '../components/nursing/NursingTaskFormModal.jsx'
+import NursingTaskCompleteModal from '../components/nursing/NursingTaskCompleteModal.jsx'
 
 export default function NursingTaskListPage() {
   const { can } = useAuth()
@@ -33,18 +32,6 @@ export default function NursingTaskListPage() {
 
   const tasks = query.data?.data ?? []
   const stats = query.data?.stats ?? {}
-
-  const complete = async () => {
-    if (!completing) return
-    try {
-      await nursingTaskApi.complete(completing.id)
-      toast.success('Task completed.')
-      setCompleting(null)
-      query.refetch()
-    } catch (err) {
-      toast.error(err.message)
-    }
-  }
 
   return (
     <div className="space-y-6">
@@ -141,14 +128,11 @@ export default function NursingTaskListPage() {
 
       <NursingTaskFormModal open={formOpen} onClose={() => setFormOpen(false)} onSaved={() => query.refetch()} />
 
-      <ConfirmDialog
+      <NursingTaskCompleteModal
         open={Boolean(completing)}
+        task={completing}
         onClose={() => setCompleting(null)}
-        onConfirm={complete}
-        title="Mark task complete?"
-        message={completing ? `Mark “${completing.title}” as completed?` : ''}
-        confirmLabel="Mark complete"
-        danger={false}
+        onSaved={() => query.refetch()}
       />
     </div>
   )

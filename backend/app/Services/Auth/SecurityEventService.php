@@ -33,6 +33,14 @@ class SecurityEventService
 
     public const PASSWORD_CHANGED = 'password.changed';
 
+    public const PASSWORD_RESET_REQUESTED = 'password.reset_requested';
+
+    public const PASSWORD_RESET_COMPLETED = 'password.reset_completed';
+
+    public const USER_PASSWORD_CHANGE_REJECTED = 'user.password_change_rejected';
+
+    public const USER_ROLE_CHANGED = 'user.role_changed';
+
     public const TWO_FACTOR_ENROLLED = 'two_factor.enrolled';
 
     public const TWO_FACTOR_CONFIRMED = 'two_factor.confirmed';

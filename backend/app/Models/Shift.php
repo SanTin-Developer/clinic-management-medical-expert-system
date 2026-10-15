@@ -27,11 +27,14 @@ class Shift extends Model
      */
     protected $fillable = [
         'user_id',
+        'shift_template_id',
         'shift_date',
         'start_time',
         'end_time',
+        'crosses_midnight',
         'type',
         'status',
+        'published_at',
         'notes',
         'created_by',
     ];
@@ -43,12 +46,19 @@ class Shift extends Model
     {
         return [
             'shift_date' => 'date',
+            'crosses_midnight' => 'boolean',
+            'published_at' => 'datetime',
         ];
     }
 
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function shiftTemplate(): BelongsTo
+    {
+        return $this->belongsTo(ShiftTemplate::class);
     }
 
     public function createdBy(): BelongsTo

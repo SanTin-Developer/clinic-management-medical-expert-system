@@ -43,7 +43,8 @@ const BASE_FORM = {
 }
 
 const ALLOWED_CV_EXTENSIONS = ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png', 'webp']
-const MAX_CV_SIZE = 10 * 1024 * 1024 // 10MB
+const ALLOWED_PHOTO_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp']
+const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 
 export default function StaffFormModal({ open, onClose, initial, onSaved }) {
   const { can } = useAuth()
@@ -52,6 +53,7 @@ export default function StaffFormModal({ open, onClose, initial, onSaved }) {
 
   const [form, setForm] = useState(BASE_FORM)
   const [cvFile, setCvFile] = useState(null)
+  const [photoFile, setPhotoFile] = useState(null)
   const [errors, setErrors] = useState({})
   const [saving, setSaving] = useState(false)
   const [supervisors, setSupervisors] = useState([])
@@ -74,6 +76,7 @@ export default function StaffFormModal({ open, onClose, initial, onSaved }) {
       setForm(BASE_FORM)
     }
     setCvFile(null)
+    setPhotoFile(null)
     setErrors({})
 
     staffApi.list({ per_page: 100 })
@@ -110,7 +113,7 @@ export default function StaffFormModal({ open, onClose, initial, onSaved }) {
       return
     }
 
-    if (selectedFile.size > MAX_CV_SIZE) {
+    if (selectedFile.size > MAX_FILE_SIZE) {
       setErrors((e) => ({ ...e, cv: 'File size exceeds the 10MB limit.' }))
       setCvFile(null)
       return
@@ -124,6 +127,36 @@ export default function StaffFormModal({ open, onClose, initial, onSaved }) {
     setCvFile(selectedFile)
   }
 
+  const handlePhotoChange = (selectedFile) => {
+    if (!selectedFile) {
+      setPhotoFile(null)
+      return
+    }
+
+    const ext = selectedFile.name.split('.').pop()?.toLowerCase()
+    if (!ext || !ALLOWED_PHOTO_EXTENSIONS.includes(ext)) {
+      setErrors((e) => ({
+        ...e,
+        photo: `Disallowed file type (.${ext}). Allowed: JPG, JPEG, PNG, WEBP.`,
+      }))
+      setPhotoFile(null)
+      return
+    }
+
+    if (selectedFile.size > MAX_FILE_SIZE) {
+      setErrors((e) => ({ ...e, photo: 'File size exceeds the 10MB limit.' }))
+      setPhotoFile(null)
+      return
+    }
+
+    setErrors((e) => {
+      const rest = { ...e }
+      delete rest.photo
+      return rest
+    })
+    setPhotoFile(selectedFile)
+  }
+
   const handleSubmit = async (event) => {
     event.preventDefault()
     const next = {}
@@ -134,6 +167,7 @@ export default function StaffFormModal({ open, onClose, initial, onSaved }) {
       next.date_of_birth = 'Date of birth must be in the past.'
     }
     if (errors.cv) next.cv = errors.cv
+    if (errors.photo) next.photo = errors.photo
 
     setErrors(next)
     if (Object.keys(next).length > 0) return
@@ -180,7 +214,7 @@ export default function StaffFormModal({ open, onClose, initial, onSaved }) {
         await staffApi.update(initial.id, payload)
         toast.success('Staff profile updated successfully.')
       } else {
-        await staffApi.create(payload, cvFile)
+        await staffApi.create(payload, cvFile, photoFile)
         toast.success('Staff profile created successfully.')
       }
 
@@ -435,6 +469,21 @@ export default function StaffFormModal({ open, onClose, initial, onSaved }) {
                     value={cvFile}
                     onSelect={handleCvChange}
                     hint="PDF, DOC, DOCX, JPG, PNG, WEBP · up to 10MB · scanned & stored privately"
+                  />
+                </Field>
+              </div>
+              <div className="sm:col-span-2">
+                <Field
+                  label="Staff photo (optional)"
+                  error={errors.photo}
+                  hint="Not displayed in the system — stored privately as a staff document like the CV."
+                >
+                  <FileDropzone
+                    id="staff-photo-file"
+                    value={photoFile}
+                    onSelect={handlePhotoChange}
+                    accept=".jpg,.jpeg,.png,.webp"
+                    hint="JPG, JPEG, PNG, WEBP · up to 10MB · scanned & stored privately"
                   />
                 </Field>
               </div>

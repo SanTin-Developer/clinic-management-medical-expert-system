@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import Modal from '../ui/Modal.jsx'
 import Button from '../ui/Button.jsx'
@@ -23,11 +23,15 @@ const EMPTY = {
   starts_at: '',
   ends_at: '',
   notes: '',
+  reason: '',
 }
 
-export default function AssignmentFormModal({ open, onClose, onSaved }) {
+const toLocalInput = (iso) => (iso ? iso.slice(0, 16) : '')
+
+export default function AssignmentFormModal({ open, assignment, onClose, onSaved }) {
   const { user, can } = useAuth()
   const canSeeUsers = can('users.view')
+  const isEdit = Boolean(assignment)
 
   const patients = useAll(['patients', 'all'], (params) => patientApi.list(params), { enabled: open })
   const wards = useAll(['wards', 'all'], (params) => wardApi.list(params), { enabled: open })
@@ -41,6 +45,27 @@ export default function AssignmentFormModal({ open, onClose, onSaved }) {
   const [form, setForm] = useState({ ...EMPTY, nurse_id: String(user?.id ?? '') })
   const [errors, setErrors] = useState({})
   const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    if (!open) return
+    setErrors({})
+    if (!assignment) {
+      setForm({ ...EMPTY, nurse_id: String(user?.id ?? '') })
+      return
+    }
+    setForm({
+      scope: assignment.patient_id ? 'patient' : 'ward',
+      nurse_id: String(assignment.nurse_id ?? ''),
+      patient_id: assignment.patient_id ? String(assignment.patient_id) : '',
+      ward_id: assignment.ward_id ? String(assignment.ward_id) : '',
+      admission_id: assignment.admission_id ? String(assignment.admission_id) : '',
+      shift: assignment.shift ?? '',
+      starts_at: toLocalInput(assignment.starts_at),
+      ends_at: toLocalInput(assignment.ends_at),
+      notes: assignment.notes ?? '',
+      reason: '',
+    })
+  }, [open, assignment, user?.id])
 
   const set = (key) => (value) => setForm((f) => ({ ...f, [key]: value }))
 
@@ -66,7 +91,7 @@ export default function AssignmentFormModal({ open, onClose, onSaved }) {
 
     setSaving(true)
     try {
-      await assignmentApi.create({
+      const payload = {
         nurse_id: Number(nurseId),
         patient_id: form.scope === 'patient' ? Number(form.patient_id) : null,
         ward_id: form.scope === 'ward' ? Number(form.ward_id) : null,
@@ -75,8 +100,16 @@ export default function AssignmentFormModal({ open, onClose, onSaved }) {
         starts_at: form.starts_at || null,
         ends_at: form.ends_at || null,
         notes: form.notes || null,
-      })
-      toast.success('Assignment created.')
+        reason: form.reason || null,
+      }
+
+      if (isEdit) {
+        await assignmentApi.update(assignment.id, payload)
+        toast.success('Assignment updated.')
+      } else {
+        await assignmentApi.create(payload)
+        toast.success('Assignment created.')
+      }
       setForm({ ...EMPTY, nurse_id: String(user?.id ?? '') })
       onSaved?.()
       onClose()
@@ -91,13 +124,19 @@ export default function AssignmentFormModal({ open, onClose, onSaved }) {
     <Modal
       open={open}
       onClose={onClose}
-      title="New assignment"
-      description="Assign a nurse to a patient or an entire ward."
+      title={isEdit ? 'Edit assignment' : 'New assignment'}
+      description={
+        isEdit
+          ? 'Changing the nurse or scope reassigns the patient and records an audit trail.'
+          : 'Assign a nurse to a patient or an entire ward.'
+      }
       size="lg"
       footer={
         <>
           <Button variant="outline" onClick={onClose} disabled={saving}>Cancel</Button>
-          <Button type="submit" form="assignment-form" loading={saving}>Create assignment</Button>
+          <Button type="submit" form="assignment-form" loading={saving}>
+            {isEdit ? 'Save changes' : 'Create assignment'}
+          </Button>
         </>
       }
     >
@@ -163,6 +202,11 @@ export default function AssignmentFormModal({ open, onClose, onSaved }) {
             <Input id="asg-ends" type="datetime-local" value={form.ends_at} onChange={(e) => set('ends_at')(e.target.value)} />
           </Field>
         </div>
+        {isEdit ? (
+          <Field label="Reason" htmlFor="asg-reason" hint="Stored in the assignment audit trail.">
+            <Input id="asg-reason" value={form.reason} onChange={(e) => set('reason')(e.target.value)} />
+          </Field>
+        ) : null}
         <Field label="Notes" htmlFor="asg-notes">
           <Textarea id="asg-notes" rows={2} value={form.notes} onChange={(e) => set('notes')(e.target.value)} />
         </Field>

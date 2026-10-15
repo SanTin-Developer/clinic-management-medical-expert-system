@@ -17,6 +17,8 @@ class StaffDocument extends Model
 
     public const CATEGORY_CV = 'cv';
 
+    public const CATEGORY_PHOTO = 'photo';
+
     public const CATEGORY_CERTIFICATE = 'certificate';
 
     public const CATEGORY_LICENSE = 'license';
@@ -27,6 +29,7 @@ class StaffDocument extends Model
 
     public const CATEGORIES = [
         self::CATEGORY_CV,
+        self::CATEGORY_PHOTO,
         self::CATEGORY_CERTIFICATE,
         self::CATEGORY_LICENSE,
         self::CATEGORY_CONTRACT,

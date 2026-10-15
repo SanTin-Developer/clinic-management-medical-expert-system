@@ -6,6 +6,7 @@ import {
   HeartPulse,
   PackageSearch,
   Pill,
+  QrCode,
   Stethoscope,
   Users,
 } from 'lucide-react'
@@ -401,6 +402,7 @@ export default function DashboardPage() {
             <Card title="Quick actions">
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {[
+                  { label: 'Scan attendance', to: '/attendance/scan', icon: QrCode, p: 'attendance.clock' },
                   { label: 'Patients', to: '/patients', icon: Users, p: 'patients.view' },
                   { label: 'Appointments', to: '/appointments', icon: CalendarDays, p: 'appointments.view' },
                   { label: 'Prescriptions', to: '/prescriptions', icon: Pill, p: 'prescriptions.view' },

@@ -116,9 +116,10 @@ class StaffController extends Controller
     {
         $data = $request->validated();
         $cv = $request->file('cv');
-        unset($data['cv']);
+        $photo = $request->file('photo');
+        unset($data['cv'], $data['photo']);
 
-        $staff = $this->staffService->createStaff($data, $request->user(), $request, $cv);
+        $staff = $this->staffService->createStaff($data, $request->user(), $request, $cv, $photo);
 
         return response()->json([
             'message' => 'Staff profile created successfully.',

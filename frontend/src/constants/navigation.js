@@ -14,6 +14,7 @@ import {
   MessageSquare,
   PackageSearch,
   Pill,
+  QrCode,
   Receipt,
   ScrollText,
   Settings,
@@ -169,9 +170,16 @@ export const NAV_SECTIONS = [
         permissions: ["staff.view"],
       },
       {
+        to: "/attendance/scan",
+        label: "Scan QR",
+        icon: QrCode,
+        permissions: ["attendance.clock"],
+      },
+      {
         to: "/attendance",
         label: "Staff Attendance",
         icon: CalendarCheck,
+        end: true,
         permissions: ["attendance.view"],
       },
       {

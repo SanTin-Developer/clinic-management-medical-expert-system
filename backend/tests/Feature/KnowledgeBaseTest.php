@@ -57,6 +57,21 @@ class KnowledgeBaseTest extends TestCase
         ]);
     }
 
+    public function test_disease_index_reports_category_stats(): void
+    {
+        $this->actingAsRole('Admin');
+
+        Disease::create(['code' => 'DIS-CAT-R1', 'name' => 'Resp A', 'category' => 'respiratory']);
+        Disease::create(['code' => 'DIS-CAT-R2', 'name' => 'Resp B', 'category' => 'respiratory']);
+        Disease::create(['code' => 'DIS-CAT-C1', 'name' => 'Cardio A', 'category' => 'cardio']);
+
+        $this->getJson('/api/v1/knowledge-base/diseases')
+            ->assertOk()
+            ->assertJsonPath('stats.total', 3)
+            ->assertJsonPath('stats.by_category.respiratory', 2)
+            ->assertJsonPath('stats.by_category.cardio', 1);
+    }
+
     public function test_admin_can_update_a_disease(): void
     {
         $this->actingAsRole('Admin');

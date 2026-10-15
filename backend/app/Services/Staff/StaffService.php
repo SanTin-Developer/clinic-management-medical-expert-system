@@ -48,13 +48,13 @@ class StaffService
     }
 
     /**
-     * Create a new staff profile, optionally attaching an initial CV document.
+     * Create a new staff profile, optionally attaching an initial CV and staff photo document.
      *
      * @param  array<string, mixed>  $data
      */
-    public function createStaff(array $data, User $actor, Request $request, ?UploadedFile $cv = null): Staff
+    public function createStaff(array $data, User $actor, Request $request, ?UploadedFile $cv = null, ?UploadedFile $photo = null): Staff
     {
-        return DB::transaction(function () use ($data, $actor, $request, $cv) {
+        return DB::transaction(function () use ($data, $actor, $request, $cv, $photo) {
             if (empty($data['staff_number'])) {
                 $data['staff_number'] = $this->generateStaffNumber();
             }
@@ -91,35 +91,47 @@ class StaffService
             ], $request);
 
             if ($cv !== null) {
-                try {
-                    $stored = $this->documents->store($cv, $staff);
-                } catch (ValidationException $e) {
-                    throw ValidationException::withMessages([
-                        'cv' => $e->errors()['file'] ?? ['The CV file could not be processed.'],
-                    ]);
-                }
+                $this->attachInitialDocument($staff, $cv, 'Curriculum Vitae', StaffDocument::CATEGORY_CV, 'cv', $actor, $request);
+            }
 
-                $document = $staff->documents()->create([
-                    'uploaded_by' => $actor->id,
-                    'title' => 'Curriculum Vitae',
-                    'category' => StaffDocument::CATEGORY_CV,
-                    'original_name' => $stored['original_name'],
-                    'path' => $stored['path'],
-                    'mime_type' => $stored['mime_type'],
-                    'size' => $stored['size'],
-                ]);
-
-                $this->events->record(SecurityEventService::STAFF_DOCUMENT_UPLOADED, $actor, 'info', [
-                    'staff_id' => $staff->id,
-                    'staff_number' => $staff->staff_number,
-                    'document_id' => $document->id,
-                    'title' => $document->title,
-                    'category' => $document->category,
-                ], $request);
+            if ($photo !== null) {
+                $this->attachInitialDocument($staff, $photo, 'Staff Photo', StaffDocument::CATEGORY_PHOTO, 'photo', $actor, $request);
             }
 
             return $staff;
         });
+    }
+
+    /**
+     * Validate, store and audit an initial confidential staff document.
+     */
+    private function attachInitialDocument(Staff $staff, UploadedFile $file, string $title, string $category, string $errorKey, User $actor, Request $request): void
+    {
+        try {
+            $stored = $this->documents->store($file, $staff);
+        } catch (ValidationException $e) {
+            throw ValidationException::withMessages([
+                $errorKey => $e->errors()['file'] ?? ['The file could not be processed.'],
+            ]);
+        }
+
+        $document = $staff->documents()->create([
+            'uploaded_by' => $actor->id,
+            'title' => $title,
+            'category' => $category,
+            'original_name' => $stored['original_name'],
+            'path' => $stored['path'],
+            'mime_type' => $stored['mime_type'],
+            'size' => $stored['size'],
+        ]);
+
+        $this->events->record(SecurityEventService::STAFF_DOCUMENT_UPLOADED, $actor, 'info', [
+            'staff_id' => $staff->id,
+            'staff_number' => $staff->staff_number,
+            'document_id' => $document->id,
+            'title' => $document->title,
+            'category' => $document->category,
+        ], $request);
     }
 
     /**

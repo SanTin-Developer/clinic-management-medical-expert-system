@@ -80,6 +80,16 @@ class StaffDirectoryTest extends TestCase
         return UploadedFile::fake()->createWithContent($name, $pdf);
     }
 
+    private function fakePng(string $name): UploadedFile
+    {
+        $png = base64_decode(
+            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+            true
+        );
+
+        return UploadedFile::fake()->createWithContent($name, $png);
+    }
+
     private function useWebGuard(): void
     {
         $this->app['auth']->shouldUse('web');
@@ -619,6 +629,68 @@ class StaffDirectoryTest extends TestCase
             ->assertJsonValidationErrors(['cv']);
 
         // The staff record must not be persisted when the CV is rejected.
+        $this->assertDatabaseMissing('staff', ['first_name' => 'Eve', 'last_name' => 'Mallory']);
+        $this->assertDatabaseCount('staff_documents', 0);
+    }
+
+    public function test_admin_can_create_staff_member_with_staff_photo_document(): void
+    {
+        Storage::fake('local');
+        $admin = $this->adminUser();
+
+        $res = $this->actingAs($admin)->postJson('/api/v1/staff', [
+            'first_name' => 'Jane',
+            'last_name' => 'Doe',
+            'email' => 'jane.doe@clinic.local',
+            'job_title' => 'Staff Nurse',
+            'photo' => $this->fakePng('jane_doe_photo.png'),
+        ]);
+
+        $res->assertCreated()
+            ->assertJsonPath('staff.first_name', 'Jane')
+            ->assertJsonPath('staff.last_name', 'Doe');
+
+        $staff = Staff::where('email', 'jane.doe@clinic.local')->first();
+        $this->assertNotNull($staff);
+
+        // The photo is stored as a confidential staff document, not displayed in the system.
+        $this->assertDatabaseHas('staff_documents', [
+            'staff_id' => $staff->id,
+            'uploaded_by' => $admin->id,
+            'category' => StaffDocument::CATEGORY_PHOTO,
+            'title' => 'Staff Photo',
+            'original_name' => 'jane_doe_photo.png',
+        ]);
+
+        $this->assertNull($staff->fresh()->photo_path);
+
+        Storage::disk('local')->assertExists(
+            $staff->documents()->where('category', StaffDocument::CATEGORY_PHOTO)->value('path')
+        );
+
+        $this->assertDatabaseHas('security_events', [
+            'event' => SecurityEventService::STAFF_DOCUMENT_UPLOADED,
+            'user_id' => $admin->id,
+        ]);
+    }
+
+    public function test_creating_staff_with_disallowed_photo_type_is_rejected(): void
+    {
+        Storage::fake('local');
+        $admin = $this->adminUser();
+
+        $badFile = UploadedFile::fake()->createWithContent('malicious.pdf', '%PDF-1.4 fake');
+
+        $res = $this->actingAs($admin)->postJson('/api/v1/staff', [
+            'first_name' => 'Eve',
+            'last_name' => 'Mallory',
+            'photo' => $badFile,
+        ]);
+
+        $res->assertUnprocessable()
+            ->assertJsonValidationErrors(['photo']);
+
+        // The staff record must not be persisted when the photo is rejected.
         $this->assertDatabaseMissing('staff', ['first_name' => 'Eve', 'last_name' => 'Mallory']);
         $this->assertDatabaseCount('staff_documents', 0);
     }

@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class AttendanceRecord extends Model
 {
@@ -23,10 +24,24 @@ class AttendanceRecord extends Model
      */
     protected $fillable = [
         'user_id',
+        'shift_id',
+        'shift_template_id',
         'work_date',
         'clock_in',
         'clock_out',
+        'clock_in_session_id',
+        'clock_out_session_id',
+        'scheduled_start',
+        'scheduled_end',
         'status',
+        'late_minutes',
+        'late_band',
+        'clock_in_source',
+        'clock_out_source',
+        'missing_clock_out',
+        'finalized_at',
+        'corrected_by',
+        'corrected_at',
         'notes',
         'approved_by',
         'approved_at',
@@ -41,7 +56,13 @@ class AttendanceRecord extends Model
             'work_date' => 'date',
             'clock_in' => 'datetime',
             'clock_out' => 'datetime',
+            'scheduled_start' => 'datetime',
+            'scheduled_end' => 'datetime',
             'approved_at' => 'datetime',
+            'finalized_at' => 'datetime',
+            'corrected_at' => 'datetime',
+            'late_minutes' => 'integer',
+            'missing_clock_out' => 'boolean',
         ];
     }
 
@@ -53,6 +74,21 @@ class AttendanceRecord extends Model
     public function approver(): BelongsTo
     {
         return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    public function shift(): BelongsTo
+    {
+        return $this->belongsTo(Shift::class);
+    }
+
+    public function shiftTemplate(): BelongsTo
+    {
+        return $this->belongsTo(ShiftTemplate::class);
+    }
+
+    public function corrections(): HasMany
+    {
+        return $this->hasMany(AttendanceCorrection::class);
     }
 
     /**

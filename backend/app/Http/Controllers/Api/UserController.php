@@ -6,16 +6,17 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Staff\SuspendUserRequest;
 use App\Models\User;
 use App\Services\Auth\AccountSecurityService;
+use App\Services\Auth\SecurityEventService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules;
+use Illuminate\Validation\ValidationException;
 
 class UserController extends Controller
 {
     public function __construct(
         private readonly AccountSecurityService $accounts,
+        private readonly SecurityEventService $events,
     ) {}
 
     // Display a paginated list of users
@@ -49,35 +50,11 @@ class UserController extends Controller
     {
         $this->authorize('create', User::class);
 
-        $validatedData = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'username' => ['nullable', 'string', 'min:3', 'max:50', 'regex:/^[A-Za-z0-9._-]+$/', 'unique:users,username'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
-            'password' => ['required', 'string', $this->passwordRule()],
-            'role' => [
-                'required',
-                'string',
-                Rule::exists('roles', 'name'),
-            ],
+        $this->rejectPasswordManagementInput($request, null);
+
+        throw ValidationException::withMessages([
+            'account' => ['Staff accounts must be provisioned through the invitation workflow.'],
         ]);
-
-        $username = ! empty($validatedData['username'])
-            ? strtolower($validatedData['username'])
-            : $this->generateUsername($validatedData['email']);
-
-        $user = User::create([
-            'name' => $validatedData['name'],
-            'username' => $username,
-            'email' => $validatedData['email'],
-            'password' => Hash::make($validatedData['password']),
-        ]);
-
-        $user->assignRole($validatedData['role']);
-
-        return response()->json([
-            'message' => 'User created successfully.',
-            'user' => $user,
-        ], 201);
     }
 
     // Display a specific user
@@ -97,6 +74,8 @@ class UserController extends Controller
     {
         $this->authorize('update', $user);
 
+        $this->rejectPasswordManagementInput($request, $user);
+
         $validated = $request->validate([
             'name' => ['sometimes', 'required', 'string', 'max:255'],
             'username' => [
@@ -115,7 +94,6 @@ class UserController extends Controller
                 'max:255',
                 Rule::unique('users', 'email')->ignore($user->id),
             ],
-            'password' => ['sometimes', 'required', 'string', $this->passwordRule()],
             'role' => [
                 'sometimes',
                 'required',
@@ -124,20 +102,25 @@ class UserController extends Controller
             ],
         ]);
 
+        if (isset($validated['role']) && ! $request->user()->hasRole('Admin')) {
+            throw ValidationException::withMessages([
+                'role' => ['You are not authorized to assign roles.'],
+            ]);
+        }
+
         $user->update([
             'name' => $validated['name'] ?? $user->name,
             'username' => ! empty($validated['username']) ? strtolower($validated['username']) : $user->username,
             'email' => $validated['email'] ?? $user->email,
         ]);
 
-        if (! empty($validated['password'])) {
-            $user->update([
-                'password' => Hash::make($validated['password']),
-            ]);
-        }
-
         if (isset($validated['role'])) {
             $user->syncRoles([$validated['role']]);
+
+            $this->events->record(SecurityEventService::USER_ROLE_CHANGED, $user, 'info', [
+                'actor_id' => $request->user()->id,
+                'role' => $validated['role'],
+            ], $request);
         }
 
         return response()->json([
@@ -197,32 +180,22 @@ class UserController extends Controller
         ]);
     }
 
-    // Shared password complexity rule (8+, upper, lower, number, symbol)
-    private function passwordRule(): Rules\Password
+    private function rejectPasswordManagementInput(Request $request, ?User $target): void
     {
-        return Rules\Password::min((int) config('auth.password_min_length', 8))
-            ->mixedCase()
-            ->numbers()
-            ->symbols();
-    }
-
-    // Derive a unique username from an email address local part
-    private function generateUsername(string $email): string
-    {
-        $base = strstr($email, '@', true) ?: $email;
-        $base = strtolower($base);
-        $base = preg_replace('/[^a-z0-9._-]/', '', $base) ?? '';
-        $base = trim($base, '._-') ?: 'user';
-
-        $candidate = $base;
-        $suffix = 1;
-
-        while (User::where('username', $candidate)->exists()) {
-            $candidate = $base.$suffix;
-            $suffix++;
+        if (! $request->hasAny(['password', 'password_confirmation', 'current_password'])) {
+            return;
         }
 
-        return $candidate;
+        $actor = $request->user();
+
+        $this->events->record(SecurityEventService::USER_PASSWORD_CHANGE_REJECTED, $target ?? $actor, 'warning', [
+            'actor_id' => $actor?->id,
+            'target_id' => $target?->id,
+        ], $request);
+
+        throw ValidationException::withMessages([
+            'password' => ['Passwords cannot be set through user management. Use the password-reset process.'],
+        ]);
     }
 
     // Format user data for response

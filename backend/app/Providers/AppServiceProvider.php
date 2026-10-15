@@ -145,6 +145,12 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('telegram-webhook', function (Request $request) {
             return Limit::perMinute(120)->by($request->ip());
         });
+
+        // Attendance QR scans are short-lived and per-staff; throttle to blunt
+        // replay and brute-force attempts on the validation endpoint.
+        RateLimiter::for('attendance-scan', function (Request $request) {
+            return Limit::perMinute(30)->by($request->user()?->id ?: $request->ip());
+        });
     }
 
     /**

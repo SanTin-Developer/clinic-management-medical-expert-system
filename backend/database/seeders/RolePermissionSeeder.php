@@ -148,6 +148,9 @@ class RolePermissionSeeder extends Seeder
             'attendance.view',
             'attendance.clock',
             'attendance.manage',
+            'attendance.session',
+            'attendance.correct',
+            'attendance.export',
 
             // Staff Scheduling
             'scheduling.view',
@@ -315,6 +318,9 @@ class RolePermissionSeeder extends Seeder
             'attendance.view',
             'attendance.clock',
             'attendance.manage',
+            'attendance.session',
+            'attendance.correct',
+            'attendance.export',
             'scheduling.view',
             'scheduling.manage',
             'telegram.connect',

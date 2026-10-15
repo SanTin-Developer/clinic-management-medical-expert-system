@@ -70,12 +70,14 @@ class MedicationAdministrationController extends Controller
         $validated = $request->validate([
             'patient_id' => ['required', 'integer', 'exists:patients,id'],
             'admission_id' => ['nullable', 'integer', 'exists:admissions,id'],
+            'nursing_task_id' => ['nullable', 'integer', 'exists:nursing_tasks,id'],
             'prescription_id' => ['nullable', 'integer', 'exists:prescriptions,id'],
             'prescription_item_id' => ['nullable', 'integer', 'exists:prescription_items,id'],
             'medicine_id' => ['nullable', 'integer', 'exists:medicines,id'],
             'ordered_by' => ['nullable', 'integer', 'exists:users,id'],
             'dose' => ['nullable', 'string', 'max:255'],
-            'route' => ['nullable', Rule::in(['oral', 'iv', 'im', 'sc', 'topical', 'inhalation', 'other'])],
+            'route' => ['nullable', Rule::in(MedicationAdministrationService::ROUTES)],
+            'route_detail' => ['nullable', 'string', 'max:100'],
             'scheduled_at' => ['required', 'date'],
             'notes' => ['nullable', 'string'],
         ]);
@@ -118,16 +120,17 @@ class MedicationAdministrationController extends Controller
         $this->authorize('administer', $medicationAdministration);
 
         $validated = $request->validate([
+            'outcome' => ['nullable', Rule::in(MedicationAdministrationService::OUTCOMES)],
             'dose' => ['nullable', 'string', 'max:255'],
-            'route' => ['nullable', Rule::in(['oral', 'iv', 'im', 'sc', 'topical', 'inhalation', 'other'])],
-            'administered_at' => ['nullable', 'date'],
+            'route' => ['nullable', Rule::in(MedicationAdministrationService::ROUTES)],
+            'route_detail' => ['nullable', 'string', 'max:100'],
             'notes' => ['nullable', 'string'],
         ]);
 
         $record = $this->meds->administer($medicationAdministration, $request->user(), $validated);
 
         return response()->json([
-            'message' => 'Medication administered successfully.',
+            'message' => 'Medication administration recorded successfully.',
             'data' => $record,
         ]);
     }

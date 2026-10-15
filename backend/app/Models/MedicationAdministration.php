@@ -32,6 +32,7 @@ class MedicationAdministration extends Model
     protected $fillable = [
         'patient_id',
         'admission_id',
+        'nursing_task_id',
         'prescription_id',
         'prescription_item_id',
         'medicine_id',
@@ -39,6 +40,7 @@ class MedicationAdministration extends Model
         'administered_by',
         'dose',
         'route',
+        'route_detail',
         'scheduled_at',
         'administered_at',
         'status',
@@ -61,6 +63,11 @@ class MedicationAdministration extends Model
     public function admission(): BelongsTo
     {
         return $this->belongsTo(Admission::class);
+    }
+
+    public function nursingTask(): BelongsTo
+    {
+        return $this->belongsTo(NursingTask::class);
     }
 
     public function prescription(): BelongsTo

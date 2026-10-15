@@ -41,4 +41,14 @@ class AttendanceRecordPolicy
     {
         return $user->can('attendance.manage');
     }
+
+    public function correct(User $user, AttendanceRecord $attendanceRecord): bool
+    {
+        return $user->can('attendance.correct');
+    }
+
+    public function export(User $user): bool
+    {
+        return $user->can('attendance.export');
+    }
 }

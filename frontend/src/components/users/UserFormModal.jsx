@@ -5,23 +5,19 @@ import Button from '../ui/Button.jsx'
 import Field from '../ui/Field.jsx'
 import Input from '../ui/Input.jsx'
 import Select from '../ui/Select.jsx'
-import PasswordChecklist from '../ui/PasswordChecklist.jsx'
 import { userApi } from '../../api/users.js'
-import { passwordError } from '../../utils/password.js'
+import { useAuth } from '../../hooks/useAuth.js'
 import { ROLES } from '../../utils/status.js'
 
 export default function UserFormModal({ open, onClose, initial, onSaved }) {
-  const editing = Boolean(initial?.id)
+  const { hasRole } = useAuth()
   const [form, setForm] = useState(
-    initial
-      ? {
-          name: initial.name ?? '',
-          username: initial.username ?? '',
-          email: initial.email ?? '',
-          role: (initial.roles?.[0]?.name ?? initial.roles?.[0] ?? ''),
-          password: '',
-        }
-      : { name: '', username: '', email: '', role: '', password: '' },
+    {
+      name: initial?.name ?? '',
+      username: initial?.username ?? '',
+      email: initial?.email ?? '',
+      role: (initial?.roles?.[0]?.name ?? initial?.roles?.[0] ?? ''),
+    },
   )
   const [errors, setErrors] = useState({})
   const [saving, setSaving] = useState(false)
@@ -37,16 +33,6 @@ export default function UserFormModal({ open, onClose, initial, onSaved }) {
     else if (username && username.length < 3) next.username = 'At least 3 characters.'
     if (!/^\S+@\S+\.\S+$/.test(form.email.trim())) next.email = 'Enter a valid email.'
     if (!form.role) next.role = 'Select a role.'
-    if (!editing) {
-      if (!form.password) next.password = 'Required.'
-      else {
-        const pwdError = passwordError(form.password)
-        if (pwdError) next.password = pwdError
-      }
-    } else if (form.password) {
-      const pwdError = passwordError(form.password)
-      if (pwdError) next.password = pwdError
-    }
     setErrors(next)
     if (Object.keys(next).length) return
 
@@ -58,14 +44,8 @@ export default function UserFormModal({ open, onClose, initial, onSaved }) {
         role: form.role,
       }
       if (username) payload.username = username.toLowerCase()
-      if (form.password) payload.password = form.password
-      if (editing) {
-        await userApi.update(initial.id, payload)
-        toast.success('User updated.')
-      } else {
-        await userApi.create(payload)
-        toast.success('User created.')
-      }
+      await userApi.update(initial.id, payload)
+      toast.success('User updated.')
       onSaved?.()
       onClose()
     } catch (err) {
@@ -79,15 +59,15 @@ export default function UserFormModal({ open, onClose, initial, onSaved }) {
     <Modal
       open={open}
       onClose={onClose}
-      title={editing ? 'Edit user' : 'New user'}
-      description="Create or update a staff account and assign their role."
+      title="Edit user"
+      description="Update a staff account and assign an authorized role."
       footer={
         <>
           <Button variant="outline" onClick={onClose} disabled={saving}>
             Cancel
           </Button>
           <Button type="submit" form="user-form" loading={saving}>
-            {editing ? 'Save changes' : 'Create user'}
+            Save changes
           </Button>
         </>
       }
@@ -107,24 +87,19 @@ export default function UserFormModal({ open, onClose, initial, onSaved }) {
         <Field label="Email" htmlFor="u-email" required error={errors.email}>
           <Input id="u-email" type="email" autoComplete="username" value={form.email} onChange={(e) => set('email')(e.target.value)} invalid={Boolean(errors.email)} />
         </Field>
-        <Field label="Role" htmlFor="u-role" required error={errors.role}>
-          <Select id="u-role" value={form.role} onChange={(e) => set('role')(e.target.value)} invalid={Boolean(errors.role)}>
-            <option value="">Select…</option>
-            {ROLES.map((r) => (
-              <option key={r.value} value={r.value}>{r.label}</option>
-            ))}
-          </Select>
-        </Field>
-        <Field
-          label={editing ? 'New password' : 'Password'}
-          htmlFor="u-password"
-          required={!editing}
-          error={errors.password}
-          hint={editing ? 'Leave blank to keep the current password. Otherwise it must meet all requirements below.' : 'Must meet all requirements below.'}
-        >
-          <Input id="u-password" type="password" autoComplete="new-password" value={form.password} onChange={(e) => set('password')(e.target.value)} invalid={Boolean(errors.password)} aria-describedby="u-password-requirements" />
-        </Field>
-        <PasswordChecklist id="u-password-requirements" value={form.password} />
+        {hasRole('Admin') ? (
+          <Field label="Role" htmlFor="u-role" required error={errors.role}>
+            <Select id="u-role" value={form.role} onChange={(e) => set('role')(e.target.value)} invalid={Boolean(errors.role)}>
+              <option value="">Select…</option>
+              {ROLES.map((r) => (
+                <option key={r.value} value={r.value}>{r.label}</option>
+              ))}
+            </Select>
+          </Field>
+        ) : null}
+        <p className="rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-800">
+          Administrators cannot directly set or view staff passwords. Staff members can reset their own passwords through the secure password-reset process.
+        </p>
       </form>
     </Modal>
   )

@@ -289,6 +289,10 @@ class InpatientDemoDataSeeder extends Seeder
 
         $sources = $sources->values();
 
+        $medicationTask = $admission->nursingTasks()
+            ->where('task_type', NursingTask::TYPE_MEDICATION)
+            ->first();
+
         $entries = [
             [
                 'status' => MedicationAdministration::STATUS_ADMINISTERED,
@@ -321,6 +325,9 @@ class InpatientDemoDataSeeder extends Seeder
 
             $admission->medicationAdministrations()->create([
                 'patient_id' => $admission->patient_id,
+                'nursing_task_id' => $entry['status'] === MedicationAdministration::STATUS_SCHEDULED
+                    ? $medicationTask?->id
+                    : null,
                 'prescription_id' => $source['prescription_id'],
                 'prescription_item_id' => $source['prescription_item_id'],
                 'medicine_id' => $source['medicine_id'],

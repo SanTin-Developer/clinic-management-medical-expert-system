@@ -14,14 +14,15 @@ function saveBlob(blob, filename) {
 export const staffApi = {
   list: (params) => api.get('/staff', { params }),
   get: (id) => api.get(`/staff/${id}`).then((r) => r.staff),
-  create: (data, cvFile = null) => {
-    if (cvFile) {
+  create: (data, cvFile = null, photoFile = null) => {
+    if (cvFile || photoFile) {
       const formData = new FormData()
       for (const [key, value] of Object.entries(data)) {
         if (value === undefined || value === null) continue
         formData.append(key, value)
       }
-      formData.append('cv', cvFile)
+      if (cvFile) formData.append('cv', cvFile)
+      if (photoFile) formData.append('photo', photoFile)
       return api
         .post('/staff', formData, {
           headers: { 'Content-Type': 'multipart/form-data' },

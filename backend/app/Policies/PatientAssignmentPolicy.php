@@ -34,6 +34,11 @@ class PatientAssignmentPolicy
         return $user->can('assignments.manage');
     }
 
+    public function update(User $user, PatientAssignment $assignment): bool
+    {
+        return $user->can('assignments.manage');
+    }
+
     public function delete(User $user, PatientAssignment $assignment): bool
     {
         return $user->can('assignments.manage');

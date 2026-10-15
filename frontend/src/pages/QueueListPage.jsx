@@ -114,7 +114,7 @@ export default function QueueListPage() {
       </div>
 
       <Card className="px-0 pb-0">
-        <div className="grid grid-cols-1 gap-3 px-5 pt-4 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid grid-cols-1 items-end gap-3 px-5 pt-4 sm:grid-cols-2 lg:grid-cols-5">
           <div className="lg:col-span-1">
             <SearchInput
               placeholder="Search ticket or patient…"

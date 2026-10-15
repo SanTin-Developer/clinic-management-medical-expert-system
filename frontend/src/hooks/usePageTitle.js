@@ -32,6 +32,7 @@ export const PAGE_TITLES = [
   { match: /^\/expert-system/, title: 'Expert System' },
   { match: /^\/queue/, title: 'Queue Management' },
   { match: /^\/inventory/, title: 'Inventory & Supplies' },
+  { match: /^\/attendance\/scan/, title: 'Scan Attendance' },
   { match: /^\/attendance/, title: 'Staff Attendance' },
   { match: /^\/scheduling/, title: 'Staff Scheduling' },
   { match: /^\/leave/, title: 'Leave Management' },

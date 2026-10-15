@@ -4,9 +4,13 @@ import {
   CalendarClock,
   CalendarDays,
   CheckCircle2,
+  LayoutGrid,
   Pencil,
   Plus,
+  Send,
+  Settings2,
   Trash2,
+  UploadCloud,
 } from 'lucide-react'
 import PageHeader from '../components/ui/PageHeader.jsx'
 import Button from '../components/ui/Button.jsx'
@@ -25,9 +29,21 @@ import { EmptyState, ErrorState } from '../components/ui/State.jsx'
 import { shiftApi } from '../api/shifts.js'
 import { usePaginated } from '../hooks/usePaginated.js'
 import { useAuth } from '../hooks/useAuth.js'
-import { formatDate, formatTime } from '../utils/format.js'
+import { formatDate, formatTime, toIsoDate } from '../utils/format.js'
 import { SHIFT_STATUS, SHIFT_STATUS_OPTIONS, SHIFT_TYPES, SHIFT_TYPE_OPTIONS, statusBadgeFor } from '../utils/status.js'
 import ShiftFormModal from '../components/scheduling/ShiftFormModal.jsx'
+import ShiftTemplateManagerModal from '../components/scheduling/ShiftTemplateManagerModal.jsx'
+import ShiftBoardModal from '../components/scheduling/ShiftBoardModal.jsx'
+
+function currentWeekRange() {
+  const d = new Date()
+  const offset = (d.getDay() + 6) % 7
+  const start = new Date(d)
+  start.setDate(d.getDate() - offset)
+  const end = new Date(start)
+  end.setDate(start.getDate() + 6)
+  return { from: toIsoDate(start), to: toIsoDate(end) }
+}
 
 export default function SchedulingPage() {
   const { can } = useAuth()
@@ -42,6 +58,9 @@ export default function SchedulingPage() {
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState(null)
   const [deleting, setDeleting] = useState(null)
+  const [templatesOpen, setTemplatesOpen] = useState(false)
+  const [boardOpen, setBoardOpen] = useState(false)
+  const [publishing, setPublishing] = useState(false)
 
   const query = usePaginated(
     ['shifts', { search, type, status, from, to }],
@@ -72,6 +91,33 @@ export default function SchedulingPage() {
     }
   }
 
+  const publishShift = async (shift) => {
+    try {
+      await shiftApi.publish(shift.id)
+      toast.success('Shift published.')
+      query.refetch()
+    } catch (err) {
+      toast.error(err.message)
+    }
+  }
+
+  const publishWeek = async () => {
+    const range = currentWeekRange()
+    setPublishing(true)
+    try {
+      const result = await shiftApi.publishBulk({
+        from: from || range.from,
+        to: to || range.to,
+      })
+      toast.success(`${result.published} shift(s) published.`)
+      query.refetch()
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setPublishing(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -81,23 +127,39 @@ export default function SchedulingPage() {
           : 'View your upcoming shift roster.'}
         breadcrumb={[{ label: 'Staff Scheduling' }]}
         actions={
-          canManage ? (
-            <Button onClick={() => { setEditing(null); setFormOpen(true) }}>
-              <Plus className="size-4" aria-hidden /> Schedule shift
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={() => setBoardOpen(true)}>
+              <LayoutGrid className="size-4" aria-hidden /> Board
             </Button>
-          ) : null
+            {canManage ? (
+              <Button variant="outline" onClick={() => setTemplatesOpen(true)}>
+                <Settings2 className="size-4" aria-hidden /> Templates
+              </Button>
+            ) : null}
+            {canManage ? (
+              <Button variant="outline" onClick={publishWeek} loading={publishing}>
+                <UploadCloud className="size-4" aria-hidden /> Publish week
+              </Button>
+            ) : null}
+            {canManage ? (
+              <Button onClick={() => { setEditing(null); setFormOpen(true) }}>
+                <Plus className="size-4" aria-hidden /> Schedule shift
+              </Button>
+            ) : null}
+          </div>
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <StatCard label="Total shifts" value={stats.total ?? 0} icon={CalendarDays} tone="brand" loading={query.isLoading} />
         <StatCard label="Today" value={stats.today ?? 0} icon={CalendarClock} tone="navy" loading={query.isLoading} />
         <StatCard label="Scheduled" value={stats.scheduled ?? 0} icon={CalendarDays} tone="blue" loading={query.isLoading} />
         <StatCard label="Completed" value={stats.completed ?? 0} icon={CheckCircle2} tone="green" loading={query.isLoading} />
+        <StatCard label="Unpublished" value={stats.unpublished ?? 0} icon={UploadCloud} tone="amber" loading={query.isLoading} />
       </div>
 
       <Card className="px-0 pb-0">
-        <div className="grid grid-cols-1 gap-3 px-5 pt-4 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid grid-cols-1 items-end gap-3 px-5 pt-4 sm:grid-cols-2 lg:grid-cols-5">
           {canManage ? (
             <div className="lg:col-span-1">
               <SearchInput
@@ -168,10 +230,26 @@ export default function SchedulingPage() {
                         {formatTime(shift.start_time)} – {formatTime(shift.end_time)}
                       </Td>
                       <Td><Badge tone={typeMeta.tone}>{typeMeta.label}</Badge></Td>
-                      <Td><Badge tone={statusMeta.tone}>{statusMeta.label}</Badge></Td>
+                      <Td>
+                        <div className="flex items-center gap-2">
+                          <Badge tone={statusMeta.tone}>{statusMeta.label}</Badge>
+                          {!shift.published_at ? <Badge tone="amber">Draft</Badge> : null}
+                        </div>
+                      </Td>
                       <Td>
                         {canManage ? (
                           <div className="flex justify-end gap-1">
+                            {!shift.published_at ? (
+                              <button
+                                type="button"
+                                aria-label="Publish shift"
+                                title="Publish"
+                                className="rounded-lg p-1.5 text-ink-muted transition-colors hover:bg-brand-soft hover:text-brand-dark"
+                                onClick={() => publishShift(shift)}
+                              >
+                                <Send className="size-4" aria-hidden />
+                              </button>
+                            ) : null}
                             <button
                               type="button"
                               aria-label="Edit shift"
@@ -215,6 +293,12 @@ export default function SchedulingPage() {
         shift={editing}
         onSaved={() => query.refetch()}
       />
+
+      {canManage ? (
+        <ShiftTemplateManagerModal open={templatesOpen} onClose={() => setTemplatesOpen(false)} />
+      ) : null}
+
+      <ShiftBoardModal open={boardOpen} onClose={() => setBoardOpen(false)} />
 
       <ConfirmDialog
         open={Boolean(deleting)}

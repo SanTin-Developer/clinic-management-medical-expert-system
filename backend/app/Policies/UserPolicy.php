@@ -35,7 +35,7 @@ class UserPolicy
      */
     public function invite(User $user): bool
     {
-        return $user->can('users.invite');
+        return $user->hasRole('Admin') && $user->can('users.invite');
     }
 
     /**

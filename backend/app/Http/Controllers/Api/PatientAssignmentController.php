@@ -4,19 +4,25 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Admission;
+use App\Models\AssignmentAuditLog;
 use App\Models\Patient;
 use App\Models\PatientAssignment;
 use App\Models\User;
 use App\Notifications\PatientAssignedNotification;
+use App\Services\Nursing\AssignmentAudit;
 use App\Services\Nursing\PatientAccessService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class PatientAssignmentController extends Controller
 {
-    public function __construct(private readonly PatientAccessService $access) {}
+    public function __construct(
+        private readonly PatientAccessService $access,
+        private readonly AssignmentAudit $audit,
+    ) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -44,12 +50,32 @@ class PatientAssignmentController extends Controller
             $query->where('status', $status);
         }
 
+        if ($shift = $request->query('shift')) {
+            $query->where('shift', $shift);
+        }
+
+        if ($type = $request->query('type')) {
+            if ($type === 'patient') {
+                $query->whereNotNull('patient_id');
+            } elseif ($type === 'ward') {
+                $query->whereNotNull('ward_id');
+            }
+        }
+
         $base = clone $query;
         $assignments = $query->latest()->paginate(15);
 
         $stats = [
             'total' => $assignments->total(),
-            'active' => (clone $base)->where('status', PatientAssignment::STATUS_ACTIVE)->count(),
+            'active' => (clone $base)->where('status', PatientAssignment::STATUS_ACTIVE)
+                ->where('starts_at', '<=', now())
+                ->where(function ($inner) {
+                    $inner->whereNull('ends_at')->orWhere('ends_at', '>=', now());
+                })
+                ->count(),
+            'upcoming' => (clone $base)->where('status', PatientAssignment::STATUS_ACTIVE)
+                ->where('starts_at', '>', now())
+                ->count(),
             'ended' => (clone $base)->where('status', PatientAssignment::STATUS_ENDED)->count(),
         ];
 
@@ -87,18 +113,32 @@ class PatientAssignmentController extends Controller
 
         $nurse = User::query()->role('Nurse')->findOrFail($validated['nurse_id']);
 
-        $assignment = PatientAssignment::create([
-            'nurse_id' => $nurse->id,
-            'patient_id' => $validated['patient_id'] ?? null,
-            'ward_id' => $validated['ward_id'] ?? null,
-            'admission_id' => $validated['admission_id'] ?? null,
-            'shift' => $validated['shift'] ?? null,
-            'status' => PatientAssignment::STATUS_ACTIVE,
-            'starts_at' => $validated['starts_at'] ?? now(),
-            'ends_at' => $validated['ends_at'] ?? null,
-            'assigned_by' => $request->user()->id,
-            'notes' => $validated['notes'] ?? null,
-        ]);
+        $assignment = DB::transaction(function () use ($validated, $nurse, $request) {
+            $assignment = PatientAssignment::create([
+                'nurse_id' => $nurse->id,
+                'patient_id' => $validated['patient_id'] ?? null,
+                'ward_id' => $validated['ward_id'] ?? null,
+                'admission_id' => $validated['admission_id'] ?? null,
+                'shift' => $validated['shift'] ?? null,
+                'status' => PatientAssignment::STATUS_ACTIVE,
+                'starts_at' => $validated['starts_at'] ?? now(),
+                'ends_at' => $validated['ends_at'] ?? null,
+                'assigned_by' => $request->user()->id,
+                'notes' => $validated['notes'] ?? null,
+            ]);
+
+            $this->audit->record(
+                AssignmentAuditLog::ACTION_CREATED,
+                $request->user()->id,
+                $assignment,
+                [],
+                $this->audit->snapshot($assignment),
+                null,
+                $request,
+            );
+
+            return $assignment;
+        });
 
         if ($assignment->patient_id !== null) {
             $patient = Patient::find($assignment->patient_id);
@@ -131,6 +171,8 @@ class PatientAssignmentController extends Controller
             ]);
         }
 
+        $before = $this->audit->snapshot($assignment);
+
         $assignment->update([
             'status' => PatientAssignment::STATUS_ENDED,
             'ends_at' => now(),
@@ -138,9 +180,150 @@ class PatientAssignmentController extends Controller
             'ended_reason' => $validated['ended_reason'] ?? 'Ended by user',
         ]);
 
+        $this->audit->record(
+            AssignmentAuditLog::ACTION_ENDED,
+            $request->user()->id,
+            $assignment,
+            $before,
+            $this->audit->snapshot($assignment->fresh()),
+            $validated['ended_reason'] ?? null,
+            $request,
+        );
+
         return response()->json([
             'message' => 'Assignment ended successfully.',
             'data' => $assignment->fresh()->load(['nurse', 'patient', 'ward']),
+        ]);
+    }
+
+    public function update(Request $request, PatientAssignment $assignment): JsonResponse
+    {
+        $this->authorize('update', $assignment);
+
+        if ($assignment->status !== PatientAssignment::STATUS_ACTIVE) {
+            throw ValidationException::withMessages([
+                'status' => 'Only an active assignment can be modified or reassigned.',
+            ]);
+        }
+
+        $validated = $request->validate([
+            'nurse_id' => ['required', 'integer', 'exists:users,id'],
+            'patient_id' => ['nullable', 'integer', 'exists:patients,id'],
+            'ward_id' => ['nullable', 'integer', 'exists:wards,id'],
+            'admission_id' => ['nullable', 'integer', 'exists:admissions,id'],
+            'shift' => ['nullable', 'string', 'max:20'],
+            'starts_at' => ['nullable', 'date'],
+            'ends_at' => ['nullable', 'date|after_or_equal:starts_at'],
+            'notes' => ['nullable', 'string'],
+            'reason' => ['nullable', 'string'],
+        ]);
+
+        if (($validated['patient_id'] ?? null) === null && ($validated['ward_id'] ?? null) === null) {
+            throw ValidationException::withMessages([
+                'patient_id' => 'Either patient_id or ward_id is required.',
+                'ward_id' => 'Either patient_id or ward_id is required.',
+            ]);
+        }
+
+        if (($validated['patient_id'] ?? null) !== null && ($validated['ward_id'] ?? null) !== null) {
+            throw ValidationException::withMessages([
+                'patient_id' => 'Specify patient_id or ward_id, not both.',
+                'ward_id' => 'Specify patient_id or ward_id, not both.',
+            ]);
+        }
+
+        $nurse = User::query()->role('Nurse')->findOrFail($validated['nurse_id']);
+
+        $identityChanged = $assignment->nurse_id !== $nurse->id
+            || ($validated['patient_id'] ?? null) !== $assignment->patient_id
+            || ($validated['ward_id'] ?? null) !== $assignment->ward_id
+            || ($validated['admission_id'] ?? null) !== $assignment->admission_id;
+
+        $before = $this->audit->snapshot($assignment);
+        $reason = $validated['reason'] ?? null;
+
+        if ($identityChanged) {
+            $newAssignment = DB::transaction(function () use ($assignment, $validated, $nurse, $before, $reason, $request) {
+                $assignment->update([
+                    'status' => PatientAssignment::STATUS_ENDED,
+                    'ends_at' => now(),
+                    'ended_by' => $request->user()->id,
+                    'ended_reason' => $reason ?? 'Reassigned',
+                ]);
+
+                $this->audit->record(
+                    AssignmentAuditLog::ACTION_REASSIGNED,
+                    $request->user()->id,
+                    $assignment,
+                    $before,
+                    $this->audit->snapshot($assignment->fresh()),
+                    $reason,
+                    $request,
+                );
+
+                $newAssignment = PatientAssignment::create([
+                    'nurse_id' => $nurse->id,
+                    'patient_id' => $validated['patient_id'] ?? null,
+                    'ward_id' => $validated['ward_id'] ?? null,
+                    'admission_id' => $validated['admission_id'] ?? null,
+                    'shift' => $validated['shift'] ?? null,
+                    'status' => PatientAssignment::STATUS_ACTIVE,
+                    'starts_at' => $validated['starts_at'] ?? now(),
+                    'ends_at' => $validated['ends_at'] ?? null,
+                    'assigned_by' => $request->user()->id,
+                    'notes' => $validated['notes'] ?? null,
+                ]);
+
+                $this->audit->record(
+                    AssignmentAuditLog::ACTION_CREATED,
+                    $request->user()->id,
+                    $newAssignment,
+                    [],
+                    $this->audit->snapshot($newAssignment),
+                    $reason,
+                    $request,
+                );
+
+                return $newAssignment;
+            });
+
+            if ($newAssignment->patient_id !== null) {
+                $patient = Patient::find($newAssignment->patient_id);
+                $nurse->notify(new PatientAssignedNotification(
+                    assignmentId: $newAssignment->id,
+                    patientId: $newAssignment->patient_id,
+                    patientName: $patient ? trim("{$patient->first_name} {$patient->last_name}") : 'Patient',
+                    wardName: $newAssignment->ward?->name,
+                    shift: $newAssignment->shift,
+                ));
+            }
+
+            return response()->json([
+                'message' => 'Assignment reassigned successfully.',
+                'data' => $newAssignment->load(['nurse', 'patient', 'ward', 'admission']),
+            ]);
+        }
+
+        $assignment->update([
+            'shift' => $validated['shift'] ?? null,
+            'starts_at' => $validated['starts_at'] ?? $assignment->starts_at,
+            'ends_at' => $validated['ends_at'] ?? null,
+            'notes' => $validated['notes'] ?? $assignment->notes,
+        ]);
+
+        $this->audit->record(
+            AssignmentAuditLog::ACTION_UPDATED,
+            $request->user()->id,
+            $assignment,
+            $before,
+            $this->audit->snapshot($assignment->fresh()),
+            $reason,
+            $request,
+        );
+
+        return response()->json([
+            'message' => 'Assignment updated successfully.',
+            'data' => $assignment->fresh()->load(['nurse', 'patient', 'ward', 'admission']),
         ]);
     }
 

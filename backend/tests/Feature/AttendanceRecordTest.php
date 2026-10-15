@@ -116,6 +116,7 @@ class AttendanceRecordTest extends TestCase
             'clock_in' => '2030-05-01 08:05:00',
             'clock_out' => '2030-05-01 16:10:00',
             'status' => 'present',
+            'reason' => 'Backfilling a missed clock-in.',
         ])
             ->assertCreated()
             ->assertJsonPath('data.user_id', $nurse->id);
@@ -133,6 +134,7 @@ class AttendanceRecordTest extends TestCase
         $this->postJson('/api/v1/attendance', [
             'user_id' => $nurse->id,
             'work_date' => '2030-05-02',
+            'reason' => 'Attempting to create a duplicate record.',
         ])->assertStatus(422);
     }
 
@@ -170,7 +172,10 @@ class AttendanceRecordTest extends TestCase
             'user_id' => $this->userWithRole('Nurse')->id,
         ]);
 
-        $this->putJson("/api/v1/attendance/{$record->id}", ['status' => 'absent'])
+        $this->putJson("/api/v1/attendance/{$record->id}", [
+            'status' => 'absent',
+            'reason' => 'Staff notified the supervisor that they were absent.',
+        ])
             ->assertOk()
             ->assertJsonPath('data.status', 'absent');
 

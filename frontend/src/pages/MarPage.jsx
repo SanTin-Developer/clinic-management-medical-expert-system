@@ -19,6 +19,7 @@ import { useAuth } from '../hooks/useAuth.js'
 import { formatDateTime, patientFullName } from '../utils/format.js'
 import { MEDICATION_ROUTES, MEDICATION_STATUS, statusBadgeFor } from '../utils/status.js'
 import MarFormModal from '../components/nursing/MarFormModal.jsx'
+import AdministerMedicationModal from '../components/nursing/AdministerMedicationModal.jsx'
 
 export default function MarPage() {
   const { can } = useAuth()
@@ -37,18 +38,6 @@ export default function MarPage() {
 
   const records = query.data?.data ?? []
   const stats = query.data?.stats ?? {}
-
-  const administer = async () => {
-    if (!administering) return
-    try {
-      await medicationAdministrationApi.administer(administering.id)
-      toast.success('Medication administered.')
-      setAdministering(null)
-      query.refetch()
-    } catch (err) {
-      toast.error(err.message)
-    }
-  }
 
   const updateStatus = async (newStatus) => {
     if (!statusAction) return
@@ -155,7 +144,7 @@ export default function MarPage() {
                         <div className="flex justify-end gap-2">
                           {actionable && canRecord ? (
                             <>
-                              <Button size="sm" onClick={() => setAdministering(record)}>Administer</Button>
+                              <Button size="sm" onClick={() => setAdministering({ record, outcome: 'administered' })}>Administer</Button>
                               <Dropdown
                                 trigger={
                                   <Button size="sm" variant="outline" aria-label="More status options">
@@ -163,10 +152,10 @@ export default function MarPage() {
                                   </Button>
                                 }
                               >
-                                <DropdownItem onClick={() => { updateStatus('held') }}>Held</DropdownItem>
-                                <DropdownItem onClick={() => { updateStatus('refused') }}>Refused</DropdownItem>
-                                <DropdownItem onClick={() => { updateStatus('missed') }}>Missed</DropdownItem>
-                                <DropdownItem danger onClick={() => { updateStatus('cancelled') }}>Cancelled</DropdownItem>
+                                <DropdownItem onClick={() => setAdministering({ record, outcome: 'held' })}>Held</DropdownItem>
+                                <DropdownItem onClick={() => setAdministering({ record, outcome: 'refused' })}>Refused</DropdownItem>
+                                <DropdownItem onClick={() => setAdministering({ record, outcome: 'missed' })}>Missed</DropdownItem>
+                                <DropdownItem danger onClick={() => setStatusAction(record)}>Cancelled</DropdownItem>
                               </Dropdown>
                             </>
                           ) : null}
@@ -185,18 +174,26 @@ export default function MarPage() {
 
       <MarFormModal open={formOpen} onClose={() => setFormOpen(false)} onSaved={() => query.refetch()} />
 
-      <ConfirmDialog
+      <AdministerMedicationModal
         open={Boolean(administering)}
+        record={administering?.record ?? null}
+        initialOutcome={administering?.outcome ?? 'administered'}
         onClose={() => setAdministering(null)}
-        onConfirm={administer}
-        title="Administer medication?"
+        onSaved={() => query.refetch()}
+      />
+
+      <ConfirmDialog
+        open={Boolean(statusAction)}
+        onClose={() => setStatusAction(null)}
+        onConfirm={() => updateStatus('cancelled')}
+        title="Cancel this dose?"
         message={
-          administering
-            ? `${patientFullName(administering.patient)} · ${administering.medicine?.name ?? 'medication'}${administering.dose ? ` (${administering.dose})` : ''}`
+          statusAction
+            ? `Cancel the scheduled dose for ${patientFullName(statusAction.patient)}?`
             : ''
         }
-        confirmLabel="Administer"
-        danger={false}
+        confirmLabel="Cancel dose"
+        danger
       />
     </div>
   )

@@ -5,10 +5,13 @@ import {
   CalendarCheck,
   Check,
   Clock,
+  Download,
   LogIn,
   LogOut,
   Pencil,
   Plus,
+  QrCode,
+  ScanLine,
   Trash2,
   UserX,
 } from 'lucide-react'
@@ -29,14 +32,18 @@ import { EmptyState, ErrorState } from '../components/ui/State.jsx'
 import { attendanceApi } from '../api/attendance.js'
 import { usePaginated } from '../hooks/usePaginated.js'
 import { useAuth } from '../hooks/useAuth.js'
-import { formatDateTime } from '../utils/format.js'
+import { formatDateTime, toIsoDate } from '../utils/format.js'
 import { ATTENDANCE_STATUS, ATTENDANCE_STATUS_OPTIONS, statusBadgeFor } from '../utils/status.js'
 import AttendanceFormModal from '../components/attendance/AttendanceFormModal.jsx'
+import AttendanceScannerModal from '../components/attendance/AttendanceScannerModal.jsx'
+import AttendanceSessionModal from '../components/attendance/AttendanceSessionModal.jsx'
 
 export default function AttendancePage() {
   const { can } = useAuth()
   const canManage = can('attendance.manage')
   const canClock = can('attendance.clock')
+  const canSession = can('attendance.session')
+  const canExport = can('attendance.export')
   const queryClient = useQueryClient()
 
   const [page, setPage] = useState(1)
@@ -48,6 +55,9 @@ export default function AttendancePage() {
   const [editing, setEditing] = useState(null)
   const [deleting, setDeleting] = useState(null)
   const [clocking, setClocking] = useState(false)
+  const [scanOpen, setScanOpen] = useState(false)
+  const [sessionOpen, setSessionOpen] = useState(false)
+  const [exporting, setExporting] = useState(false)
 
   const query = usePaginated(
     ['attendance', { search, status, from, to }],
@@ -112,6 +122,29 @@ export default function AttendancePage() {
     }
   }
 
+  const handleExport = async () => {
+    setExporting(true)
+    try {
+      const blob = await attendanceApi.exportCsv({
+        status: status || undefined,
+        from: from || undefined,
+        to: to || undefined,
+      })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `attendance-report-${toIsoDate(new Date())}.csv`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setExporting(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -121,11 +154,28 @@ export default function AttendancePage() {
           : 'Clock in and out and review your attendance history.'}
         breadcrumb={[{ label: 'Staff Attendance' }]}
         actions={
-          canManage ? (
-            <Button onClick={() => { setEditing(null); setFormOpen(true) }}>
-              <Plus className="size-4" aria-hidden /> New record
-            </Button>
-          ) : null
+          <div className="flex flex-wrap gap-2">
+            {canSession ? (
+              <Button variant="outline" onClick={() => setSessionOpen(true)}>
+                <QrCode className="size-4" aria-hidden /> QR session
+              </Button>
+            ) : null}
+            {canClock ? (
+              <Button onClick={() => setScanOpen(true)}>
+                <ScanLine className="size-4" aria-hidden /> Scan QR
+              </Button>
+            ) : null}
+            {canExport ? (
+              <Button variant="outline" onClick={handleExport} loading={exporting}>
+                <Download className="size-4" aria-hidden /> Export CSV
+              </Button>
+            ) : null}
+            {canManage ? (
+              <Button variant="outline" onClick={() => { setEditing(null); setFormOpen(true) }}>
+                <Plus className="size-4" aria-hidden /> New record
+              </Button>
+            ) : null}
+          </div>
         }
       />
 
@@ -160,15 +210,16 @@ export default function AttendancePage() {
         </Card>
       ) : null}
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <StatCard label="Records" value={stats.total ?? 0} icon={CalendarCheck} tone="brand" loading={query.isLoading} />
         <StatCard label="Present" value={stats.present ?? 0} icon={Clock} tone="green" loading={query.isLoading} />
         <StatCard label="Late" value={stats.late ?? 0} icon={Clock} tone="amber" loading={query.isLoading} />
         <StatCard label="Absent" value={stats.absent ?? 0} icon={UserX} tone="navy" loading={query.isLoading} />
+        <StatCard label="Missing clock-out" value={stats.missing_clock_out ?? 0} icon={LogOut} tone="red" loading={query.isLoading} />
       </div>
 
       <Card className="px-0 pb-0">
-        <div className="grid grid-cols-1 gap-3 px-5 pt-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 items-end gap-3 px-5 pt-4 sm:grid-cols-2 lg:grid-cols-4">
           {canManage ? (
             <div className="lg:col-span-1">
               <SearchInput
@@ -290,6 +341,18 @@ export default function AttendancePage() {
         record={editing}
         onSaved={() => query.refetch()}
       />
+
+      {canClock ? (
+        <AttendanceScannerModal
+          open={scanOpen}
+          onClose={() => setScanOpen(false)}
+          onScanned={refreshToday}
+        />
+      ) : null}
+
+      {canSession ? (
+        <AttendanceSessionModal open={sessionOpen} onClose={() => setSessionOpen(false)} />
+      ) : null}
 
       <ConfirmDialog
         open={Boolean(deleting)}

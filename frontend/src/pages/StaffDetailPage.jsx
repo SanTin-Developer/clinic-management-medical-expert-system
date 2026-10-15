@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import {
   AlertTriangle,
+  ArrowLeft,
   Building,
   DollarSign,
   Download,
@@ -178,6 +179,10 @@ export default function StaffDetailPage() {
         ]}
         actions={
           <div className="flex gap-2">
+            <Button variant="outline" onClick={() => navigate('/staff')}>
+              <ArrowLeft className="size-4" aria-hidden /> Back
+            </Button>
+
             {can('staff.update') ? (
               <Button variant="outline" onClick={() => setFormOpen(true)}>
                 <Pencil className="size-4" aria-hidden /> Edit profile

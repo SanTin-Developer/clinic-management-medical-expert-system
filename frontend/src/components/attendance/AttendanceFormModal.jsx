@@ -26,6 +26,14 @@ export default function AttendanceFormModal({ open, onClose, record, onSaved }) 
   const editing = Boolean(record?.id)
   const staff = useAll(['users', 'all'], (params) => userApi.list(params))
 
+  const original = record
+    ? {
+        clock_in: toLocalInput(record.clock_in),
+        clock_out: toLocalInput(record.clock_out),
+        status: record.status ?? 'present',
+      }
+    : null
+
   const [form, setForm] = useState(
     record
       ? {
@@ -35,6 +43,7 @@ export default function AttendanceFormModal({ open, onClose, record, onSaved }) 
           clock_out: toLocalInput(record.clock_out),
           status: record.status ?? 'present',
           notes: record.notes ?? '',
+          reason: '',
         }
       : {
           user_id: '',
@@ -43,6 +52,7 @@ export default function AttendanceFormModal({ open, onClose, record, onSaved }) 
           clock_out: '',
           status: 'present',
           notes: '',
+          reason: '',
         },
   )
   const [errors, setErrors] = useState({})
@@ -50,31 +60,49 @@ export default function AttendanceFormModal({ open, onClose, record, onSaved }) 
 
   const set = (key) => (value) => setForm((f) => ({ ...f, [key]: value }))
 
+  const timesChanged =
+    editing &&
+    (form.clock_in !== original.clock_in ||
+      form.clock_out !== original.clock_out ||
+      form.status !== original.status)
+
+  const reasonRequired = !editing || timesChanged
+
   const handleSubmit = async (event) => {
     event.preventDefault()
     const next = {}
     if (!form.user_id) next.user_id = 'Select a staff member.'
     if (!form.work_date) next.work_date = 'Required.'
     if (form.clock_out && !form.clock_in) next.clock_out = 'Set a clock-in time first.'
+    if (reasonRequired && !form.reason.trim()) {
+      next.reason = editing ? 'A reason is required for corrections.' : 'Required.'
+    }
     setErrors(next)
     if (Object.keys(next).length) return
 
     setSaving(true)
     try {
-      const payload = {
-        user_id: form.user_id,
-        work_date: form.work_date,
-        clock_in: form.clock_in ? form.clock_in.replace('T', ' ') : null,
-        clock_out: form.clock_out ? form.clock_out.replace('T', ' ') : null,
-        status: form.status,
-        notes: form.notes || null,
-      }
+      const reason = form.reason.trim() || null
       if (editing) {
-        const { user_id: _userId, work_date: _workDate, ...rest } = payload
-        await attendanceApi.update(record.id, rest)
+        const patch = { status: form.status, notes: form.notes || null, reason }
+        if (form.clock_in !== original.clock_in) {
+          patch.clock_in = form.clock_in ? form.clock_in.replace('T', ' ') : null
+        }
+        if (form.clock_out !== original.clock_out) {
+          patch.clock_out = form.clock_out ? form.clock_out.replace('T', ' ') : null
+        }
+        await attendanceApi.update(record.id, patch)
         toast.success('Attendance record updated.')
       } else {
-        await attendanceApi.create(payload)
+        await attendanceApi.create({
+          user_id: form.user_id,
+          work_date: form.work_date,
+          clock_in: form.clock_in ? form.clock_in.replace('T', ' ') : null,
+          clock_out: form.clock_out ? form.clock_out.replace('T', ' ') : null,
+          status: form.status,
+          notes: form.notes || null,
+          reason,
+        })
         toast.success('Attendance record created.')
       }
       onSaved?.()
@@ -160,6 +188,23 @@ export default function AttendanceFormModal({ open, onClose, record, onSaved }) 
           </Field>
           <Field label="Notes" htmlFor="att-notes" className="sm:col-span-2">
             <Textarea id="att-notes" rows={2} value={form.notes} onChange={(e) => set('notes')(e.target.value)} />
+          </Field>
+          <Field
+            label="Reason"
+            htmlFor="att-reason"
+            required={reasonRequired}
+            error={errors.reason}
+            hint={editing ? 'Required when changing clock times or status.' : 'Explain why this record is being created.'}
+            className="sm:col-span-2"
+          >
+            <Textarea
+              id="att-reason"
+              rows={2}
+              value={form.reason}
+              onChange={(e) => set('reason')(e.target.value)}
+              invalid={Boolean(errors.reason)}
+              placeholder="e.g. Forgot to scan the attendance QR at the start of the shift."
+            />
           </Field>
         </div>
       </form>

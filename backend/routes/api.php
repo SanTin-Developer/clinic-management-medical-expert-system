@@ -5,6 +5,8 @@ use App\Http\Controllers\Api\AdmissionController;
 use App\Http\Controllers\Api\AnnouncementController;
 use App\Http\Controllers\Api\AppointmentController;
 use App\Http\Controllers\Api\AttendanceRecordController;
+use App\Http\Controllers\Api\AttendanceScanController;
+use App\Http\Controllers\Api\AttendanceSessionController;
 use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BedController;
@@ -37,6 +39,7 @@ use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\RoomController;
 use App\Http\Controllers\Api\SearchController;
 use App\Http\Controllers\Api\ShiftController;
+use App\Http\Controllers\Api\ShiftTemplateController;
 use App\Http\Controllers\Api\StaffApprovalController;
 use App\Http\Controllers\Api\StaffController;
 use App\Http\Controllers\Api\StaffDocumentController;
@@ -299,21 +302,44 @@ Route::prefix('v1')->group(function () {
         // Staff attendance (self-service time clock)
         Route::get('/attendance', [AttendanceRecordController::class, 'index']);
         Route::post('/attendance', [AttendanceRecordController::class, 'store']);
+        Route::get('/attendance/export', [AttendanceRecordController::class, 'export']);
         Route::get('/attendance/today', [AttendanceRecordController::class, 'today']);
         Route::post('/attendance/clock-in', [AttendanceRecordController::class, 'clockIn']);
         Route::post('/attendance/clock-out', [AttendanceRecordController::class, 'clockOut']);
+
+        // Rotating QR attendance sessions (administrator display + staff scan)
+        Route::get('/attendance/sessions', [AttendanceSessionController::class, 'index']);
+        Route::post('/attendance/sessions', [AttendanceSessionController::class, 'store']);
+        Route::get('/attendance/sessions/{session}', [AttendanceSessionController::class, 'show']);
+        Route::get('/attendance/sessions/{session}/token', [AttendanceSessionController::class, 'token']);
+        Route::post('/attendance/sessions/{session}/close', [AttendanceSessionController::class, 'close']);
+        Route::post('/attendance/scan', [AttendanceScanController::class, 'store'])->middleware('throttle:attendance-scan');
+
         Route::get('/attendance/{attendanceRecord}', [AttendanceRecordController::class, 'show']);
         Route::put('/attendance/{attendanceRecord}', [AttendanceRecordController::class, 'update']);
         Route::patch('/attendance/{attendanceRecord}', [AttendanceRecordController::class, 'update']);
+        Route::post('/attendance/{attendanceRecord}/correct', [AttendanceRecordController::class, 'correct']);
         Route::post('/attendance/{attendanceRecord}/approve', [AttendanceRecordController::class, 'approve']);
         Route::delete('/attendance/{attendanceRecord}', [AttendanceRecordController::class, 'destroy']);
+
+        // Shift templates (reusable shift definitions)
+        Route::get('/shift-templates', [ShiftTemplateController::class, 'index']);
+        Route::post('/shift-templates', [ShiftTemplateController::class, 'store']);
+        Route::get('/shift-templates/{shiftTemplate}', [ShiftTemplateController::class, 'show']);
+        Route::put('/shift-templates/{shiftTemplate}', [ShiftTemplateController::class, 'update']);
+        Route::patch('/shift-templates/{shiftTemplate}', [ShiftTemplateController::class, 'update']);
+        Route::delete('/shift-templates/{shiftTemplate}', [ShiftTemplateController::class, 'destroy']);
 
         // Staff scheduling (shift rosters)
         Route::get('/shifts', [ShiftController::class, 'index']);
         Route::post('/shifts', [ShiftController::class, 'store']);
+        Route::get('/shifts/board', [ShiftController::class, 'board']);
+        Route::get('/shifts/uncovered', [ShiftController::class, 'uncovered']);
+        Route::post('/shifts/publish', [ShiftController::class, 'publishBulk']);
         Route::get('/shifts/{shift}', [ShiftController::class, 'show']);
         Route::put('/shifts/{shift}', [ShiftController::class, 'update']);
         Route::patch('/shifts/{shift}', [ShiftController::class, 'update']);
+        Route::post('/shifts/{shift}/publish', [ShiftController::class, 'publish']);
         Route::delete('/shifts/{shift}', [ShiftController::class, 'destroy']);
 
         // Staff communication — direct & group conversations
@@ -345,6 +371,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/assignments', [PatientAssignmentController::class, 'store']);
         Route::get('/assignments/{assignment}', [PatientAssignmentController::class, 'show']);
         Route::post('/assignments/{assignment}/end', [PatientAssignmentController::class, 'end']);
+        Route::match(['put', 'patch'], '/assignments/{assignment}', [PatientAssignmentController::class, 'update']);
         Route::delete('/assignments/{assignment}', [PatientAssignmentController::class, 'end']);
         Route::get('/nursing/my-patients', [PatientAssignmentController::class, 'myPatients']);
 

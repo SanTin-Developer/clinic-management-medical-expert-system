@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\User;
 use App\Notifications\PasswordChangedNotification;
 use App\Notifications\PasswordResetOtpNotification;
+use App\Services\Auth\SecurityEventService;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -36,6 +37,10 @@ class PasswordResetTest extends TestCase
 
         Notification::assertSentTo($user, PasswordResetOtpNotification::class);
         $this->assertDatabaseCount('password_reset_otps', 1);
+        $this->assertDatabaseHas('security_events', [
+            'user_id' => $user->id,
+            'event' => SecurityEventService::PASSWORD_RESET_REQUESTED,
+        ]);
     }
 
     public function test_forgot_password_does_not_reveal_unknown_accounts(): void
@@ -87,6 +92,10 @@ class PasswordResetTest extends TestCase
         $this->assertDatabaseCount('personal_access_tokens', 0);
         $this->assertDatabaseCount('trusted_devices', 0);
         Notification::assertSentTo($user, PasswordChangedNotification::class);
+        $this->assertDatabaseHas('security_events', [
+            'user_id' => $user->id,
+            'event' => SecurityEventService::PASSWORD_RESET_COMPLETED,
+        ]);
     }
 
     public function test_reset_token_is_single_use(): void

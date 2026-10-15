@@ -16,7 +16,7 @@ class DiseaseController extends Controller
         $this->authorize('viewAny', Disease::class);
 
         $query = Disease::with('symptoms:id,code,name')->withCount('symptoms');
-        $base = clone $query;
+        $statsBase = Disease::query();
 
         if ($search = $request->query('search')) {
             $query->where(function ($builder) use ($search) {
@@ -38,9 +38,9 @@ class DiseaseController extends Controller
 
         $stats = [
             'total' => $diseases->total(),
-            'active' => (clone $base)->where('is_active', true)->count(),
-            'inactive' => (clone $base)->where('is_active', false)->count(),
-            'by_category' => (clone $base)->selectRaw('category, COUNT(*) as count')->groupBy('category')->pluck('count', 'category'),
+            'active' => (clone $statsBase)->where('is_active', true)->count(),
+            'inactive' => (clone $statsBase)->where('is_active', false)->count(),
+            'by_category' => (clone $statsBase)->selectRaw('category, COUNT(*) as count')->groupBy('category')->pluck('count', 'category'),
         ];
 
         return response()->json(array_merge($diseases->toArray(), ['stats' => $stats]));

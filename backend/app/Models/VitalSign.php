@@ -16,6 +16,8 @@ class VitalSign extends Model
     protected $fillable = [
         'appointment_id',
         'patient_id',
+        'admission_id',
+        'nursing_task_id',
         'nurse_id',
         'temperature',
         'blood_pressure_systolic',
@@ -47,6 +49,16 @@ class VitalSign extends Model
     public function patient(): BelongsTo
     {
         return $this->belongsTo(Patient::class);
+    }
+
+    public function admission(): BelongsTo
+    {
+        return $this->belongsTo(Admission::class);
+    }
+
+    public function nursingTask(): BelongsTo
+    {
+        return $this->belongsTo(NursingTask::class);
     }
 
     public function nurse(): BelongsTo

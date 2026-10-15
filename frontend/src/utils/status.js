@@ -107,6 +107,7 @@ export const EMPLOYMENT_TYPE_OPTIONS = Object.entries(EMPLOYMENT_TYPE).map(
 
 export const STAFF_DOCUMENT_CATEGORIES = {
   cv: meta('CV / Resume', 'blue'),
+  photo: meta('Staff Photo', 'navy'),
   certificate: meta('Certificate', 'brand'),
   license: meta('Medical License', 'green'),
   contract: meta('Employment Contract', 'amber'),
@@ -207,6 +208,18 @@ export const TASK_PRIORITY = {
 }
 
 export const TASK_PRIORITY_OPTIONS = Object.entries(TASK_PRIORITY).map(
+  ([value, m]) => ({ value, label: m.label }),
+)
+
+export const NURSING_TASK_OUTCOMES = {
+  completed: meta('Fully completed', 'green'),
+  partially_completed: meta('Partially completed', 'amber'),
+  held: meta('Held', 'navy'),
+  refused: meta('Refused', 'red'),
+  not_completed: meta('Not completed', 'red'),
+}
+
+export const NURSING_TASK_OUTCOME_OPTIONS = Object.entries(NURSING_TASK_OUTCOMES).map(
   ([value, m]) => ({ value, label: m.label }),
 )
 

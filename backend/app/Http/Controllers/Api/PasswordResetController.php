@@ -9,6 +9,7 @@ use App\Http\Requests\Auth\VerifyResetCodeRequest;
 use App\Models\User;
 use App\Notifications\PasswordChangedNotification;
 use App\Services\Auth\PasswordResetOtpService;
+use App\Services\Auth\SecurityEventService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
 
@@ -16,6 +17,7 @@ class PasswordResetController extends Controller
 {
     public function __construct(
         private readonly PasswordResetOtpService $otps,
+        private readonly SecurityEventService $events,
     ) {}
 
     // email a one-time reset code (response is intentionally generic)
@@ -25,6 +27,7 @@ class PasswordResetController extends Controller
 
         if ($user !== null) {
             $this->otps->issue($user, $request);
+            $this->events->record(SecurityEventService::PASSWORD_RESET_REQUESTED, $user, 'info', [], $request);
         }
 
         return response()->json([
@@ -82,6 +85,7 @@ class PasswordResetController extends Controller
 
         $user->forceFill([
             'password' => $validated['password'],
+            'password_changed_at' => now(),
             'remember_token' => null,
         ])->save();
 
@@ -90,6 +94,8 @@ class PasswordResetController extends Controller
         $user->trustedDevices()->delete();
 
         $user->notify(new PasswordChangedNotification);
+
+        $this->events->record(SecurityEventService::PASSWORD_RESET_COMPLETED, $user, 'info', [], $request);
 
         return response()->json([
             'message' => 'Your password has been reset successfully.',
