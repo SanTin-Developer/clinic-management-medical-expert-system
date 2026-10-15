@@ -1,4 +1,4 @@
-import { api } from './client.js'
+import { api, httpClient } from './client.js'
 
 const withData = (promise) => promise.then((r) => r.data)
 
@@ -10,4 +10,17 @@ export const invoiceApi = {
   recordPayment: (id, data) => withData(api.post(`/invoices/${id}/payments`, data)),
   cancel: (id) => withData(api.post(`/invoices/${id}/cancel`)),
   remove: (id) => api.delete(`/invoices/${id}`),
+  downloadPdf: async (id) => {
+    const response = await httpClient.get(`/invoices/${id}/pdf`, { responseType: 'blob' })
+    const disposition = response.headers['content-disposition'] ?? ''
+    const filename = disposition.match(/filename="?(.+?)"?;?$/i)?.[1] ?? `RoyalCare-Invoice-${id}.pdf`
+    const url = URL.createObjectURL(response.data)
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = filename
+    document.body.appendChild(anchor)
+    anchor.click()
+    anchor.remove()
+    URL.revokeObjectURL(url)
+  },
 }

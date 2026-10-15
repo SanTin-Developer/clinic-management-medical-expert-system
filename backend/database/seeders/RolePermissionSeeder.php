@@ -126,6 +126,33 @@ class RolePermissionSeeder extends Seeder
             // Audit
             'audit-logs.view',
 
+            // Announcements
+            'announcements.view',
+            'announcements.create',
+            'announcements.update',
+            'announcements.delete',
+            'announcements.publish',
+
+            // Leave Management
+            'leave.view',
+            'leave.create',
+            'leave.update',
+            'leave.delete',
+            'leave.approve',
+
+            // Outpatient Queue
+            'queue.view',
+            'queue.manage',
+
+            // Staff Attendance
+            'attendance.view',
+            'attendance.clock',
+            'attendance.manage',
+
+            // Staff Scheduling
+            'scheduling.view',
+            'scheduling.manage',
+
             // Staff Communication
             'chat.view',
             'chat.create',
@@ -188,6 +215,16 @@ class RolePermissionSeeder extends Seeder
             'chat.send',
             'notifications.view',
             'notifications.manage',
+            'announcements.view',
+            'leave.view',
+            'leave.create',
+            'leave.update',
+            'leave.delete',
+            'queue.view',
+            'queue.manage',
+            'attendance.view',
+            'attendance.clock',
+            'scheduling.view',
             'telegram.connect',
         ]);
 
@@ -220,6 +257,16 @@ class RolePermissionSeeder extends Seeder
             'chat.send',
             'notifications.view',
             'notifications.manage',
+            'announcements.view',
+            'leave.view',
+            'leave.create',
+            'leave.update',
+            'leave.delete',
+            'queue.view',
+            'queue.manage',
+            'attendance.view',
+            'attendance.clock',
+            'scheduling.view',
             'telegram.connect',
         ]);
 
@@ -253,6 +300,23 @@ class RolePermissionSeeder extends Seeder
             'chat.send',
             'notifications.view',
             'notifications.manage',
+            'announcements.view',
+            'announcements.create',
+            'announcements.update',
+            'announcements.delete',
+            'announcements.publish',
+            'leave.view',
+            'leave.create',
+            'leave.update',
+            'leave.delete',
+            'leave.approve',
+            'queue.view',
+            'queue.manage',
+            'attendance.view',
+            'attendance.clock',
+            'attendance.manage',
+            'scheduling.view',
+            'scheduling.manage',
             'telegram.connect',
         ]);
 
@@ -289,6 +353,15 @@ class RolePermissionSeeder extends Seeder
             'chat.send',
             'notifications.view',
             'notifications.manage',
+            'announcements.view',
+            'leave.view',
+            'leave.create',
+            'leave.update',
+            'leave.delete',
+            'queue.view',
+            'attendance.view',
+            'attendance.clock',
+            'scheduling.view',
             'telegram.connect',
         ]);
 
@@ -307,6 +380,14 @@ class RolePermissionSeeder extends Seeder
             'chat.send',
             'notifications.view',
             'notifications.manage',
+            'announcements.view',
+            'leave.view',
+            'leave.create',
+            'leave.update',
+            'leave.delete',
+            'attendance.view',
+            'attendance.clock',
+            'scheduling.view',
             'telegram.connect',
         ]);
 
@@ -317,6 +398,7 @@ class RolePermissionSeeder extends Seeder
             'appointments.cancel',
             'medical-records.view',
             'prescriptions.view',
+            'announcements.view',
         ]);
     }
 }

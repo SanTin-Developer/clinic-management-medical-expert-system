@@ -242,6 +242,116 @@ export const ASSIGNMENT_STATUS = {
   ended: meta('Ended', 'gray'),
 }
 
+export const ANNOUNCEMENT_PRIORITY = {
+  normal: meta('Normal', 'blue'),
+  high: meta('High', 'amber'),
+  urgent: meta('Urgent', 'red'),
+}
+
+export const ANNOUNCEMENT_PRIORITY_OPTIONS = Object.entries(
+  ANNOUNCEMENT_PRIORITY,
+).map(([value, m]) => ({ value, label: m.label }))
+
+export const ANNOUNCEMENT_AUDIENCE = {
+  all: meta('Everyone', 'brand'),
+  staff: meta('All staff', 'navy'),
+  doctors: meta('Doctors', 'blue'),
+  nurses: meta('Nurses', 'green'),
+  receptionists: meta('Receptionists', 'amber'),
+  pharmacists: meta('Pharmacists', 'navy'),
+  patients: meta('Patients', 'gray'),
+}
+
+export const ANNOUNCEMENT_AUDIENCE_OPTIONS = Object.entries(
+  ANNOUNCEMENT_AUDIENCE,
+).map(([value, m]) => ({ value, label: m.label }))
+
+export const LEAVE_TYPES = {
+  annual: meta('Annual', 'brand'),
+  sick: meta('Sick', 'red'),
+  unpaid: meta('Unpaid', 'gray'),
+  maternity: meta('Maternity', 'blue'),
+  emergency: meta('Emergency', 'amber'),
+  other: meta('Other', 'navy'),
+}
+
+export const LEAVE_TYPE_OPTIONS = Object.entries(LEAVE_TYPES).map(([value, m]) => ({
+  value,
+  label: m.label,
+}))
+
+export const LEAVE_STATUS = {
+  pending: meta('Pending', 'amber'),
+  approved: meta('Approved', 'green'),
+  rejected: meta('Rejected', 'red'),
+  cancelled: meta('Cancelled', 'gray'),
+}
+
+export const LEAVE_STATUS_OPTIONS = Object.entries(LEAVE_STATUS).map(([value, m]) => ({
+  value,
+  label: m.label,
+}))
+
+export const QUEUE_STATUS = {
+  waiting: meta('Waiting', 'amber'),
+  called: meta('Called', 'blue'),
+  serving: meta('Serving', 'brand'),
+  done: meta('Done', 'green'),
+  skipped: meta('Skipped', 'navy'),
+  cancelled: meta('Cancelled', 'gray'),
+}
+
+export const QUEUE_STATUS_OPTIONS = Object.entries(QUEUE_STATUS).map(([value, m]) => ({
+  value,
+  label: m.label,
+}))
+
+export const QUEUE_PRIORITY = {
+  normal: meta('Normal', 'blue'),
+  urgent: meta('Urgent', 'red'),
+}
+
+export const QUEUE_PRIORITY_OPTIONS = Object.entries(QUEUE_PRIORITY).map(([value, m]) => ({
+  value,
+  label: m.label,
+}))
+
+export const ATTENDANCE_STATUS = {
+  present: meta('Present', 'green'),
+  late: meta('Late', 'amber'),
+  absent: meta('Absent', 'red'),
+  on_leave: meta('On leave', 'blue'),
+  holiday: meta('Holiday', 'navy'),
+}
+
+export const ATTENDANCE_STATUS_OPTIONS = Object.entries(ATTENDANCE_STATUS).map(([value, m]) => ({
+  value,
+  label: m.label,
+}))
+
+export const SHIFT_TYPES = {
+  day: meta('Day', 'blue'),
+  evening: meta('Evening', 'amber'),
+  night: meta('Night', 'navy'),
+  on_call: meta('On call', 'brand'),
+}
+
+export const SHIFT_TYPE_OPTIONS = Object.entries(SHIFT_TYPES).map(([value, m]) => ({
+  value,
+  label: m.label,
+}))
+
+export const SHIFT_STATUS = {
+  scheduled: meta('Scheduled', 'blue'),
+  completed: meta('Completed', 'green'),
+  cancelled: meta('Cancelled', 'gray'),
+}
+
+export const SHIFT_STATUS_OPTIONS = Object.entries(SHIFT_STATUS).map(([value, m]) => ({
+  value,
+  label: m.label,
+}))
+
 export function statusBadgeFor(map, value) {
   return map[value] ?? meta(value ?? '—', 'gray')
 }

@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Invoice;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
@@ -109,8 +111,27 @@ class InvoiceController extends Controller
         $this->authorize('view', $invoice);
 
         return response()->json([
-            'data' => $invoice->load(['patient', 'consultation', 'createdBy', 'items', 'payments']),
+            'data' => $invoice->load(['patient', 'consultation', 'cashier', 'items', 'payments.receiver']),
         ]);
+    }
+
+    public function pdf(Invoice $invoice): Response
+    {
+        $this->authorize('view', $invoice);
+
+        $invoice->load(['patient', 'cashier', 'items', 'payments.receiver']);
+        $sale = null;
+        if (\Schema::hasTable('pharmacy_sales')) {
+            $sale = $invoice->pharmacySale()->with('items.medicine')->first();
+        }
+
+        $pdf = Pdf::loadView('invoices.pdf', [
+            'invoice' => $invoice,
+            'sale' => $sale,
+            'clinicName' => config('app.name'),
+        ])->setPaper('a4');
+
+        return $pdf->download('RoyalCare-Invoice-'.$invoice->invoice_number.'.pdf');
     }
 
     public function update(Request $request, Invoice $invoice): JsonResponse

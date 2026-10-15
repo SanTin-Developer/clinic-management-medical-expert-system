@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import {
   PackagePlus,
@@ -18,7 +18,7 @@ import {
   RefreshCw,
 } from 'lucide-react'
 import { medicineApi, inventoryApi, stockMovementApi } from '../api/pharmacy.js'
-import { usePaginated, useAll } from '../hooks/usePaginated.js'
+import { usePaginated } from '../hooks/usePaginated.js'
 import { useAuth } from '../hooks/useAuth.js'
 import PageHeader from '../components/ui/PageHeader.jsx'
 import Button from '../components/ui/Button.jsx'
@@ -30,6 +30,7 @@ import Tabs from '../components/ui/Tabs.jsx'
 import Table, { THead, TBody, Tr, Th, Td } from '../components/ui/Table.jsx'
 import Pagination from '../components/ui/Pagination.jsx'
 import SearchInput from '../components/ui/SearchInput.jsx'
+import Select from '../components/ui/Select.jsx'
 import { RowSkeleton } from '../components/ui/Skeleton.jsx'
 import { EmptyState } from '../components/ui/State.jsx'
 import MedicineFormModal from '../components/pharmacy/MedicineFormModal.jsx'
@@ -38,30 +39,52 @@ import StockMovementFormModal from '../components/pharmacy/StockMovementFormModa
 import { formatCurrency, formatDate } from '../utils/format.js'
 import { statusBadgeFor, STOCK_MOVEMENT_TYPE } from '../utils/status.js'
 
-export default function PharmacyPage() {
+export default function PharmacyPage({ initialTab = 'medicines', inventoryOnly = false }) {
   const { can } = useAuth()
-  const [tab, setTab] = useState('medicines')
+  const [tab, setTab] = useState(initialTab)
   const [page, setPage] = useState(1)
-  const [search, setSearch] = useState('')
+  const [medicineSearch, setMedicineSearch] = useState('')
+  const [inventoryPage, setInventoryPage] = useState(1)
+  const [inventorySearch, setInventorySearch] = useState('')
+  const [inventoryStatus, setInventoryStatus] = useState('all')
+  const [movementPage, setMovementPage] = useState(1)
+  const [movementSearch, setMovementSearch] = useState('')
+  const [movementType, setMovementType] = useState('')
 
-  const medicines = usePaginated(['medicines'], (params) => medicineApi.list(params), { page })
-  const inventory = useAll(['inventory', 'all'], (params) => inventoryApi.list(params))
-  const movements = useAll(['stock-movements', 'all'], (params) => stockMovementApi.list(params))
+  useEffect(() => {
+    setTab(initialTab)
+  }, [initialTab])
+
+  const medicines = usePaginated(['medicines'], (params) => medicineApi.list(params), {
+    page,
+    params: { search: medicineSearch || undefined },
+    enabled: can('medicines.view'),
+  })
+  const inventory = usePaginated(['inventory'], (params) => inventoryApi.list(params), {
+    page: inventoryPage,
+    params: {
+      search: inventorySearch || undefined,
+      low_stock: inventoryStatus === 'low' ? 1 : undefined,
+      expiring_soon: inventoryStatus === 'expiring' ? 1 : undefined,
+      expired: inventoryStatus === 'expired' ? 1 : undefined,
+    },
+    enabled: can('inventory.view'),
+  })
+  const movements = usePaginated(['stock-movements'], (params) => stockMovementApi.list(params), {
+    page: movementPage,
+    params: { search: movementSearch || undefined, type: movementType || undefined },
+    enabled: can('inventory.view'),
+  })
 
   const [form, setForm] = useState(null)
   const [deleting, setDeleting] = useState(null)
 
-  const allMedicines = medicines.data?.data ?? []
-  const filtered = search
-    ? allMedicines.filter((m) =>
-        [m.name, m.code, m.generic_name, m.category, m.form]
-          .filter(Boolean)
-          .some((v) => String(v).toLowerCase().includes(search.toLowerCase())),
-      )
-    : allMedicines
+  const medicineRows = medicines.data?.data ?? []
+  const inventoryRows = inventory.data?.data ?? []
+  const movementRows = movements.data?.data ?? []
 
   const canManageMedicines = can('medicines.create') || can('medicines.update')
-  const canManageInventory = can('inventory.create') || can('inventory.update')
+  const canManageInventory = can('inventory.manage')
 
   const refresh = () => {
     medicines.refetch()
@@ -85,36 +108,19 @@ export default function PharmacyPage() {
   const activeQuery = { medicines, inventory, movements }[tab]
 
   const medicineStats = medicines.data?.stats ?? {}
-  const inventoryList = inventory.data ?? []
-  const now = Date.now()
-  const soon = now + 30 * 24 * 60 * 60 * 1000
-  const inventoryStats = {
-    total: inventoryList.length,
-    low_stock: inventoryList.filter((i) => i.quantity <= (i.medicine?.reorder_level ?? 0)).length,
-    expiring_soon: inventoryList.filter((i) => {
-      if (!i.expiration_date) return false
-      const t = new Date(i.expiration_date).getTime()
-      return t >= now && t <= soon
-    }).length,
-    expired: inventoryList.filter(
-      (i) => i.expiration_date && new Date(i.expiration_date).getTime() < now,
-    ).length,
-    out_of_stock: inventoryList.filter((i) => i.quantity <= 0).length,
-  }
-  const movementList = movements.data ?? []
-  const movementStats = {
-    total: movementList.length,
-    in: movementList.filter((m) => m.type === 'in').length,
-    out: movementList.filter((m) => m.type === 'out').length,
-    adjustment: movementList.filter((m) => m.type === 'adjustment').length,
-  }
+  const inventoryStats = inventory.data?.stats ?? {}
+  const movementStats = movements.data?.stats ?? {}
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Pharmacy"
-        description="Medicines, inventory batches and stock movements."
-        breadcrumb={[{ label: 'Pharmacy' }]}
+        title={inventoryOnly ? 'Inventory & Supplies' : 'Pharmacy'}
+        description={inventoryOnly ? 'Current stock, batch expiry, receiving and auditable stock movements.' : 'Medicine catalog and prescription dispensing workspace.'}
+        actions={!inventoryOnly && can('medicines.create') ? (
+          <Button onClick={() => setForm({ kind: 'medicine' })}>
+            <PackagePlus className="size-4" aria-hidden /> New medicine
+          </Button>
+        ) : null}
       />
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
@@ -214,30 +220,36 @@ export default function PharmacyPage() {
         )}
       </div>
 
-      <Card className="px-0 pb-0">
+      <Card className="overflow-hidden px-0 pb-0" bodyClassName="p-0">
         <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-4">
-          <Tabs
-            value={tab}
-            onChange={(v) => setTab(v)}
-            className="border-b-0"
-            tabs={[
-              { value: 'medicines', label: 'Medicines' },
-              { value: 'inventory', label: 'Inventory' },
-              { value: 'movements', label: 'Stock movements' },
-            ]}
-          />
+          {inventoryOnly ? (
+            <Tabs
+              value={tab}
+              onChange={(v) => setTab(v)}
+              className="border-b-0"
+              tabs={[
+                { value: 'inventory', label: 'Stock & batches' },
+                { value: 'movements', label: 'Stock movements' },
+              ]}
+            />
+          ) : (
+            <div className="flex items-center gap-3 pb-2">
+              <span className="grid size-10 place-items-center rounded-xl bg-brand-soft text-brand-dark">
+                <Pill className="size-5" aria-hidden />
+              </span>
+              <div>
+                <h2 className="font-semibold text-ink">Medicine catalog</h2>
+                <p className="text-xs text-ink-muted">Formulary details, selling price and availability status.</p>
+              </div>
+            </div>
+          )}
           <div className="flex gap-2">
-            {tab === 'medicines' && can('medicines.create') ? (
-              <Button size="sm" onClick={() => setForm({ kind: 'medicine' })}>
-                <PackagePlus className="size-4" aria-hidden /> New medicine
-              </Button>
-            ) : null}
-            {tab === 'inventory' && can('inventory.create') ? (
+            {tab === 'inventory' && can('inventory.manage') ? (
               <Button size="sm" onClick={() => setForm({ kind: 'inventory' })}>
                 <Plus className="size-4" aria-hidden /> Add stock
               </Button>
             ) : null}
-            {tab === 'movements' && can('inventory.create') ? (
+            {tab === 'movements' && can('inventory.manage') ? (
               <Button size="sm" onClick={() => setForm({ kind: 'movement' })}>
                 <ArrowLeftRight className="size-4" aria-hidden /> Record movement
               </Button>
@@ -246,14 +258,42 @@ export default function PharmacyPage() {
         </div>
 
         {tab === 'medicines' ? (
-          <div className="px-5 pt-4">
+          <div className="border-t border-line bg-canvas/35 px-5 py-4">
             <SearchInput
-              placeholder="Search medicines…"
+              placeholder="Search medicines by name or code…"
               className="w-full sm:w-80"
-              onDebounced={setSearch}
+              onDebounced={(value) => { setMedicineSearch(value); setPage(1) }}
             />
           </div>
-        ) : null}
+        ) : tab === 'inventory' ? (
+          <div className="flex flex-wrap gap-3 border-t border-line bg-canvas/35 px-5 py-4">
+            <SearchInput
+              placeholder="Search medicine, code, or batch…"
+              className="w-full sm:w-80"
+              onDebounced={(value) => { setInventorySearch(value); setInventoryPage(1) }}
+            />
+            <Select value={inventoryStatus} onChange={(event) => { setInventoryStatus(event.target.value); setInventoryPage(1) }} className="sm:w-52">
+              <option value="all">All batch statuses</option>
+              <option value="low">Low stock</option>
+              <option value="expiring">Expiring within 30 days</option>
+              <option value="expired">Expired stock</option>
+            </Select>
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-3 border-t border-line bg-canvas/35 px-5 py-4">
+            <SearchInput
+              placeholder="Search medicine, batch, reference…"
+              className="w-full sm:w-80"
+              onDebounced={(value) => { setMovementSearch(value); setMovementPage(1) }}
+            />
+            <Select value={movementType} onChange={(event) => { setMovementType(event.target.value); setMovementPage(1) }} className="sm:w-48">
+              <option value="">All movement types</option>
+              <option value="in">Stock in</option>
+              <option value="out">Stock out</option>
+              <option value="adjustment">Adjustment</option>
+            </Select>
+          </div>
+        )}
 
         {activeQuery.isLoading ? (
           <div className="p-5">
@@ -262,13 +302,13 @@ export default function PharmacyPage() {
         ) : activeQuery.isError ? (
           <p className="py-6 text-center text-sm text-red-600">{activeQuery.error.message}</p>
         ) : tab === 'medicines' ? (
-          filtered.length === 0 ? (
+          medicineRows.length === 0 ? (
             <EmptyState
-              title={allMedicines.length === 0 ? 'No medicines yet' : 'No matches'}
+              title={medicineSearch ? 'No matching medicines' : 'No medicines yet'}
               message={
-                allMedicines.length === 0
-                  ? 'Add medicines to the formulary to begin stocking.'
-                  : 'No medicines match your search.'
+                medicineSearch
+                  ? 'Try a different medicine name or code.'
+                  : 'Add medicines to the formulary to begin stocking.'
               }
             />
           ) : (
@@ -285,7 +325,7 @@ export default function PharmacyPage() {
                 </Tr>
               </THead>
               <TBody>
-                {filtered.map((m) => (
+                {medicineRows.map((m) => (
                   <Tr key={m.id}>
                     <Td className="font-mono text-xs text-ink-muted">{m.code}</Td>
                     <Td>
@@ -328,8 +368,8 @@ export default function PharmacyPage() {
             </Table>
           )
         ) : tab === 'inventory' ? (
-          (inventory.data ?? []).length === 0 ? (
-            <EmptyState title="No stock batches" message="Add stock to a medicine to see batches here." />
+          inventoryRows.length === 0 ? (
+            <EmptyState title={inventorySearch || inventoryStatus !== 'all' ? 'No matching stock batches' : 'No stock batches'} message={inventorySearch || inventoryStatus !== 'all' ? 'Try changing the search or batch status filter.' : 'Receive stock for a medicine to create its first batch.'} />
           ) : (
             <Table minWidth="min-w-[840px]">
               <THead>
@@ -344,7 +384,7 @@ export default function PharmacyPage() {
                 </Tr>
               </THead>
               <TBody>
-                {(inventory.data ?? []).map((item) => {
+                {inventoryRows.map((item) => {
                   const low = item.quantity <= (item.medicine?.reorder_level ?? 0)
                   return (
                     <Tr key={item.id}>
@@ -368,7 +408,7 @@ export default function PharmacyPage() {
                               <Pencil className="size-4" aria-hidden />
                             </button>
                           ) : null}
-                          {can('inventory.delete') ? (
+                          {can('inventory.manage') ? (
                             <button
                               type="button"
                               aria-label="Delete stock batch"
@@ -386,13 +426,14 @@ export default function PharmacyPage() {
               </TBody>
             </Table>
           )
-        ) : (movements.data ?? []).length === 0 ? (
-          <EmptyState title="No stock movements" message="Movements (in, out, adjustment) will appear here." />
+        ) : movementRows.length === 0 ? (
+          <EmptyState title={movementSearch || movementType ? 'No matching stock movements' : 'No stock movements'} message={movementSearch || movementType ? 'Try changing the search or movement type filter.' : 'Receiving, dispensing and adjustments will appear here.'} />
         ) : (
           <Table minWidth="min-w-[840px]">
             <THead>
               <Tr>
                 <Th>Medicine</Th>
+                <Th>Batch</Th>
                 <Th>Type</Th>
                 <Th>Quantity</Th>
                 <Th>Reference</Th>
@@ -402,11 +443,12 @@ export default function PharmacyPage() {
               </Tr>
             </THead>
             <TBody>
-              {(movements.data ?? []).map((m) => {
+              {movementRows.map((m) => {
                 const type = statusBadgeFor(STOCK_MOVEMENT_TYPE, m.type)
                 return (
                   <Tr key={m.id}>
                     <Td className="font-medium text-ink">{m.medicine?.name ?? `Medicine #${m.medicine_id}`}</Td>
+                    <Td className="font-mono text-xs text-ink-muted">{m.inventory_item?.batch_number ?? '—'}</Td>
                     <Td><Badge tone={type.tone}>{type.label}</Badge></Td>
                     <Td>{m.quantity}</Td>
                     <Td className="font-mono text-xs text-ink-muted">{m.reference || '—'}</Td>
@@ -422,7 +464,11 @@ export default function PharmacyPage() {
 
         {tab === 'medicines' ? (
           <Pagination page={medicines.data?.current_page ?? 1} lastPage={medicines.data?.last_page ?? 1} total={medicines.data?.total} onChange={setPage} />
-        ) : null}
+        ) : tab === 'inventory' ? (
+          <Pagination page={inventory.data?.current_page ?? 1} lastPage={inventory.data?.last_page ?? 1} total={inventory.data?.total} onChange={setInventoryPage} />
+        ) : (
+          <Pagination page={movements.data?.current_page ?? 1} lastPage={movements.data?.last_page ?? 1} total={movements.data?.total} onChange={setMovementPage} />
+        )}
       </Card>
 
       {form?.kind === 'medicine' ? (

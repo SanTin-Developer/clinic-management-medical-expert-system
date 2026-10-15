@@ -1,8 +1,8 @@
-import { useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { ArrowLeft, Banknote, Pencil, Printer, Trash2, XCircle } from 'lucide-react'
+import { ArrowLeft, Banknote, Download, Pencil, Printer, Trash2, XCircle } from 'lucide-react'
 import { invoiceApi } from '../api/billing.js'
 import { useAuth } from '../hooks/useAuth.js'
 import PageHeader from '../components/ui/PageHeader.jsx'
@@ -19,6 +19,7 @@ import { PAYMENT_METHODS, statusBadgeFor, INVOICE_STATUS } from '../utils/status
 
 export default function InvoiceDetailPage() {
   const { id } = useParams()
+  const [searchParams] = useSearchParams()
   const { can } = useAuth()
   const navigate = useNavigate()
 
@@ -31,10 +32,19 @@ export default function InvoiceDetailPage() {
   const [paymentOpen, setPaymentOpen] = useState(false)
   const [confirmState, setConfirmState] = useState(null)
   const [busy, setBusy] = useState(false)
+  const [downloading, setDownloading] = useState(false)
+  const printStarted = useRef(false)
 
   const inv = query.data
   const meta = inv ? statusBadgeFor(INVOICE_STATUS, inv.status) : null
   const open = inv && ['unpaid', 'partially_paid'].includes(inv.status)
+
+  useEffect(() => {
+    if (!inv || searchParams.get('print') !== '1' || printStarted.current) return
+    printStarted.current = true
+    const id = window.setTimeout(() => window.print(), 150)
+    return () => window.clearTimeout(id)
+  }, [inv, searchParams])
 
   const runConfirm = async () => {
     if (!confirmState) return
@@ -50,6 +60,17 @@ export default function InvoiceDetailPage() {
       toast.error(err.message)
     } finally {
       setBusy(false)
+    }
+  }
+
+  const downloadPdf = async () => {
+    setDownloading(true)
+    try {
+      await invoiceApi.downloadPdf(id)
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setDownloading(false)
     }
   }
 
@@ -72,6 +93,9 @@ export default function InvoiceDetailPage() {
             </Button>
             <Button variant="outline" className="no-print" onClick={() => window.print()}>
               <Printer className="size-4" aria-hidden /> Print
+            </Button>
+            <Button variant="outline" className="no-print" loading={downloading} onClick={downloadPdf}>
+              <Download className="size-4" aria-hidden /> Download PDF
             </Button>
             {can('billing.update') && open ? (
               <>
@@ -123,7 +147,7 @@ export default function InvoiceDetailPage() {
                 </div>
                 <div>
                   <p className="text-xs font-medium uppercase tracking-wide text-ink-muted">Created by</p>
-                  <p className="mt-1 text-sm text-ink">{inv.created_by?.name ?? '—'}</p>
+                  <p className="mt-1 text-sm text-ink">{inv.cashier?.name ?? '—'}</p>
                 </div>
                 <div>
                   <p className="text-xs font-medium uppercase tracking-wide text-ink-muted">Consultation</p>
@@ -198,7 +222,7 @@ export default function InvoiceDetailPage() {
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-semibold text-ink">{formatCurrency(payment.amount)}</p>
                         <p className="text-xs text-ink-muted">
-                          {method?.label ?? payment.method} · {formatDate(payment.paid_at)} · by {payment.received_by?.name ?? '—'}
+                          {method?.label ?? payment.method} · {formatDate(payment.paid_at)} · by {payment.receiver?.name ?? '—'}
                         </p>
                       </div>
                       {payment.reference ? <span className="font-mono text-xs text-ink-muted">{payment.reference}</span> : null}

@@ -8,6 +8,10 @@ import Select from '../ui/Select.jsx'
 import { medicineApi, inventoryApi } from '../../api/pharmacy.js'
 import { useAll } from '../../hooks/usePaginated.js'
 
+function dateInputValue(value) {
+  return value ? String(value).slice(0, 10) : ''
+}
+
 export default function InventoryFormModal({ open, onClose, initial, onSaved }) {
   const editing = Boolean(initial?.id)
   const medicines = useAll(['medicines', 'all'], (params) => medicineApi.list(params))
@@ -16,13 +20,15 @@ export default function InventoryFormModal({ open, onClose, initial, onSaved }) 
     initial
       ? {
           medicine_id: String(initial.medicine_id ?? ''),
+          batch_number: initial.batch_number ?? '',
           quantity: String(initial.quantity ?? ''),
-          expiration_date: initial.expiration_date ?? '',
-          received_date: initial.received_date ?? '',
+          expiration_date: dateInputValue(initial.expiration_date),
+          received_date: dateInputValue(initial.received_date),
           location: initial.location ?? '',
         }
       : {
           medicine_id: '',
+          batch_number: '',
           quantity: '',
           expiration_date: '',
           received_date: '',
@@ -38,8 +44,9 @@ export default function InventoryFormModal({ open, onClose, initial, onSaved }) 
     event.preventDefault()
     const next = {}
     if (!form.medicine_id) next.medicine_id = 'Select a medicine.'
+    if (!form.batch_number.trim()) next.batch_number = 'Batch number is required.'
     const qty = Number(form.quantity)
-    if (form.quantity === '' || !Number.isInteger(qty) || qty < 0) next.quantity = 'Must be a whole number ≥ 0.'
+    if (form.quantity === '' || !Number.isInteger(qty) || qty < 1) next.quantity = 'Must be a whole number ≥ 1.'
     setErrors(next)
     if (Object.keys(next).length) return
 
@@ -47,6 +54,7 @@ export default function InventoryFormModal({ open, onClose, initial, onSaved }) 
     try {
       const payload = {
         medicine_id: form.medicine_id,
+        batch_number: form.batch_number.trim(),
         quantity: qty,
         expiration_date: form.expiration_date || null,
         received_date: form.received_date || null,
@@ -73,7 +81,7 @@ export default function InventoryFormModal({ open, onClose, initial, onSaved }) 
       open={open}
       onClose={onClose}
       title={editing ? 'Edit inventory item' : 'Add stock'}
-      description="Stock for a medicine batch. Use stock movements for in/out/adjustment records."
+      description={editing ? 'Batch details only. Use a stock movement to change quantity.' : 'Receive a new batch; its opening balance is recorded as a stock receipt.'}
       footer={
         <>
           <Button variant="outline" onClick={onClose} disabled={saving}>
@@ -103,7 +111,10 @@ export default function InventoryFormModal({ open, onClose, initial, onSaved }) 
             </Select>
           </Field>
           <Field label="Quantity" htmlFor="inv-qty" required error={errors.quantity}>
-            <Input id="inv-qty" type="number" inputMode="numeric" min="0" value={form.quantity} onChange={(e) => set('quantity')(e.target.value)} invalid={Boolean(errors.quantity)} />
+            <Input id="inv-qty" type="number" inputMode="numeric" min="1" value={form.quantity} onChange={(e) => set('quantity')(e.target.value)} disabled={editing} invalid={Boolean(errors.quantity)} />
+          </Field>
+          <Field label="Batch number" htmlFor="inv-batch" required error={errors.batch_number}>
+            <Input id="inv-batch" value={form.batch_number} onChange={(e) => set('batch_number')(e.target.value)} disabled={editing} invalid={Boolean(errors.batch_number)} placeholder="e.g. LOT-2026-001" />
           </Field>
           <Field label="Expiration date" htmlFor="inv-exp">
             <Input id="inv-exp" type="date" value={form.expiration_date} onChange={(e) => set('expiration_date')(e.target.value)} />

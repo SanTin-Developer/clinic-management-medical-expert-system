@@ -29,6 +29,8 @@ const AssignmentListPage = lazy(() => import('../pages/AssignmentListPage.jsx'))
 const PrescriptionListPage = lazy(() => import('../pages/PrescriptionListPage.jsx'))
 const PrescriptionDetailPage = lazy(() => import('../pages/PrescriptionDetailPage.jsx'))
 const PharmacyPage = lazy(() => import('../pages/PharmacyPage.jsx'))
+const PharmacyDashboardPage = lazy(() => import('../pages/PharmacyDashboardPage.jsx'))
+const PharmacyPosPage = lazy(() => import('../pages/PharmacyPosPage.jsx'))
 const InvoiceListPage = lazy(() => import('../pages/InvoiceListPage.jsx'))
 const InvoiceDetailPage = lazy(() => import('../pages/InvoiceDetailPage.jsx'))
 const ReportsPage = lazy(() => import('../pages/ReportsPage.jsx'))
@@ -37,6 +39,12 @@ const StaffListPage = lazy(() => import('../pages/StaffListPage.jsx'))
 const StaffDetailPage = lazy(() => import('../pages/StaffDetailPage.jsx'))
 const StaffInvitationsPage = lazy(() => import('../pages/StaffInvitationsPage.jsx'))
 const PendingApprovalsPage = lazy(() => import('../pages/PendingApprovalsPage.jsx'))
+const AuditLogListPage = lazy(() => import('../pages/AuditLogListPage.jsx'))
+const AnnouncementListPage = lazy(() => import('../pages/AnnouncementListPage.jsx'))
+const LeaveListPage = lazy(() => import('../pages/LeaveListPage.jsx'))
+const QueueListPage = lazy(() => import('../pages/QueueListPage.jsx'))
+const AttendancePage = lazy(() => import('../pages/AttendancePage.jsx'))
+const SchedulingPage = lazy(() => import('../pages/SchedulingPage.jsx'))
 const SettingsPage = lazy(() => import('../pages/SettingsPage.jsx'))
 const ExpertSystemPage = lazy(() => import('../pages/ExpertSystemPage.jsx'))
 const ChatPage = lazy(() => import('../pages/ChatPage.jsx'))
@@ -180,8 +188,32 @@ export const router = createBrowserRouter([
       {
         path: 'pharmacy',
         element: withSuspense(
-          <Guard any={['medicines.view', 'inventory.view']}>
+          <Guard permission="medicines.view">
             <PharmacyPage />
+          </Guard>,
+        ),
+      },
+      {
+        path: 'pharmacy/dashboard',
+        element: withSuspense(
+          <Guard any={['medicines.view', 'inventory.view']}>
+            <PharmacyDashboardPage />
+          </Guard>,
+        ),
+      },
+      {
+        path: 'pharmacy/pos',
+        element: withSuspense(
+          <Guard any={['medicines.view', 'inventory.view']}>
+            <PharmacyPosPage />
+          </Guard>,
+        ),
+      },
+      {
+        path: 'inventory',
+        element: withSuspense(
+          <Guard permission="inventory.view">
+            <PharmacyPage initialTab="inventory" inventoryOnly />
           </Guard>,
         ),
       },
@@ -246,6 +278,54 @@ export const router = createBrowserRouter([
         element: withSuspense(
           <Guard permission="users.approve">
             <PendingApprovalsPage />
+          </Guard>,
+        ),
+      },
+      {
+        path: 'audit-logs',
+        element: withSuspense(
+          <Guard permission="audit-logs.view">
+            <AuditLogListPage />
+          </Guard>,
+        ),
+      },
+      {
+        path: 'announcements',
+        element: withSuspense(
+          <Guard permission="announcements.view">
+            <AnnouncementListPage />
+          </Guard>,
+        ),
+      },
+      {
+        path: 'leave',
+        element: withSuspense(
+          <Guard permission="leave.view">
+            <LeaveListPage />
+          </Guard>,
+        ),
+      },
+      {
+        path: 'queue',
+        element: withSuspense(
+          <Guard permission="queue.view">
+            <QueueListPage />
+          </Guard>,
+        ),
+      },
+      {
+        path: 'attendance',
+        element: withSuspense(
+          <Guard permission="attendance.view">
+            <AttendancePage />
+          </Guard>,
+        ),
+      },
+      {
+        path: 'scheduling',
+        element: withSuspense(
+          <Guard permission="scheduling.view">
+            <SchedulingPage />
           </Guard>,
         ),
       },

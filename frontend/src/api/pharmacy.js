@@ -22,3 +22,12 @@ export const stockMovementApi = {
   list: (params) => api.get('/stock-movements', { params }),
   create: (data) => withData(api.post('/stock-movements', data)),
 }
+
+export const pharmacyDashboardApi = {
+  get: () => withData(api.get('/pharmacy/dashboard')),
+}
+
+export const pharmacyPosApi = {
+  products: (params) => api.get('/pharmacy/pos/products', { params }),
+  checkout: (data) => withData(api.post('/pharmacy/pos/checkout', data)),
+}

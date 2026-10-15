@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Invoice;
 use App\Models\Patient;
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
@@ -118,5 +119,30 @@ class BillingTest extends TestCase
 
         $this->postJson("/api/v1/invoices/{$invoiceId}/cancel")
             ->assertStatus(422);
+    }
+
+    public function test_authorized_user_can_download_a_persisted_invoice_pdf_without_creating_records(): void
+    {
+        Sanctum::actingAs($this->userWithRole('Receptionist'));
+
+        $invoiceId = $this->createInvoice(Patient::factory()->create());
+
+        $invoice = Invoice::findOrFail($invoiceId);
+
+        $this->get("/api/v1/invoices/{$invoiceId}/pdf")
+            ->assertOk()
+            ->assertHeader('content-type', 'application/pdf')
+            ->assertHeader('content-disposition', "attachment; filename=RoyalCare-Invoice-{$invoice->invoice_number}.pdf");
+
+        $this->assertDatabaseCount('invoices', 1);
+        $this->assertDatabaseCount('payments', 0);
+    }
+
+    public function test_user_without_billing_permission_cannot_download_an_invoice_pdf(): void
+    {
+        $invoice = Invoice::factory()->create();
+        Sanctum::actingAs($this->userWithRole('Doctor'));
+
+        $this->get("/api/v1/invoices/{$invoice->id}/pdf")->assertForbidden();
     }
 }

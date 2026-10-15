@@ -21,15 +21,18 @@ class AuditLogTest extends TestCase
         app(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 
-    private function audit(): ExpertEvaluationAudit
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    private function audit(array $attributes = []): ExpertEvaluationAudit
     {
-        return ExpertEvaluationAudit::create([
+        return ExpertEvaluationAudit::create(array_merge([
             'symptom_ids' => '1,2,3',
             'matched_rule_count' => 2,
             'matched_rule_codes' => 'RULE-A,RULE-B',
             'engine_version' => '1.0.0',
             'is_clinically_validated' => false,
-        ]);
+        ], $attributes));
     }
 
     public function test_admin_can_list_audit_logs(): void
@@ -41,6 +44,47 @@ class AuditLogTest extends TestCase
             ->assertOk()
             ->assertJsonPath('total', 1)
             ->assertJsonPath('data.0.matched_rule_count', 2);
+    }
+
+    public function test_index_returns_audit_statistics(): void
+    {
+        $this->actingAsRole('Admin');
+        $this->audit();
+        $this->audit([
+            'engine_version' => '2.0.0',
+            'is_clinically_validated' => true,
+        ]);
+
+        $this->getJson('/api/v1/audit-logs')
+            ->assertOk()
+            ->assertJsonPath('stats.total', 2)
+            ->assertJsonPath('stats.last_24h', 2)
+            ->assertJsonPath('stats.validated', 1)
+            ->assertJsonCount(2, 'stats.engine_versions');
+    }
+
+    public function test_index_filters_by_validation_flag(): void
+    {
+        $this->actingAsRole('Admin');
+        $this->audit();
+        $this->audit(['is_clinically_validated' => true]);
+
+        $this->getJson('/api/v1/audit-logs?validated=1')
+            ->assertOk()
+            ->assertJsonPath('total', 1)
+            ->assertJsonPath('data.0.is_clinically_validated', true);
+    }
+
+    public function test_index_filters_by_engine_version(): void
+    {
+        $this->actingAsRole('Admin');
+        $this->audit(['engine_version' => '1.0.0']);
+        $this->audit(['engine_version' => '2.0.0']);
+
+        $this->getJson('/api/v1/audit-logs?engine_version=2.0.0')
+            ->assertOk()
+            ->assertJsonPath('total', 1)
+            ->assertJsonPath('data.0.engine_version', '2.0.0');
     }
 
     public function test_admin_can_view_a_single_audit_log(): void

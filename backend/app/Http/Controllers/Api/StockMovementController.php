@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Exceptions\Pharmacy\InsufficientStockException;
 use App\Http\Controllers\Controller;
 use App\Models\InventoryItem;
 use App\Models\StockMovement;
+use App\Services\Pharmacy\InventoryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -26,10 +28,37 @@ class StockMovementController extends Controller
             $query->where('type', $type);
         }
 
-        return response()->json($query->latest()->paginate(15));
+        if ($inventoryItemId = $request->query('inventory_item_id')) {
+            $query->where('inventory_item_id', $inventoryItemId);
+        }
+
+        if ($search = $request->query('search')) {
+            $query->where(function ($builder) use ($search) {
+                $builder->where('reference', 'ilike', "%{$search}%")
+                    ->orWhere('reason', 'ilike', "%{$search}%")
+                    ->orWhereHas('medicine', function ($medicineQuery) use ($search) {
+                        $medicineQuery->where('name', 'ilike', "%{$search}%")
+                            ->orWhere('code', 'ilike', "%{$search}%");
+                    })->orWhereHas('inventoryItem', function ($itemQuery) use ($search) {
+                        $itemQuery->where('batch_number', 'ilike', "%{$search}%");
+                    });
+            });
+        }
+
+        $statsQuery = clone $query;
+        $movements = $query->latest()->paginate($request->integer('per_page', 15));
+
+        return response()->json(array_merge($movements->toArray(), [
+            'stats' => [
+                'total' => $movements->total(),
+                'in' => (clone $statsQuery)->where('type', 'in')->count(),
+                'out' => (clone $statsQuery)->where('type', 'out')->count(),
+                'adjustment' => (clone $statsQuery)->where('type', 'adjustment')->count(),
+            ],
+        ]));
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(Request $request, InventoryService $inventory): JsonResponse
     {
         $this->authorize('create', StockMovement::class);
 
@@ -50,31 +79,20 @@ class StockMovementController extends Controller
             ], 422);
         }
 
-        if ($validated['type'] === 'out' && $item->quantity < $validated['quantity']) {
+        try {
+            $movement = DB::transaction(fn () => $inventory->applyMovement(
+                item: $item,
+                type: $validated['type'],
+                quantity: $validated['quantity'],
+                userId: $request->user()->id,
+                reason: $validated['reason'] ?? null,
+                reference: $validated['reference'] ?? null,
+            ));
+        } catch (InsufficientStockException $e) {
             return response()->json([
-                'message' => 'Insufficient stock for this stock-out movement.',
+                'message' => $e->getMessage(),
             ], 422);
         }
-
-        $movement = DB::transaction(function () use ($validated, $item, $request) {
-            match ($validated['type']) {
-                'in' => $item->quantity += $validated['quantity'],
-                'out' => $item->quantity -= $validated['quantity'],
-                'adjustment' => $item->quantity = $validated['quantity'],
-            };
-
-            $item->save();
-
-            return StockMovement::create([
-                'medicine_id' => $validated['medicine_id'],
-                'inventory_item_id' => $item->id,
-                'user_id' => $request->user()->id,
-                'type' => $validated['type'],
-                'quantity' => $validated['quantity'],
-                'reason' => $validated['reason'] ?? null,
-                'reference' => $validated['reference'] ?? null,
-            ]);
-        });
 
         return response()->json([
             'message' => 'Stock movement recorded successfully.',

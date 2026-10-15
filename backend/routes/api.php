@@ -1,9 +1,13 @@
 <?php
 
 use App\Http\Controllers\Api\AccountSecurityController;
+use App\Http\Controllers\Api\AdmissionController;
+use App\Http\Controllers\Api\AnnouncementController;
 use App\Http\Controllers\Api\AppointmentController;
+use App\Http\Controllers\Api\AttendanceRecordController;
 use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\BedController;
 use App\Http\Controllers\Api\ConsultationController;
 use App\Http\Controllers\Api\ConversationController;
 use App\Http\Controllers\Api\DashboardController;
@@ -16,14 +20,23 @@ use App\Http\Controllers\Api\ExpertSystemController;
 use App\Http\Controllers\Api\InventoryItemController;
 use App\Http\Controllers\Api\InvitationController;
 use App\Http\Controllers\Api\InvoiceController;
+use App\Http\Controllers\Api\LeaveRequestController;
 use App\Http\Controllers\Api\MedicalRecordController;
+use App\Http\Controllers\Api\MedicationAdministrationController;
 use App\Http\Controllers\Api\MedicineController;
 use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\NursingTaskController;
 use App\Http\Controllers\Api\PasswordResetController;
+use App\Http\Controllers\Api\PatientAssignmentController;
 use App\Http\Controllers\Api\PatientController;
+use App\Http\Controllers\Api\PharmacyDashboardController;
+use App\Http\Controllers\Api\PharmacyPosController;
 use App\Http\Controllers\Api\PrescriptionController;
+use App\Http\Controllers\Api\QueueEntryController;
 use App\Http\Controllers\Api\ReportController;
+use App\Http\Controllers\Api\RoomController;
 use App\Http\Controllers\Api\SearchController;
+use App\Http\Controllers\Api\ShiftController;
 use App\Http\Controllers\Api\StaffApprovalController;
 use App\Http\Controllers\Api\StaffController;
 use App\Http\Controllers\Api\StaffDocumentController;
@@ -35,12 +48,6 @@ use App\Http\Controllers\Api\TwoFactorController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\VitalSignController;
 use App\Http\Controllers\Api\WardController;
-use App\Http\Controllers\Api\RoomController;
-use App\Http\Controllers\Api\BedController;
-use App\Http\Controllers\Api\AdmissionController;
-use App\Http\Controllers\Api\PatientAssignmentController;
-use App\Http\Controllers\Api\NursingTaskController;
-use App\Http\Controllers\Api\MedicationAdministrationController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -210,6 +217,11 @@ Route::prefix('v1')->group(function () {
         Route::get('/stock-movements', [StockMovementController::class, 'index']);
         Route::post('/stock-movements', [StockMovementController::class, 'store']);
 
+        // Pharmacy dashboard (stock health, expiry risk, dispensing activity)
+        Route::get('/pharmacy/dashboard', PharmacyDashboardController::class);
+        Route::get('/pharmacy/pos/products', [PharmacyPosController::class, 'products']);
+        Route::post('/pharmacy/pos/checkout', [PharmacyPosController::class, 'store']);
+
         // Prescriptions
         Route::get('/prescriptions', [PrescriptionController::class, 'index']);
         Route::post('/prescriptions', [PrescriptionController::class, 'store']);
@@ -223,6 +235,7 @@ Route::prefix('v1')->group(function () {
         // Billing
         Route::get('/invoices', [InvoiceController::class, 'index']);
         Route::post('/invoices', [InvoiceController::class, 'store']);
+        Route::get('/invoices/{invoice}/pdf', [InvoiceController::class, 'pdf']);
         Route::get('/invoices/{invoice}', [InvoiceController::class, 'show']);
         Route::put('/invoices/{invoice}', [InvoiceController::class, 'update']);
         Route::patch('/invoices/{invoice}', [InvoiceController::class, 'update']);
@@ -252,6 +265,56 @@ Route::prefix('v1')->group(function () {
         // Expert system evaluation audit trail
         Route::get('/audit-logs', [AuditLogController::class, 'index']);
         Route::get('/audit-logs/{auditLog}', [AuditLogController::class, 'show']);
+
+        // Clinic announcements
+        Route::apiResource('announcements', AnnouncementController::class);
+        Route::post('/announcements/{announcement}/publish', [AnnouncementController::class, 'publish']);
+        Route::post('/announcements/{announcement}/unpublish', [AnnouncementController::class, 'unpublish']);
+
+        // Staff leave requests (self-service with manager approval)
+        Route::get('/leave-requests', [LeaveRequestController::class, 'index']);
+        Route::post('/leave-requests', [LeaveRequestController::class, 'store']);
+        Route::get('/leave-requests/{leaveRequest}', [LeaveRequestController::class, 'show']);
+        Route::put('/leave-requests/{leaveRequest}', [LeaveRequestController::class, 'update']);
+        Route::patch('/leave-requests/{leaveRequest}', [LeaveRequestController::class, 'update']);
+        Route::delete('/leave-requests/{leaveRequest}', [LeaveRequestController::class, 'destroy']);
+        Route::post('/leave-requests/{leaveRequest}/approve', [LeaveRequestController::class, 'approve']);
+        Route::post('/leave-requests/{leaveRequest}/reject', [LeaveRequestController::class, 'reject']);
+        Route::post('/leave-requests/{leaveRequest}/cancel', [LeaveRequestController::class, 'cancel']);
+
+        // Outpatient queue (appointment-linked waiting list)
+        Route::get('/queue-entries', [QueueEntryController::class, 'index']);
+        Route::get('/queue-entries/appointments', [QueueEntryController::class, 'appointments']);
+        Route::post('/queue-entries', [QueueEntryController::class, 'store']);
+        Route::get('/queue-entries/{queueEntry}', [QueueEntryController::class, 'show']);
+        Route::put('/queue-entries/{queueEntry}', [QueueEntryController::class, 'update']);
+        Route::patch('/queue-entries/{queueEntry}', [QueueEntryController::class, 'update']);
+        Route::delete('/queue-entries/{queueEntry}', [QueueEntryController::class, 'destroy']);
+        Route::post('/queue-entries/{queueEntry}/call', [QueueEntryController::class, 'call']);
+        Route::post('/queue-entries/{queueEntry}/start', [QueueEntryController::class, 'start']);
+        Route::post('/queue-entries/{queueEntry}/complete', [QueueEntryController::class, 'complete']);
+        Route::post('/queue-entries/{queueEntry}/skip', [QueueEntryController::class, 'skip']);
+        Route::post('/queue-entries/{queueEntry}/cancel', [QueueEntryController::class, 'cancel']);
+
+        // Staff attendance (self-service time clock)
+        Route::get('/attendance', [AttendanceRecordController::class, 'index']);
+        Route::post('/attendance', [AttendanceRecordController::class, 'store']);
+        Route::get('/attendance/today', [AttendanceRecordController::class, 'today']);
+        Route::post('/attendance/clock-in', [AttendanceRecordController::class, 'clockIn']);
+        Route::post('/attendance/clock-out', [AttendanceRecordController::class, 'clockOut']);
+        Route::get('/attendance/{attendanceRecord}', [AttendanceRecordController::class, 'show']);
+        Route::put('/attendance/{attendanceRecord}', [AttendanceRecordController::class, 'update']);
+        Route::patch('/attendance/{attendanceRecord}', [AttendanceRecordController::class, 'update']);
+        Route::post('/attendance/{attendanceRecord}/approve', [AttendanceRecordController::class, 'approve']);
+        Route::delete('/attendance/{attendanceRecord}', [AttendanceRecordController::class, 'destroy']);
+
+        // Staff scheduling (shift rosters)
+        Route::get('/shifts', [ShiftController::class, 'index']);
+        Route::post('/shifts', [ShiftController::class, 'store']);
+        Route::get('/shifts/{shift}', [ShiftController::class, 'show']);
+        Route::put('/shifts/{shift}', [ShiftController::class, 'update']);
+        Route::patch('/shifts/{shift}', [ShiftController::class, 'update']);
+        Route::delete('/shifts/{shift}', [ShiftController::class, 'destroy']);
 
         // Staff communication — direct & group conversations
         Route::get('/conversations/recipients', [ConversationController::class, 'recipients']);

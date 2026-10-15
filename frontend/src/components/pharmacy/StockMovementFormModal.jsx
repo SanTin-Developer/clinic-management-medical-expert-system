@@ -46,7 +46,8 @@ export default function StockMovementFormModal({ open, onClose, onSaved }) {
     if (!form.medicine_id) next.medicine_id = 'Select a medicine.'
     if (!form.inventory_item_id) next.inventory_item_id = 'Select the batch.'
     const qty = Number(form.quantity)
-    if (!Number.isInteger(qty) || qty < 1) next.quantity = 'Must be a whole number ≥ 1.'
+    const minimum = form.type === 'adjustment' ? 0 : 1
+    if (!Number.isInteger(qty) || qty < minimum) next.quantity = `Must be a whole number ≥ ${minimum}.`
     setErrors(next)
     if (Object.keys(next).length) return
 
@@ -143,7 +144,7 @@ export default function StockMovementFormModal({ open, onClose, onSaved }) {
             </Select>
           </Field>
           <Field label="Quantity" htmlFor="mv-qty" required error={errors.quantity}>
-            <Input id="mv-qty" type="number" inputMode="numeric" min="1" value={form.quantity} onChange={(e) => set('quantity')(e.target.value)} invalid={Boolean(errors.quantity)} />
+            <Input id="mv-qty" type="number" inputMode="numeric" min={form.type === 'adjustment' ? '0' : '1'} value={form.quantity} onChange={(e) => set('quantity')(e.target.value)} invalid={Boolean(errors.quantity)} />
           </Field>
           <Field label="Reference" htmlFor="mv-ref">
             <Input id="mv-ref" value={form.reference} onChange={(e) => set('reference')(e.target.value)} placeholder="e.g. PO-1001" />

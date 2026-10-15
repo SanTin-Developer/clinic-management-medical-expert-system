@@ -2,15 +2,14 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Exceptions\Pharmacy\InsufficientStockException;
 use App\Http\Controllers\Controller;
-use App\Models\InventoryItem;
 use App\Models\Prescription;
-use App\Models\StockMovement;
 use App\Services\Nursing\PatientAccessService;
+use App\Services\Pharmacy\InventoryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use RuntimeException;
 
 class PrescriptionController extends Controller
 {
@@ -166,7 +165,7 @@ class PrescriptionController extends Controller
         ]);
     }
 
-    public function dispense(Request $request, Prescription $prescription): JsonResponse
+    public function dispense(Request $request, Prescription $prescription, InventoryService $inventory): JsonResponse
     {
         $this->authorize('dispense', $prescription);
 
@@ -183,10 +182,12 @@ class PrescriptionController extends Controller
         }
 
         try {
-            DB::transaction(function () use ($prescription, $request) {
-                $this->allocateStock(
-                    $prescription->load('items.medicine'),
-                    $request->user()->id
+            DB::transaction(function () use ($prescription, $request, $inventory) {
+                $inventory->allocateForItems(
+                    $prescription->load('items.medicine')->items,
+                    $request->user()->id,
+                    'Prescription dispensed',
+                    $prescription->prescription_number,
                 );
 
                 $prescription->update([
@@ -195,7 +196,7 @@ class PrescriptionController extends Controller
                     'dispensed_by' => $request->user()->id,
                 ]);
             });
-        } catch (RuntimeException $e) {
+        } catch (InsufficientStockException $e) {
             return response()->json([
                 'message' => $e->getMessage(),
             ], 422);
@@ -216,54 +217,6 @@ class PrescriptionController extends Controller
         return response()->json([
             'message' => 'Prescription deleted successfully.',
         ]);
-    }
-
-    /**
-     * Deduct the prescribed quantities from available inventory batches (FIFO
-     * by expiry date) and record a stock-out movement for each batch used.
-     */
-    private function allocateStock(Prescription $prescription, int $userId): void
-    {
-        foreach ($prescription->items as $item) {
-            $remaining = $item->quantity;
-
-            $batches = InventoryItem::where('medicine_id', $item->medicine_id)
-                ->where('quantity', '>', 0)
-                ->orderByRaw('expiration_date is null')
-                ->orderBy('expiration_date')
-                ->orderBy('received_date')
-                ->lockForUpdate()
-                ->get();
-
-            if ($batches->sum('quantity') < $remaining) {
-                throw new RuntimeException(
-                    "Insufficient stock for {$item->medicine->name}."
-                );
-            }
-
-            foreach ($batches as $batch) {
-                if ($remaining <= 0) {
-                    break;
-                }
-
-                $take = min($batch->quantity, $remaining);
-
-                $batch->quantity -= $take;
-                $batch->save();
-
-                $remaining -= $take;
-
-                StockMovement::create([
-                    'medicine_id' => $item->medicine_id,
-                    'inventory_item_id' => $batch->id,
-                    'user_id' => $userId,
-                    'type' => 'out',
-                    'quantity' => $take,
-                    'reason' => 'Prescription dispensed',
-                    'reference' => $prescription->prescription_number,
-                ]);
-            }
-        }
     }
 
     private function generateNumber(): string

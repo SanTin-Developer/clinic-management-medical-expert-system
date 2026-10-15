@@ -23,6 +23,8 @@ class Medicine extends Model
         'price',
         'reorder_level',
         'is_active',
+        'requires_prescription',
+        'is_recalled',
     ];
 
     protected function casts(): array
@@ -31,6 +33,8 @@ class Medicine extends Model
             'price' => 'decimal:2',
             'reorder_level' => 'integer',
             'is_active' => 'boolean',
+            'requires_prescription' => 'boolean',
+            'is_recalled' => 'boolean',
         ];
     }
 

@@ -8,10 +8,12 @@ use App\Models\Invoice;
 use App\Models\Medicine;
 use App\Models\Patient;
 use App\Models\Payment;
+use App\Models\PharmacySale;
 use App\Models\Prescription;
 use App\Models\Staff;
 use App\Models\StaffDocument;
 use App\Models\User;
+use App\Policies\PharmacySalePolicy;
 use App\Policies\StaffDocumentPolicy;
 use App\Policies\StaffPolicy;
 use App\Services\Auth\TotpService;
@@ -87,6 +89,7 @@ class AppServiceProvider extends ServiceProvider
 
         Gate::policy(Staff::class, StaffPolicy::class);
         Gate::policy(StaffDocument::class, StaffDocumentPolicy::class);
+        Gate::policy(PharmacySale::class, PharmacySalePolicy::class);
 
         $this->registerDashboardCacheInvalidation();
 
