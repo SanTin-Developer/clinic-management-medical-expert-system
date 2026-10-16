@@ -29,6 +29,7 @@ use App\Services\Files\FileScanner;
 use App\Services\Files\NullFileScanner;
 use App\Services\Telegram\TelegramClient;
 use App\Services\Telegram\TelegramLinkService;
+use App\Services\Website\WebsiteMediaStorage;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -84,6 +85,27 @@ class AppServiceProvider extends ServiceProvider
             $disk = in_array($driver, ['local', 'public', 's3'], true) ? $driver : 'public';
 
             return new AnnouncementPosterStorage(new DiskDocumentStorage($disk), $disk);
+        });
+
+        $this->app->singleton(WebsiteMediaStorage::class, function (): WebsiteMediaStorage {
+            $driver = (string) config('documents.poster_disk', 'cloudinary');
+
+            if ($driver === 'cloudinary') {
+                $client = new CloudinaryClient((array) config('services.cloudinary', []));
+
+                if ($client->isConfigured()) {
+                    return new WebsiteMediaStorage(
+                        new CloudinaryStorage(
+                            $client,
+                            (string) config('services.cloudinary.folder', 'clinic-documents'),
+                        ),
+                    );
+                }
+            }
+
+            $disk = in_array($driver, ['local', 'public', 's3'], true) ? $driver : 'public';
+
+            return new WebsiteMediaStorage(new DiskDocumentStorage($disk), $disk);
         });
 
         $this->app->singleton(TelegramClient::class, function (): TelegramClient {

@@ -2,6 +2,11 @@
 
 React (Vite) SPA for the Clinic Management System and Medical Expert System.
 
+The public informational website was extracted into the standalone `../website`
+application. This app now contains the internal admin dashboard **and** the
+Admin-only Website Management CMS (`src/pages/website/`, `src/api/websiteAdmin.js`),
+which manages the content served by the public website.
+
 ## Stack
 
 - React 19 + Vite (JavaScript, JSX)

@@ -133,6 +133,22 @@ class RolePermissionSeeder extends Seeder
             'announcements.delete',
             'announcements.publish',
 
+            // Website CMS
+            'website.view',
+            'website.settings.view',
+            'website.settings.update',
+            'website.pages.view',
+            'website.pages.manage',
+            'website.pages.publish',
+            'website.services.manage',
+            'website.gallery.manage',
+            'website.team.manage',
+            'website.articles.view',
+            'website.articles.manage',
+            'website.articles.publish',
+            'website.media.manage',
+            'website.seo.manage',
+
             // Leave Management
             'leave.view',
             'leave.create',

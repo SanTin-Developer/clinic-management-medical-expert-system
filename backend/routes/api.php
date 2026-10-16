@@ -36,6 +36,13 @@ use App\Http\Controllers\Api\PatientController;
 use App\Http\Controllers\Api\PharmacyDashboardController;
 use App\Http\Controllers\Api\PharmacyPosController;
 use App\Http\Controllers\Api\PrescriptionController;
+use App\Http\Controllers\Api\PublicArticleController;
+use App\Http\Controllers\Api\PublicGalleryController;
+use App\Http\Controllers\Api\PublicMediaController;
+use App\Http\Controllers\Api\PublicPageController;
+use App\Http\Controllers\Api\PublicServiceController;
+use App\Http\Controllers\Api\PublicTeamController;
+use App\Http\Controllers\Api\PublicWebsiteController;
 use App\Http\Controllers\Api\QueueEntryController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\RoomController;
@@ -53,6 +60,14 @@ use App\Http\Controllers\Api\TwoFactorController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\VitalSignController;
 use App\Http\Controllers\Api\WardController;
+use App\Http\Controllers\Api\WebsiteArticleController;
+use App\Http\Controllers\Api\WebsiteDashboardController;
+use App\Http\Controllers\Api\WebsiteGalleryController;
+use App\Http\Controllers\Api\WebsiteMediaController;
+use App\Http\Controllers\Api\WebsitePageController;
+use App\Http\Controllers\Api\WebsiteServiceController;
+use App\Http\Controllers\Api\WebsiteSettingController;
+use App\Http\Controllers\Api\WebsiteTeamProfileController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -86,6 +101,20 @@ Route::prefix('v1')->group(function () {
     Route::get('/announcements/{announcement}/poster', [AnnouncementController::class, 'poster'])
         ->name('announcements.poster')
         ->middleware('throttle:api');
+
+    // Public informational website (unauthenticated; read-only, published content only)
+    Route::prefix('website')->middleware('throttle:api')->group(function () {
+        Route::get('/bootstrap', [PublicWebsiteController::class, 'bootstrap']);
+        Route::get('/home', [PublicWebsiteController::class, 'home']);
+        Route::get('/pages', [PublicPageController::class, 'index']);
+        Route::get('/pages/{page:slug}', [PublicPageController::class, 'show']);
+        Route::get('/services', [PublicServiceController::class, 'index']);
+        Route::get('/team', [PublicTeamController::class, 'index']);
+        Route::get('/gallery', [PublicGalleryController::class, 'index']);
+        Route::get('/articles', [PublicArticleController::class, 'index']);
+        Route::get('/articles/{article:slug}', [PublicArticleController::class, 'show']);
+        Route::get('/media/{mediaAsset}', [PublicMediaController::class, 'show'])->name('website.media.show');
+    });
 
     // Protected routes
     $protectedMiddleware = ['auth:sanctum', 'throttle:api', 'account.active', 'password.current'];
@@ -292,6 +321,31 @@ Route::prefix('v1')->group(function () {
         Route::post('/news/read-all', [NewsController::class, 'markAllRead']);
         Route::get('/news/{announcement}', [NewsController::class, 'show']);
         Route::post('/news/{announcement}/read', [NewsController::class, 'read']);
+
+        // Website management (CMS)
+        Route::prefix('website/admin')->group(function () {
+            Route::get('/dashboard', WebsiteDashboardController::class);
+
+            Route::get('/settings', [WebsiteSettingController::class, 'show']);
+            Route::match(['put', 'patch'], '/settings', [WebsiteSettingController::class, 'update']);
+
+            Route::apiResource('pages', WebsitePageController::class);
+            Route::post('/pages/{page}/publish', [WebsitePageController::class, 'publish']);
+            Route::post('/pages/{page}/unpublish', [WebsitePageController::class, 'unpublish']);
+
+            Route::apiResource('services', WebsiteServiceController::class);
+            Route::apiResource('team', WebsiteTeamProfileController::class)
+                ->parameters(['team' => 'teamProfile']);
+            Route::apiResource('gallery', WebsiteGalleryController::class)
+                ->parameters(['gallery' => 'galleryItem']);
+            Route::apiResource('articles', WebsiteArticleController::class);
+            Route::post('/articles/{article}/publish', [WebsiteArticleController::class, 'publish']);
+            Route::post('/articles/{article}/unpublish', [WebsiteArticleController::class, 'unpublish']);
+
+            Route::get('/media', [WebsiteMediaController::class, 'index']);
+            Route::post('/media', [WebsiteMediaController::class, 'store']);
+            Route::delete('/media/{mediaAsset}', [WebsiteMediaController::class, 'destroy']);
+        });
 
         // Staff leave requests (self-service with manager approval)
         Route::get('/leave-requests', [LeaveRequestController::class, 'index']);

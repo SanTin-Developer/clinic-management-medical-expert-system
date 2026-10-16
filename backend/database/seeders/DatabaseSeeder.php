@@ -12,6 +12,7 @@ class DatabaseSeeder extends Seeder
             RolePermissionSeeder::class,
             AdminUserSeeder::class,
             ShiftTemplateSeeder::class,
+            WebsiteContentSeeder::class,
         ]);
 
         if (app()->environment(['local', 'testing'])) {

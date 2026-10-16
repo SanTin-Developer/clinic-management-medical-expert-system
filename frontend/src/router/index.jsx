@@ -55,6 +55,15 @@ const ComingSoonPage = lazy(() => import('../pages/ComingSoonPage.jsx'))
 const NotFoundPage = lazy(() => import('../pages/NotFoundPage.jsx'))
 const ForbiddenPage = lazy(() => import('../pages/ForbiddenPage.jsx'))
 
+const WebsiteDashboardPage = lazy(() => import('../pages/website/WebsiteDashboardPage.jsx'))
+const WebsiteSettingsPage = lazy(() => import('../pages/website/WebsiteSettingsPage.jsx'))
+const WebsitePagesPage = lazy(() => import('../pages/website/WebsitePagesPage.jsx'))
+const WebsiteServicesPage = lazy(() => import('../pages/website/WebsiteServicesPage.jsx'))
+const WebsiteTeamPage = lazy(() => import('../pages/website/WebsiteTeamPage.jsx'))
+const WebsiteGalleryPage = lazy(() => import('../pages/website/WebsiteGalleryPage.jsx'))
+const WebsiteArticlesPage = lazy(() => import('../pages/website/WebsiteArticlesPage.jsx'))
+const WebsiteMediaPage = lazy(() => import('../pages/website/WebsiteMediaPage.jsx'))
+
 function withSuspense(element) {
   return (
     <Suspense
@@ -349,6 +358,70 @@ export const router = createBrowserRouter([
         ),
       },
       { path: 'settings', element: withSuspense(<SettingsPage />) },
+      {
+        path: 'website',
+        element: withSuspense(
+          <Guard permission="website.view">
+            <WebsiteDashboardPage />
+          </Guard>,
+        ),
+      },
+      {
+        path: 'website/settings',
+        element: withSuspense(
+          <Guard permission="website.settings.view">
+            <WebsiteSettingsPage />
+          </Guard>,
+        ),
+      },
+      {
+        path: 'website/pages',
+        element: withSuspense(
+          <Guard permission="website.pages.view">
+            <WebsitePagesPage />
+          </Guard>,
+        ),
+      },
+      {
+        path: 'website/services',
+        element: withSuspense(
+          <Guard permission="website.view">
+            <WebsiteServicesPage />
+          </Guard>,
+        ),
+      },
+      {
+        path: 'website/team',
+        element: withSuspense(
+          <Guard permission="website.view">
+            <WebsiteTeamPage />
+          </Guard>,
+        ),
+      },
+      {
+        path: 'website/gallery',
+        element: withSuspense(
+          <Guard permission="website.view">
+            <WebsiteGalleryPage />
+          </Guard>,
+        ),
+      },
+      {
+        path: 'website/articles',
+        element: withSuspense(
+          <Guard permission="website.articles.view">
+            <WebsiteArticlesPage />
+          </Guard>,
+        ),
+      },
+      {
+        path: 'website/media',
+        element: withSuspense(
+          <Guard permission="website.media.manage">
+            <WebsiteMediaPage />
+          </Guard>,
+        ),
+      },
       {
         path: 'chat',
         element: withSuspense(
