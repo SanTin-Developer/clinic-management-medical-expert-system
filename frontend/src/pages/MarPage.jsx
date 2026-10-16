@@ -9,6 +9,7 @@ import Badge from '../components/ui/Badge.jsx'
 import Tabs from '../components/ui/Tabs.jsx'
 import Dropdown, { DropdownItem } from '../components/ui/Dropdown.jsx'
 import ConfirmDialog from '../components/ui/ConfirmDialog.jsx'
+import RecordDetailModal from '../components/ui/RecordDetailModal.jsx'
 import Table, { THead, TBody, Tr, Th, Td } from '../components/ui/Table.jsx'
 import Pagination from '../components/ui/Pagination.jsx'
 import { RowSkeleton } from '../components/ui/Skeleton.jsx'
@@ -28,6 +29,7 @@ export default function MarPage() {
   const [formOpen, setFormOpen] = useState(false)
   const [administering, setAdministering] = useState(null)
   const [statusAction, setStatusAction] = useState(null)
+  const [viewing, setViewing] = useState(null)
 
   const canRecord = can('medications.record')
 
@@ -117,7 +119,7 @@ export default function MarPage() {
                   const routeMeta = statusBadgeFor(MEDICATION_ROUTES, record.route)
                   const actionable = record.status === 'scheduled'
                   return (
-                    <Tr key={record.id}>
+                    <Tr key={record.id} onClick={() => setViewing(record)}>
                       <Td className="font-medium text-ink">{patientFullName(record.patient)}</Td>
                       <Td>
                         <div className="text-ink">{record.medicine?.name ?? '—'}</div>
@@ -140,7 +142,7 @@ export default function MarPage() {
                         )}
                       </Td>
                       <Td><Badge tone={statusMeta.tone}>{statusMeta.label}</Badge></Td>
-                      <Td>
+                      <Td onClick={(e) => e.stopPropagation()}>
                         <div className="flex justify-end gap-2">
                           {actionable && canRecord ? (
                             <>
@@ -171,6 +173,28 @@ export default function MarPage() {
 
         <Pagination page={query.data?.current_page ?? 1} lastPage={query.data?.last_page ?? 1} total={query.data?.total} onChange={setPage} />
       </Card>
+
+      <RecordDetailModal
+        open={Boolean(viewing)}
+        onClose={() => setViewing(null)}
+        title={viewing?.medicine?.name ?? 'Medication record'}
+        subtitle={viewing ? patientFullName(viewing.patient) : undefined}
+        badges={viewing ? [statusBadgeFor(MEDICATION_STATUS, viewing.status), viewing.route ? statusBadgeFor(MEDICATION_ROUTES, viewing.route) : null] : []}
+        fields={
+          viewing
+            ? [
+                { label: 'Patient', value: patientFullName(viewing.patient) },
+                { label: 'Medicine', value: viewing.medicine?.name },
+                { label: 'Dose', value: viewing.dose },
+                { label: 'Route', value: viewing.route ? statusBadgeFor(MEDICATION_ROUTES, viewing.route).label : '—' },
+                { label: 'Scheduled', value: viewing.scheduled_at ? formatDateTime(viewing.scheduled_at) : '—' },
+                { label: 'Administered', value: viewing.administered_at ? formatDateTime(viewing.administered_at) : '—' },
+                { label: 'Administered by', value: viewing.administered_by?.name },
+                { label: 'Notes', value: viewing.notes },
+              ]
+            : []
+        }
+      />
 
       <MarFormModal open={formOpen} onClose={() => setFormOpen(false)} onSaved={() => query.refetch()} />
 

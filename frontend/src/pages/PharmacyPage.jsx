@@ -26,6 +26,7 @@ import Card from '../components/ui/Card.jsx'
 import Badge from '../components/ui/Badge.jsx'
 import StatCard from '../components/ui/StatCard.jsx'
 import ConfirmDialog from '../components/ui/ConfirmDialog.jsx'
+import RecordDetailModal from '../components/ui/RecordDetailModal.jsx'
 import Tabs from '../components/ui/Tabs.jsx'
 import Table, { THead, TBody, Tr, Th, Td } from '../components/ui/Table.jsx'
 import Pagination from '../components/ui/Pagination.jsx'
@@ -78,6 +79,7 @@ export default function PharmacyPage({ initialTab = 'medicines', inventoryOnly =
 
   const [form, setForm] = useState(null)
   const [deleting, setDeleting] = useState(null)
+  const [viewing, setViewing] = useState(null)
 
   const medicineRows = medicines.data?.data ?? []
   const inventoryRows = inventory.data?.data ?? []
@@ -326,7 +328,7 @@ export default function PharmacyPage({ initialTab = 'medicines', inventoryOnly =
               </THead>
               <TBody>
                 {medicineRows.map((m) => (
-                  <Tr key={m.id}>
+                  <Tr key={m.id} onClick={() => setViewing({ kind: 'medicine', row: m })}>
                     <Td className="font-mono text-xs text-ink-muted">{m.code}</Td>
                     <Td>
                       <p className="font-medium text-ink">{m.name}</p>
@@ -338,7 +340,7 @@ export default function PharmacyPage({ initialTab = 'medicines', inventoryOnly =
                     </Td>
                     <Td className="font-medium text-ink">{formatCurrency(m.price)}</Td>
                     <Td>{m.is_active ? <Badge tone="green">Active</Badge> : <Badge tone="gray">Inactive</Badge>}</Td>
-                    <Td>
+                    <Td onClick={(e) => e.stopPropagation()}>
                       <div className="flex justify-end gap-1">
                         {canManageMedicines ? (
                           <button
@@ -387,7 +389,7 @@ export default function PharmacyPage({ initialTab = 'medicines', inventoryOnly =
                 {inventoryRows.map((item) => {
                   const low = item.quantity <= (item.medicine?.reorder_level ?? 0)
                   return (
-                    <Tr key={item.id}>
+                    <Tr key={item.id} onClick={() => setViewing({ kind: 'inventory', row: item })}>
                       <Td className="font-medium text-ink">{item.medicine?.name ?? `Medicine #${item.medicine_id}`}</Td>
                       <Td className="font-mono text-xs text-ink-muted">{item.batch_number || '—'}</Td>
                       <Td>
@@ -396,7 +398,7 @@ export default function PharmacyPage({ initialTab = 'medicines', inventoryOnly =
                       <Td className="text-ink-muted">{formatDate(item.expiration_date)}</Td>
                       <Td className="text-ink-muted">{formatDate(item.received_date)}</Td>
                       <Td>{item.location ?? '—'}</Td>
-                      <Td>
+                      <Td onClick={(e) => e.stopPropagation()}>
                         <div className="flex justify-end gap-1">
                           {canManageInventory ? (
                             <button
@@ -446,7 +448,7 @@ export default function PharmacyPage({ initialTab = 'medicines', inventoryOnly =
               {movementRows.map((m) => {
                 const type = statusBadgeFor(STOCK_MOVEMENT_TYPE, m.type)
                 return (
-                  <Tr key={m.id}>
+                  <Tr key={m.id} onClick={() => setViewing({ kind: 'movement', row: m })}>
                     <Td className="font-medium text-ink">{m.medicine?.name ?? `Medicine #${m.medicine_id}`}</Td>
                     <Td className="font-mono text-xs text-ink-muted">{m.inventory_item?.batch_number ?? '—'}</Td>
                     <Td><Badge tone={type.tone}>{type.label}</Badge></Td>
@@ -485,6 +487,71 @@ export default function PharmacyPage({ initialTab = 'medicines', inventoryOnly =
       {form?.kind === 'movement' ? (
         <StockMovementFormModal open onClose={() => setForm(null)} onSaved={refresh} />
       ) : null}
+
+      <RecordDetailModal
+        open={Boolean(viewing)}
+        onClose={() => setViewing(null)}
+        title={
+          viewing?.kind === 'medicine'
+            ? viewing.row.name
+            : viewing?.kind === 'inventory'
+              ? viewing.row.medicine?.name ?? `Medicine #${viewing.row.medicine_id}`
+              : viewing?.kind === 'movement'
+                ? viewing.row.medicine?.name ?? `Medicine #${viewing.row.medicine_id}`
+                : ''
+        }
+        subtitle={
+          viewing?.kind === 'medicine'
+            ? viewing.row.generic_name
+            : viewing?.kind === 'inventory'
+              ? (viewing.row.batch_number ? `Batch ${viewing.row.batch_number}` : undefined)
+              : viewing?.kind === 'movement'
+                ? statusBadgeFor(STOCK_MOVEMENT_TYPE, viewing.row.type).label
+                : undefined
+        }
+        badges={
+          viewing?.kind === 'medicine'
+            ? [viewing.row.is_active ? { label: 'Active', tone: 'green' } : { label: 'Inactive', tone: 'gray' }]
+            : viewing?.kind === 'movement'
+              ? [statusBadgeFor(STOCK_MOVEMENT_TYPE, viewing.row.type)]
+              : []
+        }
+        fields={
+          viewing?.kind === 'medicine'
+            ? [
+                { label: 'Code', value: viewing.row.code },
+                { label: 'Name', value: viewing.row.name },
+                { label: 'Generic name', value: viewing.row.generic_name },
+                { label: 'Category', value: viewing.row.category },
+                { label: 'Strength', value: viewing.row.strength },
+                { label: 'Form', value: viewing.row.form },
+                { label: 'Price', value: formatCurrency(viewing.row.price) },
+                { label: 'Reorder level', value: viewing.row.reorder_level },
+                { label: 'Description', value: viewing.row.description },
+              ]
+            : viewing?.kind === 'inventory'
+              ? [
+                  { label: 'Medicine', value: viewing.row.medicine?.name ?? `Medicine #${viewing.row.medicine_id}` },
+                  { label: 'Batch number', value: viewing.row.batch_number },
+                  { label: 'Quantity', value: viewing.row.quantity },
+                  { label: 'Expiration date', value: viewing.row.expiration_date ? formatDate(viewing.row.expiration_date) : '—' },
+                  { label: 'Received date', value: viewing.row.received_date ? formatDate(viewing.row.received_date) : '—' },
+                  { label: 'Location', value: viewing.row.location },
+                ]
+              : viewing?.kind === 'movement'
+                ? [
+                    { label: 'Medicine', value: viewing.row.medicine?.name ?? `Medicine #${viewing.row.medicine_id}` },
+                    { label: 'Batch', value: viewing.row.inventory_item?.batch_number },
+                    { label: 'Type', value: statusBadgeFor(STOCK_MOVEMENT_TYPE, viewing.row.type).label },
+                    { label: 'Quantity', value: viewing.row.quantity },
+                    { label: 'Reference', value: viewing.row.reference },
+                    { label: 'Reason', value: viewing.row.reason },
+                    { label: 'Recorded by', value: viewing.row.user?.name },
+                    { label: 'When', value: viewing.row.created_at ? formatDate(viewing.row.created_at) : '—' },
+                  ]
+                : []
+        }
+      />
 
       <ConfirmDialog
         open={Boolean(deleting)}

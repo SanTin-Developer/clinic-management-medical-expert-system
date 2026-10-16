@@ -15,6 +15,8 @@ class SystemAnnouncementNotification extends Notification implements ShouldQueue
         public string $title,
         public string $body,
         public ?string $url = null,
+        public ?int $announcementId = null,
+        public string $priority = 'normal',
     ) {}
 
     /**
@@ -56,6 +58,8 @@ class SystemAnnouncementNotification extends Notification implements ShouldQueue
             'title' => $this->title,
             'body' => $this->body,
             'url' => $this->url,
+            'announcement_id' => $this->announcementId,
+            'priority' => $this->priority,
         ];
     }
 }

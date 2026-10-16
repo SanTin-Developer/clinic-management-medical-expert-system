@@ -45,6 +45,31 @@ export function formatDateTime(value) {
   return DATE_TIME_FORMAT.format(d)
 }
 
+const RELATIVE_FORMAT = new Intl.RelativeTimeFormat('en', { numeric: 'auto' })
+
+const RELATIVE_DIVISIONS = [
+  { amount: 60, unit: 'second' },
+  { amount: 60, unit: 'minute' },
+  { amount: 24, unit: 'hour' },
+  { amount: 7, unit: 'day' },
+  { amount: 4.34524, unit: 'week' },
+  { amount: 12, unit: 'month' },
+  { amount: Number.POSITIVE_INFINITY, unit: 'year' },
+]
+
+export function formatRelativeTime(value) {
+  const d = toDate(value)
+  if (!d) return '—'
+  let duration = (d.getTime() - Date.now()) / 1000
+  for (const division of RELATIVE_DIVISIONS) {
+    if (Math.abs(duration) < division.amount) {
+      return RELATIVE_FORMAT.format(Math.round(duration), division.unit)
+    }
+    duration /= division.amount
+  }
+  return '—'
+}
+
 export function formatTime(value) {
   if (!value) return '—'
   const parts = String(value).split(':').map(Number)

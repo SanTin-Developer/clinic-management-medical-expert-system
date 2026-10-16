@@ -17,6 +17,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Announcement Poster Disk
+    |--------------------------------------------------------------------------
+    |
+    | Storage driver for announcement poster/thumbnail images. Defaults to
+    | Cloudinary so posters are uploaded to and served from the CDN. When
+    | Cloudinary credentials are not configured the poster storage silently
+    | falls back to the public disk. Set to "public" or "local" to always keep
+    | posters on a local disk (useful for offline development and tests).
+    |
+    */
+
+    'poster_disk' => env('ANNOUNCEMENT_POSTER_DISK', 'cloudinary'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Upload Limits
     |--------------------------------------------------------------------------
     |

@@ -10,6 +10,7 @@ import Card from '../components/ui/Card.jsx'
 import Badge from '../components/ui/Badge.jsx'
 import StatCard from '../components/ui/StatCard.jsx'
 import ConfirmDialog from '../components/ui/ConfirmDialog.jsx'
+import RecordDetailModal from '../components/ui/RecordDetailModal.jsx'
 import Table, { THead, TBody, Tr, Th, Td } from '../components/ui/Table.jsx'
 import Pagination from '../components/ui/Pagination.jsx'
 import SearchInput from '../components/ui/SearchInput.jsx'
@@ -25,6 +26,7 @@ export default function StaffInvitationsPage() {
   const [inviteOpen, setInviteOpen] = useState(false)
   const [revoking, setRevoking] = useState(null)
   const [busyId, setBusyId] = useState(null)
+  const [viewing, setViewing] = useState(null)
 
   const query = usePaginated(['staffInvitations'], (params) => staffInvitationApi.list(params), { page })
   const all = query.data?.data ?? []
@@ -168,7 +170,7 @@ export default function StaffInvitationsPage() {
                 const canResend = status === 'pending' || status === 'expired'
                 const canRevoke = status === 'pending'
                 return (
-                  <Tr key={invitation.id}>
+                  <Tr key={invitation.id} onClick={() => setViewing(invitation)}>
                     <Td className="font-medium text-ink">{invitation.name}</Td>
                     <Td>
                       {invitation.staff ? (
@@ -191,7 +193,7 @@ export default function StaffInvitationsPage() {
                     </Td>
                     <Td className="text-ink-muted">{formatDateTime(invitation.expires_at)}</Td>
                     <Td className="text-ink-muted">{invitation.inviter?.name ?? '—'}</Td>
-                    <Td>
+                    <Td onClick={(e) => e.stopPropagation()}>
                       <div className="flex justify-end gap-1">
                         {canResend ? (
                           <button
@@ -234,6 +236,32 @@ export default function StaffInvitationsPage() {
           onChange={setPage}
         />
       </Card>
+
+      <RecordDetailModal
+        open={Boolean(viewing)}
+        onClose={() => setViewing(null)}
+        title={viewing?.name ?? 'Invitation'}
+        subtitle={viewing?.email}
+        badges={
+          viewing
+            ? [INVITATION_STATUS_META[invitationStatus(viewing)] ?? INVITATION_STATUS_META.pending]
+            : []
+        }
+        fields={
+          viewing
+            ? [
+                { label: 'Name', value: viewing.name },
+                { label: 'Email', value: viewing.email },
+                { label: 'Role', value: viewing.role },
+                { label: 'Target staff', value: viewing.staff ? `${viewing.staff.staff_number} · ${viewing.staff.first_name} ${viewing.staff.last_name}` : 'General' },
+                { label: 'Status', value: (INVITATION_STATUS_META[invitationStatus(viewing)] ?? INVITATION_STATUS_META.pending).label },
+                { label: 'Expires', value: viewing.expires_at ? formatDateTime(viewing.expires_at) : '—' },
+                { label: 'Invited by', value: viewing.inviter?.name },
+                { label: 'Invited', value: viewing.created_at ? formatDateTime(viewing.created_at) : '—' },
+              ]
+            : []
+        }
+      />
 
       <InviteStaffModal open={inviteOpen} onClose={() => setInviteOpen(false)} onSent={() => query.refetch()} />
 

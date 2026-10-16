@@ -25,6 +25,7 @@ import Input from '../components/ui/Input.jsx'
 import Field from '../components/ui/Field.jsx'
 import SearchInput from '../components/ui/SearchInput.jsx'
 import ConfirmDialog from '../components/ui/ConfirmDialog.jsx'
+import RecordDetailModal from '../components/ui/RecordDetailModal.jsx'
 import Table, { THead, TBody, Tr, Th, Td } from '../components/ui/Table.jsx'
 import Pagination from '../components/ui/Pagination.jsx'
 import { RowSkeleton } from '../components/ui/Skeleton.jsx'
@@ -58,6 +59,7 @@ export default function AttendancePage() {
   const [scanOpen, setScanOpen] = useState(false)
   const [sessionOpen, setSessionOpen] = useState(false)
   const [exporting, setExporting] = useState(false)
+  const [viewing, setViewing] = useState(null)
 
   const query = usePaginated(
     ['attendance', { search, status, from, to }],
@@ -272,7 +274,7 @@ export default function AttendancePage() {
                 {records.map((record) => {
                   const statusMeta = statusBadgeFor(ATTENDANCE_STATUS, record.status)
                   return (
-                    <Tr key={record.id}>
+                    <Tr key={record.id} onClick={() => setViewing(record)}>
                       <Td className="font-medium text-ink">{record.user?.name ?? '—'}</Td>
                       <Td className="whitespace-nowrap text-ink-muted">{formatDateTime(record.work_date)}</Td>
                       <Td className="whitespace-nowrap text-ink-muted">{record.clock_in ? formatDateTime(record.clock_in) : '—'}</Td>
@@ -284,7 +286,7 @@ export default function AttendancePage() {
                           {record.approved_at ? <Badge tone="green">Approved</Badge> : null}
                         </div>
                       </Td>
-                      <Td>
+                      <Td onClick={(e) => e.stopPropagation()}>
                         {canManage ? (
                           <div className="flex justify-end gap-1">
                             {!record.approved_at ? (
@@ -334,6 +336,34 @@ export default function AttendancePage() {
           onChange={setPage}
         />
       </Card>
+
+      <RecordDetailModal
+        open={Boolean(viewing)}
+        onClose={() => setViewing(null)}
+        title={viewing?.user?.name ?? 'Attendance record'}
+        subtitle={viewing ? formatDateTime(viewing.work_date) : undefined}
+        badges={
+          viewing
+            ? [
+                statusBadgeFor(ATTENDANCE_STATUS, viewing.status),
+                viewing.approved_at ? { label: 'Approved', tone: 'green' } : null,
+              ]
+            : []
+        }
+        fields={
+          viewing
+            ? [
+                { label: 'Staff', value: viewing.user?.name },
+                { label: 'Work date', value: viewing.work_date ? formatDateTime(viewing.work_date) : '—' },
+                { label: 'Clock in', value: viewing.clock_in ? formatDateTime(viewing.clock_in) : '—' },
+                { label: 'Clock out', value: viewing.clock_out ? formatDateTime(viewing.clock_out) : '—' },
+                { label: 'Hours worked', value: viewing.hours_worked != null ? viewing.hours_worked.toFixed(2) : '—' },
+                { label: 'Approved', value: viewing.approved_at ? formatDateTime(viewing.approved_at) : '—' },
+                { label: 'Notes', value: viewing.notes },
+              ]
+            : []
+        }
+      />
 
       <AttendanceFormModal
         open={formOpen}

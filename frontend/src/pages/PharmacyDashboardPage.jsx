@@ -1,3 +1,5 @@
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import {
   AlertTriangle,
@@ -12,6 +14,7 @@ import StatCard from '../components/ui/StatCard.jsx'
 import PageHeader from '../components/ui/PageHeader.jsx'
 import Card from '../components/ui/Card.jsx'
 import Badge from '../components/ui/Badge.jsx'
+import RecordDetailModal from '../components/ui/RecordDetailModal.jsx'
 import Table, { THead, TBody, Tr, Th, Td } from '../components/ui/Table.jsx'
 import { RowSkeleton } from '../components/ui/Skeleton.jsx'
 import { EmptyState } from '../components/ui/State.jsx'
@@ -20,6 +23,8 @@ import { formatCurrency, formatDate, formatDateTime, patientFullName } from '../
 import { statusBadgeFor, STOCK_MOVEMENT_TYPE } from '../utils/status.js'
 
 export default function PharmacyDashboardPage() {
+  const navigate = useNavigate()
+  const [viewing, setViewing] = useState(null)
   const query = useQuery({
     queryKey: ['pharmacy', 'dashboard'],
     queryFn: () => pharmacyDashboardApi.get(),
@@ -98,7 +103,7 @@ export default function PharmacyDashboardPage() {
               </THead>
               <TBody>
                 {lowStock.map((row) => (
-                  <Tr key={row.id}>
+                  <Tr key={row.id} onClick={() => setViewing({ kind: 'lowStock', row })}>
                     <Td>
                       <div className="font-medium text-ink">{row.name}</div>
                       <div className="text-xs text-ink-muted">{row.code}</div>
@@ -131,7 +136,7 @@ export default function PharmacyDashboardPage() {
               </THead>
               <TBody>
                 {expiringSoon.map((row) => (
-                  <Tr key={row.id}>
+                  <Tr key={row.id} onClick={() => setViewing({ kind: 'expiring', row })}>
                     <Td className="font-medium text-ink">{row.medicine ?? '—'}</Td>
                     <Td className="text-ink-muted">{row.batch_number ?? '—'}</Td>
                     <Td>{row.quantity}</Td>
@@ -165,7 +170,7 @@ export default function PharmacyDashboardPage() {
               {recentMovements.map((row) => {
                 const meta = statusBadgeFor(STOCK_MOVEMENT_TYPE, row.type)
                 return (
-                  <Tr key={row.id}>
+                  <Tr key={row.id} onClick={() => setViewing({ kind: 'movement', row })}>
                     <Td className="font-medium text-ink">{row.medicine?.name ?? '—'}</Td>
                     <Td><Badge tone={meta.tone}>{meta.label}</Badge></Td>
                     <Td>{row.quantity}</Td>
@@ -197,7 +202,7 @@ export default function PharmacyDashboardPage() {
             </THead>
             <TBody>
               {recentDispensed.map((row) => (
-                <Tr key={row.id}>
+                <Tr key={row.id} onClick={() => navigate(`/prescriptions/${row.id}`)}>
                   <Td className="font-medium text-ink">{row.prescription_number}</Td>
                   <Td>{patientFullName(row.patient)}</Td>
                   <Td className="text-ink-muted">{row.dispensed_by?.name ?? '—'}</Td>
@@ -208,6 +213,48 @@ export default function PharmacyDashboardPage() {
           </Table>
         )}
       </Card>
+
+      <RecordDetailModal
+        open={Boolean(viewing)}
+        onClose={() => setViewing(null)}
+        title={
+          viewing?.kind === 'lowStock'
+            ? viewing.row.name
+            : viewing?.kind === 'expiring'
+              ? viewing.row.medicine ?? 'Batch'
+              : viewing?.kind === 'movement'
+                ? viewing.row.medicine?.name ?? 'Stock movement'
+                : ''
+        }
+        subtitle={viewing?.kind === 'expiring' && viewing.row.batch_number ? `Batch ${viewing.row.batch_number}` : undefined}
+        badges={viewing?.kind === 'movement' ? [statusBadgeFor(STOCK_MOVEMENT_TYPE, viewing.row.type)] : []}
+        fields={
+          viewing?.kind === 'lowStock'
+            ? [
+                { label: 'Medicine', value: viewing.row.name },
+                { label: 'Code', value: viewing.row.code },
+                { label: 'Stock', value: viewing.row.stock },
+                { label: 'Reorder level', value: viewing.row.reorder_level },
+              ]
+            : viewing?.kind === 'expiring'
+              ? [
+                  { label: 'Medicine', value: viewing.row.medicine },
+                  { label: 'Batch', value: viewing.row.batch_number },
+                  { label: 'Quantity', value: viewing.row.quantity },
+                  { label: 'Expires', value: viewing.row.expiration_date ? formatDate(viewing.row.expiration_date) : '—' },
+                ]
+              : viewing?.kind === 'movement'
+                ? [
+                    { label: 'Medicine', value: viewing.row.medicine?.name },
+                    { label: 'Type', value: statusBadgeFor(STOCK_MOVEMENT_TYPE, viewing.row.type).label },
+                    { label: 'Quantity', value: viewing.row.quantity },
+                    { label: 'Reason', value: viewing.row.reason },
+                    { label: 'Recorded by', value: viewing.row.user?.name },
+                    { label: 'When', value: viewing.row.created_at ? formatDateTime(viewing.row.created_at) : '—' },
+                  ]
+                : []
+        }
+      />
     </div>
   )
 }

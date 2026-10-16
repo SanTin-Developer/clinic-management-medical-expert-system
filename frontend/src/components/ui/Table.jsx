@@ -38,12 +38,20 @@ export function Tr({ children, className, onClick }) {
   )
 }
 
-export function Th({ children, className }) {
-  return <th className={cn('px-4 py-3 font-semibold', className)}>{children}</th>
+export function Th({ children, className, ...props }) {
+  return (
+    <th className={cn('px-4 py-3 font-semibold', className)} {...props}>
+      {children}
+    </th>
+  )
 }
 
-export function Td({ children, className }) {
-  return <td className={cn('px-4 py-3 align-middle', className)}>{children}</td>
+export function Td({ children, className, ...props }) {
+  return (
+    <td className={cn('px-4 py-3 align-middle', className)} {...props}>
+      {children}
+    </td>
+  )
 }
 
 export default Table

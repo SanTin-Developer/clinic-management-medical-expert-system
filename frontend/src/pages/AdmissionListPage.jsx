@@ -7,6 +7,7 @@ import Button from '../components/ui/Button.jsx'
 import Card from '../components/ui/Card.jsx'
 import Badge from '../components/ui/Badge.jsx'
 import ConfirmDialog from '../components/ui/ConfirmDialog.jsx'
+import RecordDetailModal from '../components/ui/RecordDetailModal.jsx'
 import Tabs from '../components/ui/Tabs.jsx'
 import Table, { THead, TBody, Tr, Th, Td } from '../components/ui/Table.jsx'
 import Pagination from '../components/ui/Pagination.jsx'
@@ -25,6 +26,7 @@ export default function AdmissionListPage() {
   const [status, setStatus] = useState('all')
   const [formOpen, setFormOpen] = useState(false)
   const [action, setAction] = useState(null)
+  const [viewing, setViewing] = useState(null)
 
   const query = usePaginated(['admissions'], (params) => admissionApi.list(params), {
     page,
@@ -106,7 +108,7 @@ export default function AdmissionListPage() {
                 {admissions.map((a) => {
                   const meta = statusBadgeFor(ADMISSION_STATUS, a.status)
                   return (
-                    <Tr key={a.id}>
+                    <Tr key={a.id} onClick={() => setViewing(a)}>
                       <Td className="font-medium text-ink">{patientFullName(a.patient)}</Td>
                       <Td>
                         {a.ward?.name ?? '—'}
@@ -115,7 +117,7 @@ export default function AdmissionListPage() {
                       <Td>{a.attending_doctor?.name ?? '—'}</Td>
                       <Td className="text-ink-muted">{formatDateTime(a.admitted_at)}</Td>
                       <Td><Badge tone={meta.tone}>{meta.label}</Badge></Td>
-                      <Td>
+                      <Td onClick={(e) => e.stopPropagation()}>
                         <div className="flex justify-end gap-2">
                           {a.status === 'admitted' && can('admissions.discharge') ? (
                             <Button size="sm" variant="outline" onClick={() => setAction({ type: 'discharge', record: a })}>
@@ -141,6 +143,28 @@ export default function AdmissionListPage() {
       </Card>
 
       <AdmissionFormModal open={formOpen} onClose={() => setFormOpen(false)} onSaved={() => query.refetch()} />
+
+      <RecordDetailModal
+        open={Boolean(viewing)}
+        onClose={() => setViewing(null)}
+        title={viewing ? patientFullName(viewing.patient) : 'Admission'}
+        subtitle={viewing?.ward?.name ?? undefined}
+        badges={viewing ? [statusBadgeFor(ADMISSION_STATUS, viewing.status)] : []}
+        fields={
+          viewing
+            ? [
+                { label: 'Patient number', value: viewing.patient?.patient_number },
+                { label: 'Ward', value: viewing.ward?.name },
+                { label: 'Bed', value: viewing.bed?.label },
+                { label: 'Attending doctor', value: viewing.attending_doctor?.name },
+                { label: 'Admitted', value: viewing.admitted_at ? formatDateTime(viewing.admitted_at) : '—' },
+                { label: 'Discharged', value: viewing.discharged_at ? formatDateTime(viewing.discharged_at) : '—' },
+                { label: 'Reason', value: viewing.reason },
+                { label: 'Notes', value: viewing.notes },
+              ]
+            : []
+        }
+      />
 
       <ConfirmDialog
         open={Boolean(action)}

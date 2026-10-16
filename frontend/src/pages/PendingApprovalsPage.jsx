@@ -7,6 +7,7 @@ import Card from '../components/ui/Card.jsx'
 import Badge from '../components/ui/Badge.jsx'
 import StatCard from '../components/ui/StatCard.jsx'
 import Table, { THead, TBody, Tr, Th, Td } from '../components/ui/Table.jsx'
+import RecordDetailModal from '../components/ui/RecordDetailModal.jsx'
 import Pagination from '../components/ui/Pagination.jsx'
 import SearchInput from '../components/ui/SearchInput.jsx'
 import { RowSkeleton } from '../components/ui/Skeleton.jsx'
@@ -21,6 +22,7 @@ function roleName(role) {
 export default function PendingApprovalsPage() {
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
+  const [viewing, setViewing] = useState(null)
 
   const query = usePaginated(['staffApprovals'], (params) => staffApprovalApi.list(params), { page })
   const all = query.data?.data ?? []
@@ -101,7 +103,7 @@ export default function PendingApprovalsPage() {
             </THead>
             <TBody>
               {items.map((user) => (
-                <Tr key={user.id}>
+                <Tr key={user.id} onClick={() => setViewing(user)}>
                   <Td className="font-medium text-ink">
                     {user.name}
                     {user.username ? (
@@ -117,7 +119,7 @@ export default function PendingApprovalsPage() {
                     </div>
                   </Td>
                   <Td className="text-ink-muted">{formatDateTime(user.created_at)}</Td>
-                  <Td>
+                  <Td onClick={(e) => e.stopPropagation()}>
                     <StaffApprovalActions user={user} onChanged={() => query.refetch()} />
                   </Td>
                 </Tr>
@@ -133,6 +135,25 @@ export default function PendingApprovalsPage() {
           onChange={setPage}
         />
       </Card>
+
+      <RecordDetailModal
+        open={Boolean(viewing)}
+        onClose={() => setViewing(null)}
+        title={viewing?.name ?? 'Pending account'}
+        subtitle={viewing?.email}
+        badges={viewing ? [{ label: 'Pending approval', tone: 'amber' }] : []}
+        fields={
+          viewing
+            ? [
+                { label: 'Name', value: viewing.name },
+                { label: 'Username', value: viewing.username },
+                { label: 'Email', value: viewing.email },
+                { label: 'Roles', value: (viewing.roles ?? []).map(roleName).join(', ') || '—' },
+                { label: 'Submitted', value: viewing.created_at ? formatDateTime(viewing.created_at) : '—' },
+              ]
+            : []
+        }
+      />
 
       <div className="mt-4 flex items-start gap-2 rounded-lg bg-canvas px-3 py-2 text-xs text-ink-muted">
         <ShieldCheck className="mt-0.5 size-4 shrink-0" aria-hidden />

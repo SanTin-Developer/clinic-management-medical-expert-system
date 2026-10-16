@@ -22,6 +22,7 @@ import Input from '../components/ui/Input.jsx'
 import Field from '../components/ui/Field.jsx'
 import SearchInput from '../components/ui/SearchInput.jsx'
 import ConfirmDialog from '../components/ui/ConfirmDialog.jsx'
+import RecordDetailModal from '../components/ui/RecordDetailModal.jsx'
 import Table, { THead, TBody, Tr, Th, Td } from '../components/ui/Table.jsx'
 import Pagination from '../components/ui/Pagination.jsx'
 import { RowSkeleton } from '../components/ui/Skeleton.jsx'
@@ -61,6 +62,7 @@ export default function SchedulingPage() {
   const [templatesOpen, setTemplatesOpen] = useState(false)
   const [boardOpen, setBoardOpen] = useState(false)
   const [publishing, setPublishing] = useState(false)
+  const [viewing, setViewing] = useState(null)
 
   const query = usePaginated(
     ['shifts', { search, type, status, from, to }],
@@ -223,7 +225,7 @@ export default function SchedulingPage() {
                   const typeMeta = statusBadgeFor(SHIFT_TYPES, shift.type)
                   const statusMeta = statusBadgeFor(SHIFT_STATUS, shift.status)
                   return (
-                    <Tr key={shift.id}>
+                    <Tr key={shift.id} onClick={() => setViewing(shift)}>
                       <Td className="font-medium text-ink">{shift.user?.name ?? '—'}</Td>
                       <Td className="whitespace-nowrap text-ink-muted">{formatDate(shift.shift_date)}</Td>
                       <Td className="whitespace-nowrap text-ink-muted">
@@ -236,7 +238,7 @@ export default function SchedulingPage() {
                           {!shift.published_at ? <Badge tone="amber">Draft</Badge> : null}
                         </div>
                       </Td>
-                      <Td>
+                      <Td onClick={(e) => e.stopPropagation()}>
                         {canManage ? (
                           <div className="flex justify-end gap-1">
                             {!shift.published_at ? (
@@ -286,6 +288,34 @@ export default function SchedulingPage() {
           onChange={setPage}
         />
       </Card>
+
+      <RecordDetailModal
+        open={Boolean(viewing)}
+        onClose={() => setViewing(null)}
+        title={viewing?.user?.name ?? 'Shift'}
+        subtitle={viewing ? `${formatDate(viewing.shift_date)} · ${formatTime(viewing.start_time)} – ${formatTime(viewing.end_time)}` : undefined}
+        badges={
+          viewing
+            ? [
+                statusBadgeFor(SHIFT_TYPES, viewing.type),
+                statusBadgeFor(SHIFT_STATUS, viewing.status),
+                viewing.published_at ? null : { label: 'Draft', tone: 'amber' },
+              ]
+            : []
+        }
+        fields={
+          viewing
+            ? [
+                { label: 'Staff', value: viewing.user?.name },
+                { label: 'Date', value: formatDate(viewing.shift_date) },
+                { label: 'Time', value: `${formatTime(viewing.start_time)} – ${formatTime(viewing.end_time)}` },
+                { label: 'Type', value: statusBadgeFor(SHIFT_TYPES, viewing.type).label },
+                { label: 'Published', value: viewing.published_at ? formatDate(viewing.published_at) : '—' },
+                { label: 'Notes', value: viewing.notes },
+              ]
+            : []
+        }
+      />
 
       <ShiftFormModal
         open={formOpen}

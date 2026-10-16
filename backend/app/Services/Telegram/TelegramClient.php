@@ -33,6 +33,37 @@ class TelegramClient
     }
 
     /**
+     * Send a photo by public URL or by uploading local bytes.
+     *
+     * Telegram rejects captions longer than 1024 characters, so callers should
+     * keep captions short. When `$photo` is a stream or file path the image is
+     * uploaded as multipart data, which works even when the server is not
+     * reachable from the internet.
+     *
+     * @param  resource|string  $photo  A public URL, a file path, or a stream resource.
+     * @param  array<string, mixed>  $options
+     * @return array<string, mixed>
+     */
+    public function sendPhoto(int|string $chatId, mixed $photo, string $caption = '', ?string $filename = null, array $options = []): array
+    {
+        $payload = array_merge([
+            'chat_id' => $chatId,
+            'caption' => $caption,
+            'parse_mode' => 'HTML',
+        ], $options);
+
+        if (is_string($photo) && preg_match('#^https?://#i', $photo) === 1) {
+            return $this->call('sendPhoto', array_merge($payload, ['photo' => $photo]));
+        }
+
+        return $this->call('sendPhoto', $payload, null, [
+            'name' => 'photo',
+            'contents' => $photo,
+            'filename' => $filename,
+        ]);
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function getMe(): array
@@ -88,9 +119,10 @@ class TelegramClient
 
     /**
      * @param  array<string, mixed>  $payload
+     * @param  array{name: string, contents: mixed, filename: string|null}|null  $file
      * @return array<string, mixed>
      */
-    private function call(string $method, array $payload = [], ?int $timeout = null): array
+    private function call(string $method, array $payload = [], ?int $timeout = null, ?array $file = null): array
     {
         $token = $this->config['bot_token'] ?? null;
 
@@ -98,10 +130,16 @@ class TelegramClient
             throw new RuntimeException('Telegram bot token is not configured.');
         }
 
-        $response = Http::timeout($timeout ?? (int) ($this->config['timeout'] ?? 10))
-            ->baseUrl(rtrim((string) ($this->config['api_base_url'] ?? 'https://api.telegram.org'), '/'))
-            ->asJson()
-            ->post('/bot'.$token.'/'.$method, $payload);
+        $request = Http::timeout($timeout ?? (int) ($this->config['timeout'] ?? 10))
+            ->baseUrl(rtrim((string) ($this->config['api_base_url'] ?? 'https://api.telegram.org'), '/'));
+
+        if ($file !== null) {
+            $request = $request->attach($file['name'], $file['contents'], $file['filename']);
+        } else {
+            $request = $request->asJson();
+        }
+
+        $response = $request->post('/bot'.$token.'/'.$method, $payload);
 
         if ($response->failed()) {
             throw new RuntimeException(

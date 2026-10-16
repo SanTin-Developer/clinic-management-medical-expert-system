@@ -348,7 +348,7 @@ export default function StaffListPage() {
                 const hasLogin = Boolean(s.user_id && s.user)
 
                 return (
-                  <Tr key={s.id}>
+                  <Tr key={s.id} onClick={() => navigate(`/staff/${s.id}`)}>
                     <Td className="font-mono text-xs font-semibold text-brand">
                       {s.staff_number}
                     </Td>
@@ -387,7 +387,7 @@ export default function StaffListPage() {
                       )}
                     </Td>
                     <Td className="text-ink-muted">{formatDate(s.hire_date)}</Td>
-                    <Td>
+                    <Td onClick={(e) => e.stopPropagation()}>
                       <div className="flex justify-end gap-1">
                         <button
                           type="button"

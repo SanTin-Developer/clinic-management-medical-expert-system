@@ -11,6 +11,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Throwable;
 
@@ -34,6 +35,9 @@ class SendTelegramMessage implements ShouldQueue
         public ?string $idempotencyKey = null,
         public ?int $conversationId = null,
         public ?int $conversationMessageId = null,
+        public ?string $photoDisk = null,
+        public ?string $photoPath = null,
+        public ?string $photoUrl = null,
     ) {}
 
     public function handle(TelegramClient $client): void
@@ -49,7 +53,7 @@ class SendTelegramMessage implements ShouldQueue
         }
 
         try {
-            $result = $client->sendMessage($this->chatId, $this->text);
+            $result = $this->deliver($client);
 
             $log->update([
                 'status' => TelegramDeliveryLog::STATUS_SENT,
@@ -109,6 +113,50 @@ class SendTelegramMessage implements ShouldQueue
             $this->conversationId,
             $this->conversationMessageId,
         ));
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function deliver(TelegramClient $client): array
+    {
+        if ($this->photoUrl !== null) {
+            return $client->sendPhoto(
+                $this->chatId,
+                $this->photoUrl,
+                Str::limit($this->text, 1024, ''),
+                basename((string) parse_url($this->photoUrl, PHP_URL_PATH)),
+            );
+        }
+
+        if ($this->photoPath === null) {
+            return $client->sendMessage($this->chatId, $this->text);
+        }
+
+        $disk = Storage::disk($this->photoDisk ?? 'public');
+
+        if (! $disk->exists($this->photoPath)) {
+            return $client->sendMessage($this->chatId, $this->text);
+        }
+
+        $stream = $disk->readStream($this->photoPath);
+
+        if ($stream === null) {
+            return $client->sendMessage($this->chatId, $this->text);
+        }
+
+        try {
+            return $client->sendPhoto(
+                $this->chatId,
+                $stream,
+                Str::limit($this->text, 1024, ''),
+                basename($this->photoPath),
+            );
+        } finally {
+            if (is_resource($stream)) {
+                fclose($stream);
+            }
+        }
     }
 
     private function resolveLog(): TelegramDeliveryLog

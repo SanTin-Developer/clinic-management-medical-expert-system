@@ -279,6 +279,32 @@ export const ANNOUNCEMENT_AUDIENCE_OPTIONS = Object.entries(
   ANNOUNCEMENT_AUDIENCE,
 ).map(([value, m]) => ({ value, label: m.label }))
 
+export const ANNOUNCEMENT_CATEGORY = {
+  general: meta('General', 'gray'),
+  hr: meta('HR', 'brand'),
+  maintenance: meta('Maintenance', 'amber'),
+  event: meta('Event', 'blue'),
+  health: meta('Health', 'green'),
+  policy: meta('Policy', 'navy'),
+  other: meta('Other', 'gray'),
+}
+
+export const ANNOUNCEMENT_CATEGORY_OPTIONS = Object.entries(
+  ANNOUNCEMENT_CATEGORY,
+).map(([value, m]) => ({ value, label: m.label }))
+
+export const ANNOUNCEMENT_STATUS = {
+  published: meta('Published', 'green'),
+  draft: meta('Draft', 'gray'),
+  scheduled: meta('Scheduled', 'amber'),
+  expired: meta('Expired', 'navy'),
+  archived: meta('Archived', 'gray'),
+}
+
+export const ANNOUNCEMENT_STATUS_OPTIONS = Object.entries(ANNOUNCEMENT_STATUS).map(
+  ([value, m]) => ({ value, label: m.label }),
+)
+
 export const LEAVE_TYPES = {
   annual: meta('Annual', 'brand'),
   sick: meta('Sick', 'red'),

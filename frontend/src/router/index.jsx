@@ -41,6 +41,7 @@ const StaffInvitationsPage = lazy(() => import('../pages/StaffInvitationsPage.js
 const PendingApprovalsPage = lazy(() => import('../pages/PendingApprovalsPage.jsx'))
 const AuditLogListPage = lazy(() => import('../pages/AuditLogListPage.jsx'))
 const AnnouncementListPage = lazy(() => import('../pages/AnnouncementListPage.jsx'))
+const NewsPage = lazy(() => import('../pages/NewsPage.jsx'))
 const LeaveListPage = lazy(() => import('../pages/LeaveListPage.jsx'))
 const QueueListPage = lazy(() => import('../pages/QueueListPage.jsx'))
 const AttendancePage = lazy(() => import('../pages/AttendancePage.jsx'))
@@ -294,8 +295,16 @@ export const router = createBrowserRouter([
       {
         path: 'announcements',
         element: withSuspense(
-          <Guard permission="announcements.view">
+          <Guard any={['announcements.create', 'announcements.update', 'announcements.publish']}>
             <AnnouncementListPage />
+          </Guard>,
+        ),
+      },
+      {
+        path: 'news',
+        element: withSuspense(
+          <Guard permission="announcements.view">
+            <NewsPage />
           </Guard>,
         ),
       },

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AccountSecurityController;
+use App\Http\Controllers\Api\ActivityLogController;
 use App\Http\Controllers\Api\AdmissionController;
 use App\Http\Controllers\Api\AnnouncementController;
 use App\Http\Controllers\Api\AppointmentController;
@@ -26,6 +27,7 @@ use App\Http\Controllers\Api\LeaveRequestController;
 use App\Http\Controllers\Api\MedicalRecordController;
 use App\Http\Controllers\Api\MedicationAdministrationController;
 use App\Http\Controllers\Api\MedicineController;
+use App\Http\Controllers\Api\NewsController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\NursingTaskController;
 use App\Http\Controllers\Api\PasswordResetController;
@@ -79,6 +81,11 @@ Route::prefix('v1')->group(function () {
 
     // Telegram webhook (public; authenticated via the X-Telegram-Bot-Api-Secret-Token header)
     Route::post('/telegram/webhook', [TelegramController::class, 'webhook'])->middleware('throttle:telegram-webhook');
+
+    // Public announcement poster image (served from private storage; 404 when absent)
+    Route::get('/announcements/{announcement}/poster', [AnnouncementController::class, 'poster'])
+        ->name('announcements.poster')
+        ->middleware('throttle:api');
 
     // Protected routes
     $protectedMiddleware = ['auth:sanctum', 'throttle:api', 'account.active', 'password.current'];
@@ -265,14 +272,26 @@ Route::prefix('v1')->group(function () {
                 ->parameters(['expert-rules' => 'expertRule']);
         });
 
-        // Expert system evaluation audit trail
-        Route::get('/audit-logs', [AuditLogController::class, 'index']);
-        Route::get('/audit-logs/{auditLog}', [AuditLogController::class, 'show']);
+        // General user activity audit trail (sidebar Audit Logs page)
+        Route::get('/audit-logs', [ActivityLogController::class, 'index']);
+        Route::get('/audit-logs/{activityLog}', [ActivityLogController::class, 'show']);
 
-        // Clinic announcements
+        // Clinic announcements (management)
         Route::apiResource('announcements', AnnouncementController::class);
         Route::post('/announcements/{announcement}/publish', [AnnouncementController::class, 'publish']);
         Route::post('/announcements/{announcement}/unpublish', [AnnouncementController::class, 'unpublish']);
+        Route::post('/announcements/{announcement}/schedule', [AnnouncementController::class, 'schedule']);
+        Route::post('/announcements/{announcement}/archive', [AnnouncementController::class, 'archive']);
+        Route::post('/announcements/{announcement}/restore', [AnnouncementController::class, 'restore']);
+        Route::get('/announcements/{announcement}/readership', [AnnouncementController::class, 'readership']);
+        Route::get('/announcements/{announcement}/audit', [AnnouncementController::class, 'audit']);
+
+        // News & Updates (reader-facing, audience-filtered)
+        Route::get('/news', [NewsController::class, 'index']);
+        Route::get('/news/unread-count', [NewsController::class, 'unreadCount']);
+        Route::post('/news/read-all', [NewsController::class, 'markAllRead']);
+        Route::get('/news/{announcement}', [NewsController::class, 'show']);
+        Route::post('/news/{announcement}/read', [NewsController::class, 'read']);
 
         // Staff leave requests (self-service with manager approval)
         Route::get('/leave-requests', [LeaveRequestController::class, 'index']);
@@ -404,5 +423,9 @@ Route::prefix('v1')->group(function () {
 
         // Medical Expert System (proxied to the internal Python service)
         Route::post('/expert-system/evaluate', [ExpertSystemController::class, 'evaluate']);
+
+        // Expert system evaluation audit trail (Expert page "Audit History" tab)
+        Route::get('/expert-system/audit-logs', [AuditLogController::class, 'index']);
+        Route::get('/expert-system/audit-logs/{auditLog}', [AuditLogController::class, 'show']);
     });
 });

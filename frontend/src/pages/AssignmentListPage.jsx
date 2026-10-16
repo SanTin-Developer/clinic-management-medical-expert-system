@@ -10,6 +10,7 @@ import Field from '../components/ui/Field.jsx'
 import Input from '../components/ui/Input.jsx'
 import Select from '../components/ui/Select.jsx'
 import ConfirmDialog from '../components/ui/ConfirmDialog.jsx'
+import RecordDetailModal from '../components/ui/RecordDetailModal.jsx'
 import Table, { THead, TBody, Tr, Th, Td } from '../components/ui/Table.jsx'
 import Pagination from '../components/ui/Pagination.jsx'
 import { RowSkeleton } from '../components/ui/Skeleton.jsx'
@@ -42,6 +43,7 @@ export default function AssignmentListPage() {
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState(null)
   const [ending, setEnding] = useState(null)
+  const [viewing, setViewing] = useState(null)
 
   const canManage = can('assignments.manage')
 
@@ -140,7 +142,7 @@ export default function AssignmentListPage() {
                 {assignments.map((a) => {
                   const meta = statusBadgeFor(ASSIGNMENT_STATUS, a.status)
                   return (
-                    <Tr key={a.id}>
+                    <Tr key={a.id} onClick={() => setViewing(a)}>
                       <Td className="font-medium text-ink">{a.nurse?.name ?? '—'}</Td>
                       <Td>
                         {a.patient ? (
@@ -157,7 +159,7 @@ export default function AssignmentListPage() {
                       </Td>
                       <Td className="text-ink-muted">{a.ends_at ? formatDateTime(a.ends_at) : '—'}</Td>
                       <Td><Badge tone={meta.tone}>{meta.label}</Badge></Td>
-                      <Td>
+                      <Td onClick={(e) => e.stopPropagation()}>
                         <div className="flex justify-end gap-2">
                           {a.status === 'active' && canManage ? (
                             <>
@@ -189,6 +191,33 @@ export default function AssignmentListPage() {
         assignment={editing}
         onClose={() => setEditing(null)}
         onSaved={() => query.refetch()}
+      />
+
+      <RecordDetailModal
+        open={Boolean(viewing)}
+        onClose={() => setViewing(null)}
+        title={viewing?.nurse?.name ?? 'Assignment'}
+        subtitle={
+          viewing?.patient
+            ? `Patient · ${patientFullName(viewing.patient)}`
+            : viewing?.ward
+              ? `Ward · ${viewing.ward.name}`
+              : undefined
+        }
+        badges={viewing ? [statusBadgeFor(ASSIGNMENT_STATUS, viewing.status)] : []}
+        fields={
+          viewing
+            ? [
+                { label: 'Nurse', value: viewing.nurse?.name },
+                { label: 'Patient', value: viewing.patient ? patientFullName(viewing.patient) : '—' },
+                { label: 'Ward', value: viewing.ward?.name },
+                { label: 'Shift', value: viewing.shift },
+                { label: 'Starts', value: viewing.starts_at ? formatDateTime(viewing.starts_at) : '—' },
+                { label: 'Ends', value: viewing.ends_at ? formatDateTime(viewing.ends_at) : '—' },
+                { label: 'Notes', value: viewing.notes },
+              ]
+            : []
+        }
       />
 
       <ConfirmDialog

@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Listeners\ActivityEventSubscriber;
 use App\Models\Appointment;
 use App\Models\InventoryItem;
 use App\Models\Invoice;
@@ -16,6 +17,7 @@ use App\Models\User;
 use App\Policies\PharmacySalePolicy;
 use App\Policies\StaffDocumentPolicy;
 use App\Policies\StaffPolicy;
+use App\Services\Announcements\AnnouncementPosterStorage;
 use App\Services\Auth\TotpService;
 use App\Services\Dashboard\DashboardMetricsService;
 use App\Services\Files\ClamAvFileScanner;
@@ -30,6 +32,7 @@ use App\Services\Telegram\TelegramLinkService;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
@@ -62,6 +65,27 @@ class AppServiceProvider extends ServiceProvider
             return new DiskDocumentStorage($driver);
         });
 
+        $this->app->singleton(AnnouncementPosterStorage::class, function (): AnnouncementPosterStorage {
+            $driver = (string) config('documents.poster_disk', 'cloudinary');
+
+            if ($driver === 'cloudinary') {
+                $client = new CloudinaryClient((array) config('services.cloudinary', []));
+
+                if ($client->isConfigured()) {
+                    return new AnnouncementPosterStorage(
+                        new CloudinaryStorage(
+                            $client,
+                            (string) config('services.cloudinary.folder', 'clinic-documents'),
+                        ),
+                    );
+                }
+            }
+
+            $disk = in_array($driver, ['local', 'public', 's3'], true) ? $driver : 'public';
+
+            return new AnnouncementPosterStorage(new DiskDocumentStorage($disk), $disk);
+        });
+
         $this->app->singleton(TelegramClient::class, function (): TelegramClient {
             return new TelegramClient((array) config('communication.telegram', []));
         });
@@ -90,6 +114,9 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Staff::class, StaffPolicy::class);
         Gate::policy(StaffDocument::class, StaffDocumentPolicy::class);
         Gate::policy(PharmacySale::class, PharmacySalePolicy::class);
+
+        // Record create/update/delete activity for authenticated users.
+        Event::subscribe(ActivityEventSubscriber::class);
 
         $this->registerDashboardCacheInvalidation();
 

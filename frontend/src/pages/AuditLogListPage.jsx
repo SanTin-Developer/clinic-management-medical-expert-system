@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Activity, Clock3, Eye, RotateCcw, ShieldCheck, Cpu, ScrollText } from 'lucide-react'
+import { Activity, Clock3, Eye, ListFilter, RotateCcw, ScrollText, Users } from 'lucide-react'
 import { auditApi } from '../api/audit.js'
 import { usePaginated } from '../hooks/usePaginated.js'
 import { useAuth } from '../hooks/useAuth.js'
@@ -19,13 +19,57 @@ import { RowSkeleton } from '../components/ui/Skeleton.jsx'
 import { EmptyState, ErrorState, ForbiddenState } from '../components/ui/State.jsx'
 import { formatDateTime } from '../utils/format.js'
 
+const EVENT_META = {
+  created: { label: 'Created', tone: 'green' },
+  updated: { label: 'Updated', tone: 'blue' },
+  deleted: { label: 'Deleted', tone: 'red' },
+  login: { label: 'Signed in', tone: 'brand' },
+  logout: { label: 'Signed out', tone: 'gray' },
+  login_failed: { label: 'Failed sign-in', tone: 'amber' },
+}
+
+function eventMeta(event) {
+  if (!event) {
+    return { label: 'Activity', tone: 'gray' }
+  }
+
+  return EVENT_META[event] ?? { label: event.replace(/_/g, ' '), tone: 'gray' }
+}
+
+function subjectLabel(entry) {
+  if (entry.properties?.subject_label) {
+    return entry.properties.subject_label
+  }
+
+  if (!entry.subject_type) {
+    return null
+  }
+
+  return entry.subject_type.split('\\').pop()
+}
+
+function displayValue(value) {
+  if (value === null || value === undefined || value === '') {
+    return '—'
+  }
+
+  if (typeof value === 'boolean') {
+    return value ? 'true' : 'false'
+  }
+
+  if (typeof value === 'object') {
+    return JSON.stringify(value)
+  }
+
+  return String(value)
+}
+
 export default function AuditLogListPage() {
   const { can } = useAuth()
 
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
-  const [engineVersion, setEngineVersion] = useState('')
-  const [validated, setValidated] = useState('')
+  const [event, setEvent] = useState('')
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
   const [detailId, setDetailId] = useState(null)
@@ -33,14 +77,13 @@ export default function AuditLogListPage() {
   const allowed = can('audit-logs.view')
 
   const query = usePaginated(
-    ['audit-logs', { page, search, engineVersion, validated, from, to }],
+    ['audit-logs', { page, search, event, from, to }],
     (params) =>
       auditApi.list({
         ...params,
         page,
         search: search || undefined,
-        engine_version: engineVersion || undefined,
-        validated: validated || undefined,
+        event: event || undefined,
         from: from || undefined,
         to: to || undefined,
       }),
@@ -49,13 +92,12 @@ export default function AuditLogListPage() {
 
   const items = query.data?.data ?? []
   const stats = query.data?.stats ?? {}
-  const engineVersions = stats.engine_versions ?? []
-  const hasActiveFilters = Boolean(search || engineVersion || validated || from || to)
+  const events = stats.events ?? []
+  const hasActiveFilters = Boolean(search || event || from || to)
 
   const resetFilters = () => {
     setSearch('')
-    setEngineVersion('')
-    setValidated('')
+    setEvent('')
     setFrom('')
     setTo('')
     setPage(1)
@@ -66,7 +108,7 @@ export default function AuditLogListPage() {
       <div className="space-y-6">
         <PageHeader
           title="Audit Logs"
-          description="A record of clinical decision-support evaluations and system activity."
+          description="A chronological record of user activity across the clinic."
         />
         <Card>
           <ForbiddenState message="You need the audit-logs.view permission to view audit logs." />
@@ -79,13 +121,13 @@ export default function AuditLogListPage() {
     <div className="space-y-6">
       <PageHeader
         title="Audit Logs"
-        description="A record of clinical decision-support evaluations and system activity."
+        description="A chronological record of user activity across the clinic — sign-ins and record changes."
         breadcrumb={[{ label: 'Audit Logs' }]}
       />
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          label="Total evaluations"
+          label="Total activity"
           value={stats.total ?? query.data?.total ?? 0}
           icon={Activity}
           tone="brand"
@@ -99,16 +141,16 @@ export default function AuditLogListPage() {
           loading={query.isLoading}
         />
         <StatCard
-          label="Clinically validated"
-          value={stats.validated ?? 0}
-          icon={ShieldCheck}
+          label="Active users"
+          value={stats.users ?? 0}
+          icon={Users}
           tone="green"
           loading={query.isLoading}
         />
         <StatCard
-          label="Engine versions"
-          value={engineVersions.length}
-          icon={Cpu}
+          label="Event types"
+          value={events.length}
+          icon={ListFilter}
           tone="navy"
           loading={query.isLoading}
         />
@@ -116,10 +158,10 @@ export default function AuditLogListPage() {
 
       <Card>
         <div className="mb-4 space-y-3">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="grid grid-cols-1 items-end gap-3 sm:grid-cols-2 lg:grid-cols-5">
             <div className="lg:col-span-2">
               <SearchInput
-                placeholder="Search rule codes, symptoms, engine…"
+                placeholder="Search users, descriptions, IP…"
                 className="w-full"
                 value={search}
                 onDebounced={(value) => {
@@ -130,58 +172,43 @@ export default function AuditLogListPage() {
             </div>
 
             <Select
-              aria-label="Filter by engine version"
-              value={engineVersion}
-              onChange={(event) => {
-                setEngineVersion(event.target.value)
+              aria-label="Filter by event"
+              value={event}
+              onChange={(selectEvent) => {
+                setEvent(selectEvent.target.value)
                 setPage(1)
               }}
             >
-              <option value="">All engine versions</option>
-              {engineVersions.map((version) => (
-                <option key={version} value={version}>
-                  {version}
+              <option value="">All events</option>
+              {events.map((name) => (
+                <option key={name} value={name}>
+                  {eventMeta(name).label}
                 </option>
               ))}
             </Select>
 
-            <Select
-              aria-label="Filter by validation status"
-              value={validated}
-              onChange={(event) => {
-                setValidated(event.target.value)
-                setPage(1)
-              }}
-            >
-              <option value="">All results</option>
-              <option value="true">Clinically validated</option>
-              <option value="false">Not validated</option>
-            </Select>
-
-            <div className="grid grid-cols-2 gap-2">
-              <Field label="From" htmlFor="audit-from" className="space-y-1">
-                <Input
-                  id="audit-from"
-                  type="date"
-                  value={from}
-                  onChange={(event) => {
-                    setFrom(event.target.value)
-                    setPage(1)
-                  }}
-                />
-              </Field>
-              <Field label="To" htmlFor="audit-to" className="space-y-1">
-                <Input
-                  id="audit-to"
-                  type="date"
-                  value={to}
-                  onChange={(event) => {
-                    setTo(event.target.value)
-                    setPage(1)
-                  }}
-                />
-              </Field>
-            </div>
+            <Field label="From" htmlFor="activity-from" className="space-y-1">
+              <Input
+                id="activity-from"
+                type="date"
+                value={from}
+                onChange={(inputEvent) => {
+                  setFrom(inputEvent.target.value)
+                  setPage(1)
+                }}
+              />
+            </Field>
+            <Field label="To" htmlFor="activity-to" className="space-y-1">
+              <Input
+                id="activity-to"
+                type="date"
+                value={to}
+                onChange={(inputEvent) => {
+                  setTo(inputEvent.target.value)
+                  setPage(1)
+                }}
+              />
+            </Field>
           </div>
 
           {hasActiveFilters ? (
@@ -202,74 +229,78 @@ export default function AuditLogListPage() {
         </div>
 
         {query.isLoading ? (
-          <RowSkeleton rows={6} cols={5} />
+          <RowSkeleton rows={6} cols={6} />
         ) : query.isError ? (
           <ErrorState
-            title="Failed to load audit logs"
-            message={query.error?.message || 'An error occurred while fetching audit logs.'}
+            title="Failed to load activity logs"
+            message={query.error?.message || 'An error occurred while fetching activity logs.'}
             onRetry={() => query.refetch()}
           />
         ) : items.length === 0 ? (
           <EmptyState
             icon={ScrollText}
-            title="No audit entries found"
+            title="No activity entries found"
             message={
               hasActiveFilters
-                ? 'No audit entries match the selected filters.'
-                : 'The evaluation audit trail is empty. Enable expert-system audit to start recording.'
+                ? 'No activity entries match the selected filters.'
+                : 'No user activity has been recorded yet.'
             }
           />
         ) : (
-          <Table minWidth="min-w-[820px]">
+          <Table minWidth="min-w-[960px]">
             <THead>
               <Tr>
                 <Th>When</Th>
-                <Th>Matches</Th>
-                <Th>Rule codes</Th>
-                <Th>Engine</Th>
-                <Th>Flag</Th>
+                <Th>User</Th>
+                <Th>Event</Th>
+                <Th>Description</Th>
+                <Th>Subject</Th>
+                <Th>IP</Th>
                 <Th>
                   <span className="sr-only">Actions</span>
                 </Th>
               </Tr>
             </THead>
             <TBody>
-              {items.map((log) => (
-                <Tr key={log.id}>
-                  <Td className="whitespace-nowrap text-ink-muted">
-                    {formatDateTime(log.created_at)}
-                  </Td>
-                  <Td className="font-semibold text-ink">{log.matched_rule_count}</Td>
-                  <Td>
-                    <span className="line-clamp-2 max-w-xs font-mono text-xs text-ink-muted">
-                      {log.matched_rule_codes || '—'}
-                    </span>
-                  </Td>
-                  <Td className="font-mono text-xs text-ink-muted">
-                    {log.engine_version || '—'}
-                  </Td>
-                  <Td>
-                    {log.is_clinically_validated ? (
-                      <Badge tone="green">Validated</Badge>
-                    ) : (
-                      <Badge tone="gray">—</Badge>
-                    )}
-                  </Td>
-                  <Td>
-                    <div className="flex justify-end">
-                      <button
-                        type="button"
-                        aria-label={`View audit entry ${log.id}`}
-                        className="rounded-lg p-1.5 text-ink-muted transition-colors hover:bg-canvas hover:text-ink"
-                        onClick={() => setDetailId(log.id)}
-                        title="View details"
-                      >
-                        <Eye className="size-4" aria-hidden />
-                      </button>
-                    </div>
-                  </Td>
-                </Tr>
-              ))}
+              {items.map((log) => {
+                const meta = eventMeta(log.event)
+                const subject = subjectLabel(log)
+
+                return (
+                  <Tr key={log.id} onClick={() => setDetailId(log.id)}>
+                    <Td className="whitespace-nowrap text-ink-muted">
+                      {formatDateTime(log.created_at)}
+                    </Td>
+                    <Td>
+                      <div className="flex flex-col">
+                        <span className="font-medium text-ink">{log.user_name || 'System'}</span>
+                        {log.user_role ? (
+                          <span className="text-xs text-ink-muted">{log.user_role}</span>
+                        ) : null}
+                      </div>
+                    </Td>
+                    <Td>
+                      <Badge tone={meta.tone}>{meta.label}</Badge>
+                    </Td>
+                    <Td className="text-ink">{log.description}</Td>
+                    <Td className="text-ink-muted">{subject || '—'}</Td>
+                    <Td className="font-mono text-xs text-ink-muted">{log.ip_address || '—'}</Td>
+                    <Td onClick={(e) => e.stopPropagation()}>
+                      <div className="flex justify-end">
+                        <button
+                          type="button"
+                          aria-label={`View activity entry ${log.id}`}
+                          className="rounded-lg p-1.5 text-ink-muted transition-colors hover:bg-canvas hover:text-ink"
+                          onClick={() => setDetailId(log.id)}
+                          title="View details"
+                        >
+                          <Eye className="size-4" aria-hidden />
+                        </button>
+                      </div>
+                    </Td>
+                  </Tr>
+                )
+              })}
             </TBody>
           </Table>
         )}
@@ -282,12 +313,12 @@ export default function AuditLogListPage() {
         />
       </Card>
 
-      <AuditDetailModal id={detailId} onClose={() => setDetailId(null)} />
+      <ActivityDetailModal id={detailId} onClose={() => setDetailId(null)} />
     </div>
   )
 }
 
-function AuditDetailModal({ id, onClose }) {
+function ActivityDetailModal({ id, onClose }) {
   const { data: entry, isLoading, isError, error } = useQuery({
     queryKey: ['audit-log', id],
     queryFn: () => auditApi.get(id),
@@ -296,33 +327,96 @@ function AuditDetailModal({ id, onClose }) {
 
   if (!id) return null
 
+  const meta = entry ? eventMeta(entry.event) : null
+
   const rows = entry
     ? [
         ['Recorded', formatDateTime(entry.created_at)],
-        ['Matched rules', entry.matched_rule_count],
-        ['Rule codes', entry.matched_rule_codes || '—'],
-        ['Symptom IDs', entry.symptom_ids || '—'],
-        ['Engine version', entry.engine_version || '—'],
-        ['Clinically validated', entry.is_clinically_validated ? 'Yes' : 'No'],
+        ['User', entry.user_name || 'System'],
+        ['Role', entry.user_role || '—'],
+        ['Description', entry.description],
+        ['Subject', subjectLabel(entry) || '—'],
+        ['Subject reference', entry.subject_type ? `${entry.subject_type} #${entry.subject_id}` : '—'],
+        ['IP address', entry.ip_address || '—'],
+        ['User agent', entry.user_agent || '—'],
       ]
     : []
 
   return (
-    <Modal open={Boolean(id)} onClose={onClose} title="Audit entry" size="md">
+    <Modal open={Boolean(id)} onClose={onClose} title="Activity entry" size="md">
       {isLoading ? (
         <RowSkeleton rows={4} cols={2} />
       ) : isError ? (
-        <ErrorState message={error?.message || 'Failed to load audit entry.'} compact />
+        <ErrorState message={error?.message || 'Failed to load activity entry.'} compact />
       ) : (
-        <dl className="divide-y divide-line">
-          {rows.map(([label, value]) => (
-            <div key={label} className="grid grid-cols-3 gap-3 py-2.5">
-              <dt className="text-sm font-medium text-ink-muted">{label}</dt>
-              <dd className="col-span-2 break-words text-sm text-ink">{value}</dd>
+        <div className="space-y-4">
+          {meta ? (
+            <div>
+              <Badge tone={meta.tone}>{meta.label}</Badge>
             </div>
-          ))}
-        </dl>
+          ) : null}
+
+          <dl className="divide-y divide-line">
+            {rows.map(([label, value]) => (
+              <div key={label} className="grid grid-cols-3 gap-3 py-2.5">
+                <dt className="text-sm font-medium text-ink-muted">{label}</dt>
+                <dd className="col-span-2 break-words text-sm text-ink">{value}</dd>
+              </div>
+            ))}
+          </dl>
+
+          <PropertiesSection properties={entry?.properties} />
+        </div>
       )}
     </Modal>
+  )
+}
+
+function PropertiesSection({ properties }) {
+  const changes = properties?.changes
+  const attributes = properties?.attributes
+
+  if (!changes && !attributes) {
+    return null
+  }
+
+  return (
+    <div className="space-y-3">
+      {changes ? (
+        <div>
+          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-ink-muted">
+            Changes
+          </p>
+          <ul className="divide-y divide-line rounded-lg border border-line">
+            {Object.entries(changes).map(([field, diff]) => (
+              <li key={field} className="grid grid-cols-3 gap-3 px-3 py-2 text-sm">
+                <span className="font-medium text-ink-muted">{field}</span>
+                <span className="col-span-2 break-words text-ink">
+                  <span className="text-ink-muted line-through">{displayValue(diff?.from)}</span>
+                  {' → '}
+                  <span>{displayValue(diff?.to)}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {attributes ? (
+        <div>
+          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-ink-muted">
+            Recorded values
+          </p>
+          <ul className="divide-y divide-line rounded-lg border border-line">
+            {Object.entries(attributes).map(([field, value]) => (
+              <li key={field} className="grid grid-cols-3 gap-3 px-3 py-2 text-sm">
+                <span className="font-medium text-ink-muted">{field}</span>
+                <span className="col-span-2 break-words text-ink">{displayValue(value)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </div>
   )
 }

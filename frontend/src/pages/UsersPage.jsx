@@ -11,6 +11,7 @@ import Card from '../components/ui/Card.jsx'
 import Badge from '../components/ui/Badge.jsx'
 import StatCard from '../components/ui/StatCard.jsx'
 import ConfirmDialog from '../components/ui/ConfirmDialog.jsx'
+import RecordDetailModal from '../components/ui/RecordDetailModal.jsx'
 import Table, { THead, TBody, Tr, Th, Td } from '../components/ui/Table.jsx'
 import Pagination from '../components/ui/Pagination.jsx'
 import SearchInput from '../components/ui/SearchInput.jsx'
@@ -50,6 +51,7 @@ export default function UsersPage() {
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState(null)
   const [deleting, setDeleting] = useState(null)
+  const [viewing, setViewing] = useState(null)
 
   const query = usePaginated(['users'], (params) => userApi.list(params), { page })
 
@@ -182,7 +184,7 @@ export default function UsersPage() {
                 const roles = (u.roles ?? []).map(roleName)
                 const verified = Boolean(u.email_verified_at)
                 return (
-                  <Tr key={u.id}>
+                  <Tr key={u.id} onClick={() => setViewing(u)}>
                     <Td className="font-medium text-ink">{u.name}</Td>
                     <Td>
                       {u.staff_id ? (
@@ -224,7 +226,7 @@ export default function UsersPage() {
                       )}
                     </Td>
                     <Td className="text-ink-muted">{formatDate(u.created_at)}</Td>
-                    <Td>
+                    <Td onClick={(e) => e.stopPropagation()}>
                       <div className="flex justify-end gap-1">
                         {can('users.suspend') ? (
                           <UserStatusActions user={u} onChanged={() => query.refetch()} />
@@ -263,6 +265,39 @@ export default function UsersPage() {
 
         <Pagination page={query.data?.current_page ?? 1} lastPage={query.data?.last_page ?? 1} total={query.data?.total} onChange={setPage} />
       </Card>
+
+      <RecordDetailModal
+        open={Boolean(viewing)}
+        onClose={() => setViewing(null)}
+        title={viewing?.name ?? 'User'}
+        subtitle={viewing?.email}
+        badges={
+          viewing
+            ? [
+                (() => {
+                  const meta = STATUS_META[viewing.account_status] ?? STATUS_META.active
+                  return { label: meta.label, tone: meta.tone }
+                })(),
+                viewing.two_factor_enabled ? { label: '2FA on', tone: 'green' } : null,
+                viewing.email_verified_at ? { label: 'Email verified', tone: 'green' } : { label: 'Email unverified', tone: 'amber' },
+              ]
+            : []
+        }
+        fields={
+          viewing
+            ? [
+                { label: 'Username', value: viewing.username },
+                { label: 'Email', value: viewing.email },
+                { label: 'Staff #', value: viewing.staff_id },
+                { label: 'Roles', value: (viewing.roles ?? []).map(roleName).join(', ') || '—' },
+                { label: 'Status', value: (STATUS_META[viewing.account_status] ?? STATUS_META.active).label },
+                { label: '2FA', value: viewing.two_factor_enabled ? 'Enabled' : 'Disabled' },
+                { label: 'Email verified', value: viewing.email_verified_at ? formatDate(viewing.email_verified_at) : 'Not verified' },
+                { label: 'Joined', value: formatDate(viewing.created_at) },
+              ]
+            : []
+        }
+      />
 
       <UserFormModal
         open={formOpen}

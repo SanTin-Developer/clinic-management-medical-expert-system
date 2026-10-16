@@ -10,6 +10,7 @@ import Card from '../components/ui/Card.jsx'
 import Badge from '../components/ui/Badge.jsx'
 import StatCard from '../components/ui/StatCard.jsx'
 import ConfirmDialog from '../components/ui/ConfirmDialog.jsx'
+import RecordDetailModal from '../components/ui/RecordDetailModal.jsx'
 import Tabs from '../components/ui/Tabs.jsx'
 import Table, { THead, TBody, Tr, Th, Td } from '../components/ui/Table.jsx'
 import Pagination from '../components/ui/Pagination.jsx'
@@ -37,6 +38,7 @@ export default function MedicalRecordsPage() {
   const [createOpen, setCreateOpen] = useState(false)
   const [deleting, setDeleting] = useState(null)
   const [busy, setBusy] = useState(false)
+  const [viewing, setViewing] = useState(null)
 
   const active = { records, consultations, diagnoses, vitals }[tab]
   const activeItems = active.data?.data ?? []
@@ -144,6 +146,81 @@ export default function MedicalRecordsPage() {
     consultations: { icon: Stethoscope, label: 'Consultation' },
     diagnoses: { icon: Microscope, label: 'Diagnosis' },
     vitals: { icon: Activity, label: 'Vital Signs' },
+  }
+
+  const detailFor = (tabKey, row) => {
+    if (!row) return { title: '', subtitle: undefined, badges: [], fields: [] }
+    const subtitle = patientFullName(row.patient)
+    if (tabKey === 'records') {
+      return {
+        title: meta.records.label,
+        subtitle,
+        badges: [],
+        fields: [
+          { label: 'Patient', value: patientFullName(row.patient) },
+          { label: 'Appointment', value: row.appointment?.appointment_number },
+          { label: 'Doctor', value: row.doctor?.name },
+          { label: 'Treatment plan', value: row.treatment_plan },
+          { label: 'Notes', value: row.notes },
+          { label: 'Created', value: row.created_at ? formatDateTime(row.created_at) : '—' },
+        ],
+      }
+    }
+    if (tabKey === 'consultations') {
+      return {
+        title: meta.consultations.label,
+        subtitle,
+        badges: [],
+        fields: [
+          { label: 'Patient', value: patientFullName(row.patient) },
+          { label: 'Chief complaint', value: row.chief_complaint },
+          { label: 'Doctor', value: row.doctor?.name },
+          { label: 'Assessment', value: row.assessment },
+          { label: 'Plan', value: row.plan },
+          { label: 'Created', value: row.created_at ? formatDateTime(row.created_at) : '—' },
+        ],
+      }
+    }
+    if (tabKey === 'diagnoses') {
+      const severity = row.severity ? DISEASE_SEVERITY[row.severity] : null
+      return {
+        title: row.diagnosis_name ?? meta.diagnoses.label,
+        subtitle,
+        badges: [
+          row.is_confirmed ? { label: 'Confirmed', tone: 'green' } : { label: 'Provisional', tone: 'amber' },
+          severity ? { label: severity.label, tone: severity.tone } : null,
+        ],
+        fields: [
+          { label: 'Patient', value: patientFullName(row.patient) },
+          { label: 'Diagnosis', value: row.diagnosis_name },
+          { label: 'ICD code', value: row.icd_code },
+          { label: 'Doctor', value: row.doctor?.name },
+          { label: 'Severity', value: severity?.label },
+          { label: 'Notes', value: row.notes },
+          { label: 'Created', value: row.created_at ? formatDateTime(row.created_at) : '—' },
+        ],
+      }
+    }
+    return {
+      title: meta.vitals.label,
+      subtitle,
+      badges: [],
+      fields: [
+        { label: 'Patient', value: patientFullName(row.patient) },
+        { label: 'Temperature', value: row.temperature != null ? `${row.temperature}°C` : '—' },
+        {
+          label: 'Blood pressure',
+          value:
+            row.blood_pressure_systolic || row.blood_pressure_diastolic
+              ? `${row.blood_pressure_systolic ?? '—'}/${row.blood_pressure_diastolic ?? '—'}`
+              : '—',
+        },
+        { label: 'Heart rate', value: row.heart_rate != null ? `${row.heart_rate} bpm` : '—' },
+        { label: 'Respiratory rate', value: row.respiratory_rate != null ? `${row.respiratory_rate} /min` : '—' },
+        { label: 'O₂ saturation', value: row.oxygen_saturation != null ? `${row.oxygen_saturation}%` : '—' },
+        { label: 'Recorded', value: row.created_at ? formatDateTime(row.created_at) : '—' },
+      ],
+    }
   }
 
   return (
@@ -295,9 +372,9 @@ export default function MedicalRecordsPage() {
             </THead>
             <TBody>
               {activeItems.map((row) => (
-                <Tr key={row.id}>
+                <Tr key={row.id} onClick={() => setViewing({ tab, row })}>
                   {renderRow[tab](row)}
-                  <Td>
+                  <Td onClick={(e) => e.stopPropagation()}>
                     <div className="flex justify-end">
                       <button
                         type="button"
@@ -336,6 +413,15 @@ export default function MedicalRecordsPage() {
       {tab === 'vitals' ? (
         <VitalSignFormModal open={createOpen} onClose={() => setCreateOpen(false)} onSaved={refetchAll} />
       ) : null}
+
+      <RecordDetailModal
+        open={Boolean(viewing)}
+        onClose={() => setViewing(null)}
+        title={viewing ? detailFor(viewing.tab, viewing.row).title : ''}
+        subtitle={viewing ? detailFor(viewing.tab, viewing.row).subtitle : undefined}
+        badges={viewing ? detailFor(viewing.tab, viewing.row).badges : []}
+        fields={viewing ? detailFor(viewing.tab, viewing.row).fields : []}
+      />
 
       <ConfirmDialog
         open={Boolean(deleting)}

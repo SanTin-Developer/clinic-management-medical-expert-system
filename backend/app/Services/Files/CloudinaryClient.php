@@ -72,7 +72,10 @@ class CloudinaryClient
         $params['signature'] = $this->signature($params, (string) $this->config['api_secret']);
         $params['api_key'] = (string) $this->config['api_key'];
 
-        Http::asForm()->post($this->endpoint('image').'/destroy', $params);
+        Http::asForm()->post(
+            'https://api.cloudinary.com/v1_1/'.$this->config['cloud_name'].'/image/destroy',
+            $params,
+        );
     }
 
     private function endpoint(string $resource): string

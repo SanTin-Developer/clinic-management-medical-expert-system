@@ -1,7 +1,7 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Bell, CheckCheck } from 'lucide-react'
+import { Bell, CheckCheck, Newspaper } from 'lucide-react'
 import { toast } from 'sonner'
 import Dropdown from '../ui/Dropdown.jsx'
 import { cn } from '../../utils/cn.js'
@@ -9,6 +9,7 @@ import { notificationApi } from '../../api/communication.js'
 import { getEcho } from '../../lib/echo.js'
 import { useAuth } from '../../hooks/useAuth.js'
 import { formatDateTime } from '../../utils/format.js'
+import { playNotificationSound, primeNotificationAudio } from '../../utils/notificationSound.js'
 
 const BROADCAST_EVENT = '.Illuminate\\Notifications\\Events\\BroadcastNotificationCreated'
 
@@ -28,6 +29,14 @@ function describe(notification) {
       url: data.url,
     }
   }
+  if (notification.kind === 'system_announcement' || data.kind === 'system_announcement') {
+    return {
+      title: data.title ?? 'Announcement',
+      body: data.body ?? '',
+      url: data.url ?? '/news',
+      priority: data.priority ?? 'normal',
+    }
+  }
   return {
     title: data.title ?? 'Notification',
     body: data.body ?? data.message ?? '',
@@ -39,6 +48,7 @@ export default function NotificationBell() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const greetedRef = useRef(false)
 
   const unread = useQuery({
     queryKey: ['notifications', 'unread'],
@@ -53,6 +63,27 @@ export default function NotificationBell() {
   })
 
   useEffect(() => {
+    primeNotificationAudio()
+
+    const unlock = () => {
+      primeNotificationAudio()
+      window.removeEventListener('pointerdown', unlock)
+      window.removeEventListener('keydown', unlock)
+      window.removeEventListener('touchstart', unlock)
+    }
+
+    window.addEventListener('pointerdown', unlock)
+    window.addEventListener('keydown', unlock)
+    window.addEventListener('touchstart', unlock)
+
+    return () => {
+      window.removeEventListener('pointerdown', unlock)
+      window.removeEventListener('keydown', unlock)
+      window.removeEventListener('touchstart', unlock)
+    }
+  }, [])
+
+  useEffect(() => {
     if (!user?.id) return undefined
     const echo = getEcho()
     if (!echo) return undefined
@@ -60,6 +91,7 @@ export default function NotificationBell() {
     const channel = echo.private(`notifications.${user.id}`)
     channel.listen(BROADCAST_EVENT, (payload) => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] })
+      playNotificationSound()
       const info = describe({ kind: payload?.kind, data: payload })
       toast.info(info.title, { description: info.body || undefined })
     })
@@ -68,6 +100,19 @@ export default function NotificationBell() {
       echo.leave(`notifications.${user.id}`)
     }
   }, [user?.id, queryClient])
+
+  useEffect(() => {
+    if (greetedRef.current) return
+    const count = unread.data ?? 0
+    if (count <= 0) return
+
+    greetedRef.current = true
+    playNotificationSound()
+    toast.info(
+      count === 1 ? 'You have 1 new notification' : `You have ${count} new notifications`,
+      { id: 'notification-greeting', description: 'Open the bell to review them.' },
+    )
+  }, [unread.data])
 
   const unreadCount = unread.data ?? 0
   const notifications = list.data?.data ?? []
@@ -138,8 +183,9 @@ export default function NotificationBell() {
                 type="button"
                 onClick={() => openNotification(notification)}
                 className={cn(
-                  'block w-full border-b border-line px-4 py-3 text-left transition-colors last:border-b-0 hover:bg-canvas',
+                  'block w-full border-b border-l-4 border-line border-l-transparent px-4 py-3 text-left transition-colors last:border-b-0 hover:bg-canvas',
                   !notification.read_at && 'bg-brand-faint',
+                  info.priority === 'urgent' && 'border-l-red-500',
                 )}
               >
                 <span className="flex items-center gap-2">
@@ -159,6 +205,13 @@ export default function NotificationBell() {
           })
         )}
       </div>
+      <button
+        type="button"
+        onClick={() => { navigate('/news'); }}
+        className="flex w-full items-center justify-center gap-1 border-t border-line px-4 py-2.5 text-xs font-semibold text-brand transition-colors hover:bg-canvas"
+      >
+        <Newspaper className="size-3.5" aria-hidden /> View all news &amp; announcements
+      </button>
     </Dropdown>
   )
 }

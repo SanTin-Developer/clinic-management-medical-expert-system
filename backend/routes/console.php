@@ -12,3 +12,7 @@ Artisan::command('inspire', function () {
 // (absence records, missing clock-out flags). Idempotent, so a short interval
 // simply keeps the live dashboard and reports timely.
 Schedule::command('attendance:finalize')->everyMinute()->withoutOverlapping()->runInBackground();
+
+// Publish announcements whose scheduled publication time has arrived.
+// Idempotent, so a short interval is safe.
+Schedule::command('announcements:publish-scheduled')->everyMinute()->withoutOverlapping();

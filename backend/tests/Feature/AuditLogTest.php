@@ -40,7 +40,7 @@ class AuditLogTest extends TestCase
         $this->actingAsRole('Admin');
         $this->audit();
 
-        $this->getJson('/api/v1/audit-logs')
+        $this->getJson('/api/v1/expert-system/audit-logs')
             ->assertOk()
             ->assertJsonPath('total', 1)
             ->assertJsonPath('data.0.matched_rule_count', 2);
@@ -55,7 +55,7 @@ class AuditLogTest extends TestCase
             'is_clinically_validated' => true,
         ]);
 
-        $this->getJson('/api/v1/audit-logs')
+        $this->getJson('/api/v1/expert-system/audit-logs')
             ->assertOk()
             ->assertJsonPath('stats.total', 2)
             ->assertJsonPath('stats.last_24h', 2)
@@ -69,10 +69,27 @@ class AuditLogTest extends TestCase
         $this->audit();
         $this->audit(['is_clinically_validated' => true]);
 
-        $this->getJson('/api/v1/audit-logs?validated=1')
+        $this->getJson('/api/v1/expert-system/audit-logs?validated=1')
             ->assertOk()
             ->assertJsonPath('total', 1)
             ->assertJsonPath('data.0.is_clinically_validated', true);
+    }
+
+    public function test_index_filters_by_validation_flag_sent_as_string(): void
+    {
+        $this->actingAsRole('Admin');
+        $this->audit();
+        $this->audit(['is_clinically_validated' => true]);
+
+        $this->getJson('/api/v1/expert-system/audit-logs?validated=true')
+            ->assertOk()
+            ->assertJsonPath('total', 1)
+            ->assertJsonPath('data.0.is_clinically_validated', true);
+
+        $this->getJson('/api/v1/expert-system/audit-logs?validated=false')
+            ->assertOk()
+            ->assertJsonPath('total', 1)
+            ->assertJsonPath('data.0.is_clinically_validated', false);
     }
 
     public function test_index_filters_by_engine_version(): void
@@ -81,7 +98,7 @@ class AuditLogTest extends TestCase
         $this->audit(['engine_version' => '1.0.0']);
         $this->audit(['engine_version' => '2.0.0']);
 
-        $this->getJson('/api/v1/audit-logs?engine_version=2.0.0')
+        $this->getJson('/api/v1/expert-system/audit-logs?engine_version=2.0.0')
             ->assertOk()
             ->assertJsonPath('total', 1)
             ->assertJsonPath('data.0.engine_version', '2.0.0');
@@ -92,7 +109,7 @@ class AuditLogTest extends TestCase
         $this->actingAsRole('Admin');
         $audit = $this->audit();
 
-        $this->getJson("/api/v1/audit-logs/{$audit->id}")
+        $this->getJson("/api/v1/expert-system/audit-logs/{$audit->id}")
             ->assertOk()
             ->assertJsonPath('data.engine_version', '1.0.0');
     }
@@ -101,6 +118,6 @@ class AuditLogTest extends TestCase
     {
         $this->actingAsRole('Receptionist');
 
-        $this->getJson('/api/v1/audit-logs')->assertForbidden();
+        $this->getJson('/api/v1/expert-system/audit-logs')->assertForbidden();
     }
 }

@@ -7,9 +7,11 @@ use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\OtpResendRequest;
 use App\Http\Requests\Auth\OtpVerifyRequest;
 use App\Http\Requests\Auth\TwoFactorVerifyRequest;
+use App\Models\ActivityLog;
 use App\Models\LoginChallenge;
 use App\Models\TrustedDevice;
 use App\Models\User;
+use App\Services\Audit\ActivityLogger;
 use App\Services\Auth\LoginChallengeService;
 use App\Services\Auth\SecurityEventService;
 use App\Services\Auth\TrustedDeviceService;
@@ -29,6 +31,7 @@ class AuthController extends Controller
         private readonly TrustedDeviceService $trustedDevices,
         private readonly TwoFactorChallengeService $twoFactorChallenges,
         private readonly SecurityEventService $events,
+        private readonly ActivityLogger $activity,
     ) {}
 
     // login user and create a Sanctum token (or start a second-factor challenge)
@@ -220,6 +223,7 @@ class AuthController extends Controller
         $user->currentAccessToken()->delete();
 
         $this->events->record(SecurityEventService::LOGOUT, $user, 'info', [], $request);
+        $this->activity->record(ActivityLog::EVENT_LOGOUT, 'Signed out', null, [], $user, $request);
 
         $response = response()->json([
             'message' => 'Logout successful.',
@@ -299,6 +303,7 @@ class AuthController extends Controller
         }
 
         $this->events->record(SecurityEventService::LOGIN_FAILED, $user, 'warning', [], $request);
+        $this->activity->record(ActivityLog::EVENT_LOGIN_FAILED, 'Failed sign-in attempt', null, [], $user, $request);
     }
 
     /**
@@ -320,6 +325,7 @@ class AuthController extends Controller
 
         if ($request !== null) {
             $this->events->record(SecurityEventService::LOGIN_SUCCEEDED, $user, 'info', $context, $request);
+            $this->activity->record(ActivityLog::EVENT_LOGIN, 'Signed in', null, [], $user, $request);
         }
 
         $response = response()->json([

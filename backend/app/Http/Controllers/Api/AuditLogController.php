@@ -17,7 +17,6 @@ class AuditLogController extends Controller
             'from' => ['nullable', 'date'],
             'to' => ['nullable', 'date'],
             'engine_version' => ['nullable', 'string', 'max:50'],
-            'validated' => ['nullable', 'boolean'],
             'search' => ['nullable', 'string', 'max:255'],
         ]);
 

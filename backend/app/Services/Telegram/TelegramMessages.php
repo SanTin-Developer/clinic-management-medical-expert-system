@@ -2,6 +2,8 @@
 
 namespace App\Services\Telegram;
 
+use Illuminate\Support\Str;
+
 /**
  * Central catalogue of every user-facing RoyalCare Telegram message.
  *
@@ -153,6 +155,29 @@ final class TelegramMessages
             : '';
 
         return '💬 <b>'.e($senderName).'</b>'.$context."\n".e($body);
+    }
+
+    /**
+     * Announcement broadcast sent when an announcement is published and the
+     * recipient has opted into Telegram notifications.
+     *
+     * The body is trimmed so the whole message stays within Telegram's 1024
+     * character photo-caption limit; readers open the app for the full text.
+     */
+    public static function announcement(string $title, string $body, string $priority = 'normal'): string
+    {
+        $icon = match ($priority) {
+            'urgent' => '🚨',
+            'high' => '⚠️',
+            default => '📢',
+        };
+
+        return implode("\n", [
+            $icon.' <b>'.e($title).'</b>',
+            e(Str::limit($body, 700, '…')),
+            '',
+            '— Open the RoyalCare app → News & Announcements for full details.',
+        ]);
     }
 
     /**

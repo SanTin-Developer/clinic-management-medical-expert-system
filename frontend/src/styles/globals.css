@@ -37,6 +37,7 @@
     sans-serif;
 
   --shadow-card: 0 1px 2px rgb(23 37 84 / 0.04), 0 4px 16px rgb(37 99 235 / 0.08);
+  --shadow-card-hover: 0 18px 40px -14px rgb(37 99 235 / 0.38);
   --shadow-dialog: 0 20px 50px -12px rgb(23 37 84 / 0.35);
   --radius-card: 14px;
 }
@@ -58,6 +59,7 @@
   --color-brand-faint: #16294c;
 
   --shadow-card: 0 1px 2px rgb(0 0 0 / 0.5), 0 4px 16px rgb(0 0 0 / 0.45);
+  --shadow-card-hover: 0 18px 40px -14px rgb(0 0 0 / 0.75);
   --shadow-dialog: 0 20px 50px -12px rgb(0 0 0 / 0.7);
 
   /* Re-map the light surface/text shades used by alert, chip and status markup. */

@@ -6,6 +6,7 @@ import Button from '../components/ui/Button.jsx'
 import Card from '../components/ui/Card.jsx'
 import Badge from '../components/ui/Badge.jsx'
 import Tabs from '../components/ui/Tabs.jsx'
+import RecordDetailModal from '../components/ui/RecordDetailModal.jsx'
 import Table, { THead, TBody, Tr, Th, Td } from '../components/ui/Table.jsx'
 import Pagination from '../components/ui/Pagination.jsx'
 import { RowSkeleton } from '../components/ui/Skeleton.jsx'
@@ -24,6 +25,7 @@ export default function NursingTaskListPage() {
   const [status, setStatus] = useState('all')
   const [formOpen, setFormOpen] = useState(false)
   const [completing, setCompleting] = useState(null)
+  const [viewing, setViewing] = useState(null)
 
   const query = usePaginated(['nursing-tasks'], (params) => nursingTaskApi.list(params), {
     page,
@@ -96,7 +98,7 @@ export default function NursingTaskListPage() {
                   const statusMeta = statusBadgeFor(NURSING_TASK_STATUS, task.status)
                   const priorityMeta = statusBadgeFor(TASK_PRIORITY, task.priority)
                   return (
-                    <Tr key={task.id}>
+                    <Tr key={task.id} onClick={() => setViewing(task)}>
                       <Td>
                         <div className="font-medium text-ink">{task.title}</div>
                         <Badge tone={typeMeta.tone} className="mt-1">{typeMeta.label}</Badge>
@@ -106,7 +108,7 @@ export default function NursingTaskListPage() {
                       <Td className="text-ink-muted">{formatDateTime(task.scheduled_at)}</Td>
                       <Td><Badge tone={priorityMeta.tone}>{priorityMeta.label}</Badge></Td>
                       <Td><Badge tone={statusMeta.tone}>{statusMeta.label}</Badge></Td>
-                      <Td>
+                      <Td onClick={(e) => e.stopPropagation()}>
                         <div className="flex justify-end">
                           {task.status !== 'completed' && task.status !== 'cancelled' && can('nursing-tasks.complete') ? (
                             <Button size="sm" variant="outline" onClick={() => setCompleting(task)}>
@@ -125,6 +127,34 @@ export default function NursingTaskListPage() {
 
         <Pagination page={query.data?.current_page ?? 1} lastPage={query.data?.last_page ?? 1} total={query.data?.total} onChange={setPage} />
       </Card>
+
+      <RecordDetailModal
+        open={Boolean(viewing)}
+        onClose={() => setViewing(null)}
+        title={viewing?.title ?? 'Nursing task'}
+        subtitle={viewing ? patientFullName(viewing.patient) : undefined}
+        badges={
+          viewing
+            ? [
+                statusBadgeFor(NURSING_TASK_TYPES, viewing.task_type),
+                statusBadgeFor(TASK_PRIORITY, viewing.priority),
+                statusBadgeFor(NURSING_TASK_STATUS, viewing.status),
+              ]
+            : []
+        }
+        fields={
+          viewing
+            ? [
+                { label: 'Patient', value: patientFullName(viewing.patient) },
+                { label: 'Assigned nurse', value: viewing.assigned_nurse?.name },
+                { label: 'Scheduled', value: viewing.scheduled_at ? formatDateTime(viewing.scheduled_at) : '—' },
+                { label: 'Completed', value: viewing.completed_at ? formatDateTime(viewing.completed_at) : '—' },
+                { label: 'Description', value: viewing.description },
+                { label: 'Notes', value: viewing.notes },
+              ]
+            : []
+        }
+      />
 
       <NursingTaskFormModal open={formOpen} onClose={() => setFormOpen(false)} onSaved={() => query.refetch()} />
 

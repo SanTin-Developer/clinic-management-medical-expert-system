@@ -23,5 +23,5 @@ export const expertApi = {
     withData(api.put(`/knowledge-base/expert-rules/${id}`, data)),
   removeExpertRule: (id) => api.delete(`/knowledge-base/expert-rules/${id}`),
 
-  auditLogs: (params) => api.get('/audit-logs', { params }),
+  auditLogs: (params) => api.get('/expert-system/audit-logs', { params }),
 }

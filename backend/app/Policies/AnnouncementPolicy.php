@@ -12,6 +12,17 @@ class AnnouncementPolicy
         return $user->can('announcements.view');
     }
 
+    /**
+     * Whether the user can access the management listing (create, edit,
+     * publish, schedule, archive, readership, audit).
+     */
+    public function manageAny(User $user): bool
+    {
+        return $user->can('announcements.create')
+            || $user->can('announcements.update')
+            || $user->can('announcements.publish');
+    }
+
     public function view(User $user, Announcement $announcement): bool
     {
         return $user->can('announcements.view');
