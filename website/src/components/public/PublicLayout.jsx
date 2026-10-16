@@ -133,12 +133,6 @@ export default function PublicLayout() {
           </nav>
 
           <div className="hidden items-center gap-2 lg:flex">
-            <Link
-              to="/login"
-              className="rounded-lg border border-line px-3 py-2 text-sm font-semibold text-ink transition-colors hover:bg-canvas"
-            >
-              Staff Login
-            </Link>
             {phone ? (
               <a
                 href={`tel:${phone}`}
@@ -147,7 +141,14 @@ export default function PublicLayout() {
                 <Phone className="size-4" aria-hidden />
                 Call Us
               </a>
-            ) : null}
+            ) : (
+              <Link
+                to="/contact"
+                className="rounded-lg border border-line px-3 py-2 text-sm font-semibold text-ink transition-colors hover:bg-canvas"
+              >
+                Contact Us
+              </Link>
+            )}
           </div>
 
           <button
@@ -178,12 +179,6 @@ export default function PublicLayout() {
                   {item.label}
                 </NavLink>
               ))}
-              <Link
-                to="/login"
-                className="mt-2 rounded-lg bg-brand px-3 py-2.5 text-center text-sm font-semibold text-white"
-              >
-                Staff Login
-              </Link>
             </div>
           </nav>
         ) : null}
@@ -246,7 +241,11 @@ export default function PublicLayout() {
                 </li>
               ))}
               {services.length === 0 ? (
-                <li className="text-ink-muted">Coming soon.</li>
+                <li>
+                  <Link to="/services" className="text-ink-muted transition-colors hover:text-brand">
+                    View our services
+                  </Link>
+                </li>
               ) : null}
             </ul>
           </div>

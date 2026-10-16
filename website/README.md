@@ -8,6 +8,11 @@ Dashboard's Website Management CMS (`../frontend`).
 This is a separate application from the admin dashboard. It contains **no**
 authentication, patient data, or other private clinic features.
 
+> **Staff / administration:** the internal Admin Dashboard (clinic management +
+> Website Management CMS) lives in `../frontend` and runs at `http://localhost:5173`
+> in development. It is intentionally **not** linked from the public website; staff
+> reach it directly at its own URL.
+
 ## Stack
 
 - React 19 + Vite (JavaScript, JSX)

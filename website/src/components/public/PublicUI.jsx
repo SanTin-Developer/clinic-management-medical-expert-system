@@ -24,7 +24,9 @@ const ICONS = {
   cross: Cross,
   eye: Eye,
   heart: HeartPulse,
+  heartpulse: HeartPulse,
   lab: Microscope,
+  microscope: Microscope,
   pill: Pill,
   scan: Scan,
   stethoscope: Stethoscope,
@@ -32,7 +34,10 @@ const ICONS = {
 }
 
 export function resolveIcon(name) {
-  return ICONS[String(name ?? '').toLowerCase()] ?? Stethoscope
+  const key = String(name ?? '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '')
+  return ICONS[key] ?? Stethoscope
 }
 
 export function Section({ children, className }) {

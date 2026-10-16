@@ -46,6 +46,20 @@ class WebsitePublicTest extends TestCase
             ->assertJsonPath('services.0.title', 'Cardiology');
     }
 
+    public function test_public_services_only_lists_published_services(): void
+    {
+        Service::factory()->published()->create(['title' => 'Cardiology', 'sort_order' => 2]);
+        Service::factory()->published()->create(['title' => 'Dentistry', 'sort_order' => 1]);
+        Service::factory()->create(['title' => 'Draft Service', 'sort_order' => 0]);
+
+        $this->getJson('/api/v1/website/services')
+            ->assertOk()
+            ->assertJsonCount(2, 'data')
+            ->assertJsonPath('data.0.title', 'Dentistry')
+            ->assertJsonPath('data.1.title', 'Cardiology')
+            ->assertJsonMissing(['title' => 'Draft Service']);
+    }
+
     public function test_public_pages_only_expose_published_content(): void
     {
         PublicPage::factory()->published()->create(['slug' => 'about']);
