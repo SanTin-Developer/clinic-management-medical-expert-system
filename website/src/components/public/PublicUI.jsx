@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { cn } from '../../utils/cn.js'
 import { formatDate } from '../../utils/format.js'
+import { useInView } from './Reveal.jsx'
 
 const ICONS = {
   activity: Activity,
@@ -40,9 +41,21 @@ export function resolveIcon(name) {
   return ICONS[key] ?? Stethoscope
 }
 
-export function Section({ children, className }) {
+export function Section({ children, className, reveal = true }) {
+  const { ref, inView } = useInView()
+
   return (
-    <section className={cn('mx-auto w-full max-w-7xl px-4 sm:px-6', className)}>{children}</section>
+    <section
+      ref={reveal ? ref : undefined}
+      className={cn(
+        'mx-auto w-full max-w-7xl px-4 sm:px-6',
+        reveal && 'reveal-scroll',
+        reveal && inView && 'is-visible',
+        className,
+      )}
+    >
+      {children}
+    </section>
   )
 }
 

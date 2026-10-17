@@ -9,6 +9,7 @@ import {
   Users,
 } from 'lucide-react'
 import { cn } from '../../utils/cn.js'
+import { Reveal } from './Reveal.jsx'
 import {
   ABOUT_CLINIC_IMAGE,
   DEFAULT_HERO_IMAGE,
@@ -170,7 +171,7 @@ export function HeroSection({ settings = {} }) {
 export function PartnersStrip() {
   return (
     <section className="border-y border-line bg-white">
-      <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-6 px-4 py-8 sm:px-6 lg:flex-row lg:items-center lg:gap-12">
+      <Reveal className="mx-auto flex w-full max-w-[1200px] flex-col gap-6 px-4 py-8 sm:px-6 lg:flex-row lg:items-center lg:gap-12">
         <p className="shrink-0 text-sm font-medium leading-snug text-[#4A5568]">
           <span className="block">Trusted by Leading</span>
           <span className="block">Partners</span>
@@ -188,7 +189,7 @@ export function PartnersStrip() {
             </Fragment>
           ))}
         </div>
-      </div>
+      </Reveal>
     </section>
   )
 }
@@ -200,7 +201,7 @@ export function AboutSection({ settings = {} }) {
 
   return (
     <section className="mx-auto w-full max-w-7xl px-4 py-20 sm:px-6 lg:py-28">
-      <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
+      <Reveal className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.28em] text-azure-600">About RoyalCare</p>
           <h2 className="mt-4 text-3xl font-extrabold leading-tight tracking-tight text-ink sm:text-4xl lg:text-5xl">
@@ -227,18 +228,20 @@ export function AboutSection({ settings = {} }) {
         </div>
 
         <div className="relative">
-          <img
-            src={ABOUT_CLINIC_IMAGE}
-            alt="Inside RoyalCare Clinic"
-            loading="lazy"
-            className="h-80 w-full rounded-[2rem] object-cover shadow-[var(--shadow-float)] sm:h-[26rem]"
-          />
+          <div className="overflow-hidden rounded-[2rem] shadow-[var(--shadow-float)]">
+            <img
+              src={ABOUT_CLINIC_IMAGE}
+              alt="Inside RoyalCare Clinic"
+              loading="lazy"
+              className="block h-auto w-full"
+            />
+          </div>
           <span className="absolute -bottom-5 left-6 hidden items-center gap-3 rounded-2xl bg-accent px-5 py-4 text-accent-ink shadow-[var(--shadow-float)] sm:inline-flex">
             <HeartPulse className="size-6" aria-hidden />
             <span className="text-sm font-bold">Patient-first care</span>
           </span>
         </div>
-      </div>
+      </Reveal>
     </section>
   )
 }
@@ -247,7 +250,7 @@ export function CtaBanner({ settings = {} }) {
   const phone = settings.primary_phone ?? settings.secondary_phone
   return (
     <section className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6">
-      <div className="brand-gradient-deep hero-glow relative overflow-hidden rounded-hero px-8 py-14 text-center">
+      <Reveal className="brand-gradient-deep hero-glow relative overflow-hidden rounded-hero px-8 py-14 text-center">
         <div className="relative mx-auto max-w-2xl text-white">
           <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">Ready to visit us?</h2>
           <p className="mt-3 text-sm text-white/80 sm:text-base">
@@ -271,7 +274,7 @@ export function CtaBanner({ settings = {} }) {
             ) : null}
           </div>
         </div>
-      </div>
+      </Reveal>
     </section>
   )
 }

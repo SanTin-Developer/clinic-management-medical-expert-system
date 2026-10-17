@@ -329,6 +329,57 @@ input[type="search"]::-webkit-search-decoration {
 .reveal-5 { animation-delay: 0.48s; }
 .reveal-6 { animation-delay: 0.58s; }
 
+/* ----------------------------------------------------------------------------
+   Scroll-triggered section reveals (public website).
+   Sections rise into view the way the hero content does. Only opacity and
+   transform animate so scrolling stays smooth on mid-range devices.
+---------------------------------------------------------------------------- */
+.reveal-scroll {
+  opacity: 0;
+  transform: translateY(28px);
+  transition:
+    opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.reveal-scroll.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* ----------------------------------------------------------------------------
+   "Our Team" 3D coverflow carousel.
+   Cards are absolutely positioned on a perspective stage; each card receives
+   its transform from JS based on its distance from the active profile.
+---------------------------------------------------------------------------- */
+.carousel-stage {
+  perspective: 1800px;
+  perspective-origin: 50% 45%;
+  touch-action: pan-y;
+}
+
+.carousel-card {
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+  will-change: transform, opacity;
+  transition:
+    transform 0.62s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.62s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.4s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal-scroll {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .carousel-card {
+    transition: none;
+  }
+}
+
 /* Hero background opens with a soft settle (starts slightly enlarged, eases to
    its final crop so the doctor's head stays in frame). */
 @keyframes hero-image-in {

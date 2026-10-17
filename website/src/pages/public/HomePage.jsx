@@ -4,8 +4,9 @@ import { ArrowRight } from 'lucide-react'
 import { publicWebsiteApi } from '../../api/website.js'
 import { Spinner } from '../../components/ui/Skeleton.jsx'
 import { ErrorState } from '../../components/ui/State.jsx'
-import { ArticleCard, Section, SectionHeading, ServiceCard, TeamCard } from '../../components/public/PublicUI.jsx'
+import { ArticleCard, Section, SectionHeading, ServiceCard } from '../../components/public/PublicUI.jsx'
 import { AboutSection, CtaBanner, HeroSection, PartnersStrip } from '../../components/public/HomeSections.jsx'
+import TeamCarousel from '../../components/public/TeamCarousel.jsx'
 
 export default function HomePage() {
   const { data, isLoading, isError, refetch } = useQuery({
@@ -71,14 +72,12 @@ export default function HomePage() {
               to="/team"
               className="inline-flex items-center gap-1.5 text-sm font-semibold text-azure-700 hover:text-azure-600"
             >
-              Meet everyone
+              View all team
               <ArrowRight className="size-4" aria-hidden />
             </Link>
           </div>
-          <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {team.map((profile) => (
-              <TeamCard key={profile.id} profile={profile} />
-            ))}
+          <div className="mt-10">
+            <TeamCarousel members={team.slice(0, 8)} />
           </div>
         </Section>
       ) : null}
