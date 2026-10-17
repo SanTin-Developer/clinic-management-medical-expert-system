@@ -38,6 +38,7 @@ export const websiteAdminApi = {
     withData(api.post('/website/admin/settings', toFormData({ ...payload, _method: 'PUT' }))),
 
   listPages: (params) => api.get('/website/admin/pages', { params }),
+  getPage: (id) => withData(api.get(`/website/admin/pages/${id}`)),
   createPage: (payload) => create('/website/admin/pages', payload),
   updatePage: (id, payload) => update(`/website/admin/pages/${id}`, payload),
   deletePage: (id) => api.delete(`/website/admin/pages/${id}`),
@@ -45,21 +46,25 @@ export const websiteAdminApi = {
   unpublishPage: (id) => withData(api.post(`/website/admin/pages/${id}/unpublish`)),
 
   listServices: (params) => api.get('/website/admin/services', { params }),
+  getService: (id) => withData(api.get(`/website/admin/services/${id}`)),
   createService: (payload) => create('/website/admin/services', payload),
   updateService: (id, payload) => update(`/website/admin/services/${id}`, payload),
   deleteService: (id) => api.delete(`/website/admin/services/${id}`),
 
   listTeam: (params) => api.get('/website/admin/team', { params }),
+  getTeam: (id) => withData(api.get(`/website/admin/team/${id}`)),
   createTeam: (payload) => create('/website/admin/team', payload),
   updateTeam: (id, payload) => update(`/website/admin/team/${id}`, payload),
   deleteTeam: (id) => api.delete(`/website/admin/team/${id}`),
 
   listGallery: (params) => api.get('/website/admin/gallery', { params }),
+  getGallery: (id) => withData(api.get(`/website/admin/gallery/${id}`)),
   createGallery: (payload) => create('/website/admin/gallery', payload),
   updateGallery: (id, payload) => update(`/website/admin/gallery/${id}`, payload),
   deleteGallery: (id) => api.delete(`/website/admin/gallery/${id}`),
 
   listArticles: (params) => api.get('/website/admin/articles', { params }),
+  getArticle: (id) => withData(api.get(`/website/admin/articles/${id}`)),
   createArticle: (payload) => create('/website/admin/articles', payload),
   updateArticle: (id, payload) => update(`/website/admin/articles/${id}`, payload),
   deleteArticle: (id) => api.delete(`/website/admin/articles/${id}`),

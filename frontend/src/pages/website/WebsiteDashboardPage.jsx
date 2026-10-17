@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import {
   Activity,
@@ -34,6 +34,7 @@ const SHORTCUTS = [
 ]
 
 export default function WebsiteDashboardPage() {
+  const navigate = useNavigate()
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['website', 'admin', 'dashboard'],
     queryFn: websiteAdminApi.dashboard,
@@ -94,7 +95,7 @@ export default function WebsiteDashboardPage() {
                     </THead>
                     <TBody>
                       {articles.map((article) => (
-                        <Tr key={article.id}>
+                        <Tr key={article.id} onClick={() => navigate(`/website/articles/${article.id}`)}>
                           <Td className="font-medium text-ink">{article.title}</Td>
                           <Td>
                             <Badge tone={article.status === 'published' ? 'green' : 'gray'}>

@@ -58,10 +58,15 @@ const ForbiddenPage = lazy(() => import('../pages/ForbiddenPage.jsx'))
 const WebsiteDashboardPage = lazy(() => import('../pages/website/WebsiteDashboardPage.jsx'))
 const WebsiteSettingsPage = lazy(() => import('../pages/website/WebsiteSettingsPage.jsx'))
 const WebsitePagesPage = lazy(() => import('../pages/website/WebsitePagesPage.jsx'))
+const WebsitePageDetailPage = lazy(() => import('../pages/website/WebsitePageDetailPage.jsx'))
 const WebsiteServicesPage = lazy(() => import('../pages/website/WebsiteServicesPage.jsx'))
+const WebsiteServiceDetailPage = lazy(() => import('../pages/website/WebsiteServiceDetailPage.jsx'))
 const WebsiteTeamPage = lazy(() => import('../pages/website/WebsiteTeamPage.jsx'))
+const WebsiteTeamDetailPage = lazy(() => import('../pages/website/WebsiteTeamDetailPage.jsx'))
 const WebsiteGalleryPage = lazy(() => import('../pages/website/WebsiteGalleryPage.jsx'))
+const WebsiteGalleryDetailPage = lazy(() => import('../pages/website/WebsiteGalleryDetailPage.jsx'))
 const WebsiteArticlesPage = lazy(() => import('../pages/website/WebsiteArticlesPage.jsx'))
+const WebsiteArticleDetailPage = lazy(() => import('../pages/website/WebsiteArticleDetailPage.jsx'))
 const WebsiteMediaPage = lazy(() => import('../pages/website/WebsiteMediaPage.jsx'))
 
 function withSuspense(element) {
@@ -383,10 +388,26 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: 'website/pages/:id',
+        element: withSuspense(
+          <Guard permission="website.pages.view">
+            <WebsitePageDetailPage />
+          </Guard>,
+        ),
+      },
+      {
         path: 'website/services',
         element: withSuspense(
           <Guard permission="website.view">
             <WebsiteServicesPage />
+          </Guard>,
+        ),
+      },
+      {
+        path: 'website/services/:id',
+        element: withSuspense(
+          <Guard permission="website.view">
+            <WebsiteServiceDetailPage />
           </Guard>,
         ),
       },
@@ -399,6 +420,14 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: 'website/team/:id',
+        element: withSuspense(
+          <Guard permission="website.view">
+            <WebsiteTeamDetailPage />
+          </Guard>,
+        ),
+      },
+      {
         path: 'website/gallery',
         element: withSuspense(
           <Guard permission="website.view">
@@ -407,10 +436,26 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: 'website/gallery/:id',
+        element: withSuspense(
+          <Guard permission="website.view">
+            <WebsiteGalleryDetailPage />
+          </Guard>,
+        ),
+      },
+      {
         path: 'website/articles',
         element: withSuspense(
           <Guard permission="website.articles.view">
             <WebsiteArticlesPage />
+          </Guard>,
+        ),
+      },
+      {
+        path: 'website/articles/:id',
+        element: withSuspense(
+          <Guard permission="website.articles.view">
+            <WebsiteArticleDetailPage />
           </Guard>,
         ),
       },
