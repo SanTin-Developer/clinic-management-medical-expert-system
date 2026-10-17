@@ -68,7 +68,7 @@ export default function HealthNewsPage() {
                   className={cn(
                     'rounded-full border px-4 py-1.5 text-sm font-medium capitalize transition-colors',
                     category === cat
-                      ? 'border-brand bg-brand text-white'
+                      ? 'border-azure-500 bg-azure-500 text-white'
                       : 'border-line bg-surface text-ink-muted hover:text-ink',
                   )}
                 >
@@ -87,11 +87,11 @@ export default function HealthNewsPage() {
             {featured.cover?.url ? (
               <img src={featured.cover.url} alt={featured.title} className="h-64 w-full object-cover lg:h-full" />
             ) : (
-              <div className="h-64 w-full bg-brand-soft lg:h-full" />
+              <div className="h-64 w-full bg-azure-50 lg:h-full" />
             )}
             <div className="flex flex-col justify-center p-8">
-              <span className="text-xs font-semibold uppercase tracking-wide text-brand">Featured</span>
-              <h2 className="mt-2 text-2xl font-bold text-ink group-hover:text-brand">{featured.title}</h2>
+              <span className="text-xs font-semibold uppercase tracking-wide text-azure-600">Featured</span>
+              <h2 className="mt-2 text-2xl font-bold text-ink group-hover:text-azure-700">{featured.title}</h2>
               {featured.excerpt ? (
                 <p className="mt-3 line-clamp-3 text-sm text-ink-muted">{featured.excerpt}</p>
               ) : null}

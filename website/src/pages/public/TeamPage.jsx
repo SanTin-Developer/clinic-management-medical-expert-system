@@ -36,12 +36,12 @@ export default function TeamPage() {
                 {profile.email || profile.phone ? (
                   <div className="mt-2 flex items-center justify-center gap-3 text-xs text-ink-muted">
                     {profile.email ? (
-                      <a href={`mailto:${profile.email}`} className="inline-flex items-center gap-1 hover:text-brand">
+                      <a href={`mailto:${profile.email}`} className="inline-flex items-center gap-1 hover:text-azure-700">
                         <Mail className="size-3.5" aria-hidden /> Email
                       </a>
                     ) : null}
                     {profile.phone ? (
-                      <a href={`tel:${profile.phone}`} className="inline-flex items-center gap-1 hover:text-brand">
+                      <a href={`tel:${profile.phone}`} className="inline-flex items-center gap-1 hover:text-azure-700">
                         <Phone className="size-3.5" aria-hidden /> Call
                       </a>
                     ) : null}

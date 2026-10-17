@@ -19,8 +19,8 @@ class WebsiteContentSeeder extends Seeder
         $settings->fill([
             'site_name' => $settings->site_name ?: 'RoyalCare',
             'tagline' => $settings->tagline ?: 'Compassionate care, expert medicine.',
-            'hero_title' => $settings->hero_title ?: 'Your health, our priority',
-            'hero_subtitle' => $settings->hero_subtitle ?: 'Modern medical care delivered by a dedicated team of professionals.',
+            'hero_title' => $settings->hero_title ?: "Better Health\nBrighter Tomorrow",
+            'hero_subtitle' => $settings->hero_subtitle ?: 'At RoyalCare Clinic, we provide compassionate, high-quality healthcare with modern facilities and expert medical professionals.',
             'about_summary' => $settings->about_summary ?: 'RoyalCare is a full-service medical clinic committed to providing accessible, high-quality healthcare to our community.',
             'seo_title' => $settings->seo_title ?: 'RoyalCare Medical Clinic',
             'seo_description' => $settings->seo_description ?: 'RoyalCare Medical Clinic — compassionate, expert healthcare for you and your family.',

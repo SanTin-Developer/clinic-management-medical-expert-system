@@ -4,8 +4,8 @@ import { PageBanner, Section } from '../../components/public/PublicUI.jsx'
 
 function InfoCard({ icon: Icon, title, children }) {
   return (
-    <div className="rounded-2xl border border-line bg-surface p-6 shadow-[var(--shadow-card)]">
-      <span className="grid size-11 place-items-center rounded-xl bg-brand-soft text-brand">
+    <div className="rounded-3xl border border-line bg-surface p-6 shadow-[var(--shadow-card)]">
+      <span className="grid size-11 place-items-center rounded-2xl bg-azure-100 text-azure-700">
         <Icon className="size-5" aria-hidden />
       </span>
       <h3 className="mt-4 text-base font-semibold text-ink">{title}</h3>
@@ -29,12 +29,12 @@ export default function ContactPage() {
           {(settings?.primary_phone || settings?.secondary_phone) && (
             <InfoCard icon={Phone} title="Phone">
               {settings.primary_phone ? (
-                <a href={`tel:${settings.primary_phone}`} className="block hover:text-brand">
+                <a href={`tel:${settings.primary_phone}`} className="block hover:text-azure-700">
                   {settings.primary_phone}
                 </a>
               ) : null}
               {settings.secondary_phone ? (
-                <a href={`tel:${settings.secondary_phone}`} className="block hover:text-brand">
+                <a href={`tel:${settings.secondary_phone}`} className="block hover:text-azure-700">
                   {settings.secondary_phone}
                 </a>
               ) : null}
@@ -43,7 +43,7 @@ export default function ContactPage() {
 
           {settings?.email ? (
             <InfoCard icon={Mail} title="Email">
-              <a href={`mailto:${settings.email}`} className="block hover:text-brand">
+              <a href={`mailto:${settings.email}`} className="block hover:text-azure-700">
                 {settings.email}
               </a>
             </InfoCard>

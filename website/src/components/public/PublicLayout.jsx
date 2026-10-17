@@ -2,27 +2,17 @@ import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import {
+  Calendar,
   Clock,
   Mail,
   MapPin,
   Menu,
   Phone,
-  Stethoscope,
   X,
 } from 'lucide-react'
 import { publicWebsiteApi } from '../../api/website.js'
-import { APP_NAME } from '../../constants/index.js'
+import { APP_NAME, FOOTER_LINKS, PRIMARY_NAV, SECONDARY_NAV } from '../../constants/index.js'
 import { cn } from '../../utils/cn.js'
-
-const NAV_ITEMS = [
-  { to: '/home', label: 'Home' },
-  { to: '/about', label: 'About Us' },
-  { to: '/services', label: 'Services' },
-  { to: '/team', label: 'Our Team' },
-  { to: '/gallery', label: 'Gallery' },
-  { to: '/health-news', label: 'News & Health' },
-  { to: '/contact', label: 'Contact' },
-]
 
 const SOCIALS = [
   {
@@ -60,26 +50,39 @@ function SocialGlyph({ path, label }) {
   )
 }
 
+function RoyalCareLogo({ className }) {
+  return (
+    <svg viewBox="0 0 48 48" role="img" aria-label="RoyalCare" className={cn('shrink-0', className)}>
+      <rect x="17.5" y="6" width="13" height="36" rx="6.5" fill="#1E88C8" />
+      <rect x="6" y="17.5" width="36" height="13" rx="6.5" fill="#1E88C8" />
+      <path
+        d="M30.5 8c6.6-.8 11.2 2.8 11.2 2.8s-1.3 6-6.8 8c-4.1 1.5-7.9.3-9.7-.8 1.8-5.2 5.3-10 5.3-10Z"
+        fill="#4CAF50"
+        transform="translate(0, 22)"
+      />
+    </svg>
+  )
+}
+
 function BrandMark({ settings, className }) {
   if (settings?.logo?.url) {
     return <img src={settings.logo.url} alt={settings.site_name ?? APP_NAME} className={cn('object-contain', className)} />
   }
-  return (
-    <span className={cn('grid place-items-center rounded-xl bg-brand text-white', className)}>
-      <Stethoscope className="size-5" aria-hidden />
-    </span>
-  )
+  return <RoyalCareLogo className={cn('h-10 w-10', className)} />
 }
 
 function navLinkClass({ isActive }) {
   return cn(
-    'rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-    isActive ? 'text-brand' : 'text-ink-muted hover:text-ink',
+    'relative inline-flex items-center px-3.5 py-2 text-sm font-medium transition-colors',
+    isActive
+      ? "text-[#1E88C8] after:absolute after:-bottom-1 after:left-3 after:right-3 after:h-0.5 after:rounded-full after:bg-[#1E88C8]"
+      : 'text-[#4A5568] hover:text-[#0B4A8F]',
   )
 }
 
 export default function PublicLayout() {
   const [menuOpen, setMenuOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
   const location = useLocation()
 
   const { data } = useQuery({
@@ -92,12 +95,38 @@ export default function PublicLayout() {
   const footerPages = data?.footer_pages ?? []
   const services = data?.services ?? []
 
+  // Only the home page opens with a hero image, so that is where the header can
+  // start fully transparent. Other pages have dark banners that need the glass.
+  const isHome = location.pathname === '/home' || location.pathname === '/'
+
+  // The header sits flush over the hero when at the top of the page (no
+  // background), then fades in its glass background once the page is scrolled.
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 20)
+    const frame = requestAnimationFrame(onScroll)
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => {
+      cancelAnimationFrame(frame)
+      window.removeEventListener('scroll', onScroll)
+    }
+  }, [])
+
   useEffect(() => {
     setMenuOpen(false)
   }, [location.pathname])
 
   useEffect(() => {
     document.title = settings.seo_title || settings.site_name || APP_NAME
+
+    if (settings.seo_description) {
+      let meta = document.querySelector("meta[name='description']")
+      if (!meta) {
+        meta = document.createElement('meta')
+        meta.name = 'description'
+        document.head.appendChild(meta)
+      }
+      meta.content = settings.seo_description
+    }
 
     if (settings.favicon?.url) {
       let link = document.querySelector("link[rel='icon']")
@@ -108,77 +137,90 @@ export default function PublicLayout() {
       }
       link.href = settings.favicon.url
     }
-  }, [settings.seo_title, settings.site_name, settings.favicon?.url])
+  }, [settings.seo_title, settings.site_name, settings.seo_description, settings.favicon?.url])
 
   const phone = settings.primary_phone ?? settings.secondary_phone
   const year = new Date().getFullYear()
 
   return (
     <div className="flex min-h-screen flex-col bg-canvas text-ink">
-      <header className="sticky top-0 z-40 border-b border-line bg-surface/95 backdrop-blur">
-        <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
-          <Link to="/home" className="flex items-center gap-2.5">
-            <BrandMark settings={settings} className="size-9" />
-            <span className="text-base font-bold tracking-tight text-ink">
-              {settings.site_name ?? APP_NAME}
-            </span>
+      <header
+        className={cn(
+          'fixed inset-x-0 top-0 z-50 transition-all duration-300',
+          scrolled || !isHome
+            ? 'bg-white/60 shadow-[0_10px_30px_rgba(11,74,143,0.06)] backdrop-blur-[12px]'
+            : 'bg-transparent',
+        )}
+      >
+        <div className="relative mx-auto flex h-16 w-full max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
+          <Link to="/home" className="flex items-center gap-3">
+            <BrandMark settings={settings} className="size-11" />
+            <div className="flex flex-col leading-tight">
+              <span className="text-[24px] font-extrabold tracking-tight text-[#0B4A8F]" style={{ fontFamily: 'var(--font-display, "Plus Jakarta Sans", system-ui, sans-serif)' }}>
+                RoyalCare
+              </span>
+              <span className="text-[15px] font-medium text-[#1E88C8]" style={{ fontFamily: 'var(--font-display, "Plus Jakarta Sans", system-ui, sans-serif)' }}>
+                Clinic
+              </span>
+            </div>
           </Link>
 
-          <nav className="hidden items-center gap-1 lg:flex" aria-label="Primary">
-            {NAV_ITEMS.map((item) => (
+          <nav
+            className="absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 items-center gap-1 lg:flex"
+            aria-label="Primary"
+          >
+            {PRIMARY_NAV.map((item) => (
               <NavLink key={item.to} to={item.to} className={navLinkClass}>
                 {item.label}
               </NavLink>
             ))}
           </nav>
 
-          <div className="hidden items-center gap-2 lg:flex">
-            {phone ? (
-              <a
-                href={`tel:${phone}`}
-                className="inline-flex items-center gap-2 rounded-lg bg-brand px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-dark"
-              >
-                <Phone className="size-4" aria-hidden />
-                Call Us
-              </a>
-            ) : (
-              <Link
-                to="/contact"
-                className="rounded-lg border border-line px-3 py-2 text-sm font-semibold text-ink transition-colors hover:bg-canvas"
-              >
-                Contact Us
-              </Link>
-            )}
-          </div>
+          <div className="flex items-center gap-2">
+            <Link
+              to="/contact"
+              className="hidden items-center gap-2 rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-ink shadow-[var(--shadow-card)] transition-transform hover:-translate-y-0.5 hover:bg-accent-dark lg:inline-flex"
+            >
+              <Calendar className="size-4" aria-hidden />
+              Book an Appointment
+            </Link>
 
-          <button
-            type="button"
-            onClick={() => setMenuOpen((v) => !v)}
-            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
-            aria-expanded={menuOpen}
-            className="grid size-10 place-items-center rounded-lg border border-line text-ink lg:hidden"
-          >
-            {menuOpen ? <X className="size-5" aria-hidden /> : <Menu className="size-5" aria-hidden />}
-          </button>
+            <button
+              type="button"
+              onClick={() => setMenuOpen((v) => !v)}
+              aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+              aria-expanded={menuOpen}
+              className="grid size-10 place-items-center rounded-xl border border-line bg-surface/70 text-ink lg:hidden"
+            >
+              {menuOpen ? <X className="size-5" aria-hidden /> : <Menu className="size-5" aria-hidden />}
+            </button>
+          </div>
         </div>
 
         {menuOpen ? (
           <nav className="border-t border-line bg-surface px-4 py-3 lg:hidden" aria-label="Mobile">
             <div className="flex flex-col">
-              {NAV_ITEMS.map((item) => (
+              {[...PRIMARY_NAV, ...SECONDARY_NAV].map((item) => (
                 <NavLink
                   key={item.to}
                   to={item.to}
                   className={({ isActive }) =>
                     cn(
-                      'rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
-                      isActive ? 'bg-brand-soft text-brand-dark' : 'text-ink-muted hover:bg-canvas',
+                      'rounded-xl px-3 py-2.5 text-sm font-medium transition-colors',
+                      isActive ? 'bg-azure-100 text-azure-700' : 'text-ink-muted hover:bg-canvas',
                     )
                   }
                 >
                   {item.label}
                 </NavLink>
               ))}
+              <Link
+                to="/contact"
+                className="mt-2 inline-flex items-center justify-center gap-2 rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-accent-ink shadow-[var(--shadow-card)]"
+              >
+                <Calendar className="size-4" aria-hidden />
+                Book an Appointment
+              </Link>
             </div>
           </nav>
         ) : null}
@@ -189,14 +231,14 @@ export default function PublicLayout() {
       </main>
 
       <footer className="mt-16 border-t border-line bg-surface">
-        <div className="mx-auto grid w-full max-w-6xl gap-10 px-4 py-12 sm:px-6 lg:grid-cols-4">
+        <div className="mx-auto grid w-full max-w-7xl gap-10 px-4 py-12 sm:px-6 lg:grid-cols-4">
           <div className="lg:col-span-1">
             <Link to="/home" className="flex items-center gap-2.5">
               <BrandMark settings={settings} className="size-9" />
               <span className="text-base font-bold text-ink">{settings.site_name ?? APP_NAME}</span>
             </Link>
             {settings.tagline ? (
-              <p className="mt-3 text-sm font-medium text-brand">{settings.tagline}</p>
+              <p className="mt-3 text-sm font-medium text-azure-700">{settings.tagline}</p>
             ) : null}
             {settings.about_summary ? (
               <p className="mt-2 line-clamp-4 text-sm text-ink-muted">{settings.about_summary}</p>
@@ -209,7 +251,7 @@ export default function PublicLayout() {
                   target="_blank"
                   rel="noreferrer"
                   aria-label={s.label}
-                  className="grid size-9 place-items-center rounded-lg border border-line text-ink-muted transition-colors hover:border-brand hover:text-brand"
+                  className="grid size-9 place-items-center rounded-lg border border-line text-ink-muted transition-colors hover:border-azure-400 hover:text-azure-600"
                 >
                   <SocialGlyph path={s.path} label={s.label} />
                 </a>
@@ -218,11 +260,11 @@ export default function PublicLayout() {
           </div>
 
           <div>
-            <h3 className="text-sm font-semibold text-ink">Quick Links</h3>
+            <h2 className="text-sm font-semibold text-ink">Quick Links</h2>
             <ul className="mt-3 space-y-2 text-sm">
-              {NAV_ITEMS.slice(1).map((item) => (
+              {FOOTER_LINKS.map((item) => (
                 <li key={item.to}>
-                  <Link to={item.to} className="text-ink-muted transition-colors hover:text-brand">
+                  <Link to={item.to} className="text-ink-muted transition-colors hover:text-azure-600">
                     {item.label}
                   </Link>
                 </li>
@@ -231,18 +273,18 @@ export default function PublicLayout() {
           </div>
 
           <div>
-            <h3 className="text-sm font-semibold text-ink">Our Services</h3>
+            <h2 className="text-sm font-semibold text-ink">Our Services</h2>
             <ul className="mt-3 space-y-2 text-sm">
               {services.slice(0, 6).map((service) => (
                 <li key={service.id}>
-                  <Link to="/services" className="text-ink-muted transition-colors hover:text-brand">
+                  <Link to="/services" className="text-ink-muted transition-colors hover:text-azure-600">
                     {service.title}
                   </Link>
                 </li>
               ))}
               {services.length === 0 ? (
                 <li>
-                  <Link to="/services" className="text-ink-muted transition-colors hover:text-brand">
+                  <Link to="/services" className="text-ink-muted transition-colors hover:text-azure-600">
                     View our services
                   </Link>
                 </li>
@@ -251,18 +293,18 @@ export default function PublicLayout() {
           </div>
 
           <div>
-            <h3 className="text-sm font-semibold text-ink">Get in Touch</h3>
+            <h2 className="text-sm font-semibold text-ink">Get in Touch</h2>
             <ul className="mt-3 space-y-3 text-sm text-ink-muted">
               {settings.address ? (
                 <li className="flex gap-2">
-                  <MapPin className="mt-0.5 size-4 shrink-0 text-brand" aria-hidden />
+                  <MapPin className="mt-0.5 size-4 shrink-0 text-azure-500" aria-hidden />
                   <span>{settings.address}</span>
                 </li>
               ) : null}
               {phone ? (
                 <li className="flex gap-2">
-                  <Phone className="mt-0.5 size-4 shrink-0 text-brand" aria-hidden />
-                  <a href={`tel:${phone}`} className="transition-colors hover:text-brand">
+                  <Phone className="mt-0.5 size-4 shrink-0 text-azure-500" aria-hidden />
+                  <a href={`tel:${phone}`} className="transition-colors hover:text-azure-600">
                     {phone}
                     {settings.secondary_phone ? ` · ${settings.secondary_phone}` : ''}
                   </a>
@@ -270,15 +312,15 @@ export default function PublicLayout() {
               ) : null}
               {settings.email ? (
                 <li className="flex gap-2">
-                  <Mail className="mt-0.5 size-4 shrink-0 text-brand" aria-hidden />
-                  <a href={`mailto:${settings.email}`} className="transition-colors hover:text-brand">
+                  <Mail className="mt-0.5 size-4 shrink-0 text-azure-500" aria-hidden />
+                  <a href={`mailto:${settings.email}`} className="transition-colors hover:text-azure-600">
                     {settings.email}
                   </a>
                 </li>
               ) : null}
               {settings.business_hours ? (
                 <li className="flex gap-2">
-                  <Clock className="mt-0.5 size-4 shrink-0 text-brand" aria-hidden />
+                  <Clock className="mt-0.5 size-4 shrink-0 text-azure-500" aria-hidden />
                   <span className="whitespace-pre-line">{settings.business_hours}</span>
                 </li>
               ) : null}
@@ -287,13 +329,13 @@ export default function PublicLayout() {
         </div>
 
         <div className="border-t border-line">
-          <div className="mx-auto flex w-full max-w-6xl flex-col gap-2 px-4 py-4 text-xs text-ink-muted sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <div className="mx-auto flex w-full max-w-7xl flex-col gap-2 px-4 py-4 text-xs text-ink-muted sm:flex-row sm:items-center sm:justify-between sm:px-6">
             <p>
               © {year} {settings.site_name ?? APP_NAME}. All rights reserved.
             </p>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
               {footerPages.map((page) => (
-                <Link key={page.id} to={`/pages/${page.slug}`} className="transition-colors hover:text-brand">
+                <Link key={page.id} to={`/pages/${page.slug}`} className="transition-colors hover:text-azure-600">
                   {page.title}
                 </Link>
               ))}

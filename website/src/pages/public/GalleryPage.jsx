@@ -34,7 +34,7 @@ export default function GalleryPage() {
               className={cn(
                 'rounded-full border px-4 py-1.5 text-sm font-medium transition-colors',
                 category === ''
-                  ? 'border-brand bg-brand text-white'
+                  ? 'border-azure-500 bg-azure-500 text-white'
                   : 'border-line bg-surface text-ink-muted hover:text-ink',
               )}
             >
@@ -48,7 +48,7 @@ export default function GalleryPage() {
                 className={cn(
                   'rounded-full border px-4 py-1.5 text-sm font-medium capitalize transition-colors',
                   category === cat
-                    ? 'border-brand bg-brand text-white'
+                    ? 'border-azure-500 bg-azure-500 text-white'
                     : 'border-line bg-surface text-ink-muted hover:text-ink',
                 )}
               >

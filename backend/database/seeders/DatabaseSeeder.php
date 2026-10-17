@@ -21,6 +21,7 @@ class DatabaseSeeder extends Seeder
                 KhmerDemoDataSeeder::class,
                 WardRoomBedDemoSeeder::class,
                 InpatientDemoDataSeeder::class,
+                WebsiteDemoContentSeeder::class,
             ]);
         }
     }

@@ -78,6 +78,36 @@ All requests target the Laravel backend prefix `/api/v1` and only fetch
 No authentication token is used. Loading, empty, and error states are handled
 per page.
 
+## Content not yet verified
+
+Some homepage copy reproduces the design reference and is **not** verified
+clinic data. Confirm or replace it before publishing:
+
+- **Hero highlights** — "10,000+ Happy Patients", "50+ Specialists" and
+  "8AM - 8PM" (`HERO_STATS` in `src/constants/index.js`). These are reference
+  figures, not confirmed statistics.
+- **Partner strip** — `PARTNER_PLACEHOLDERS` renders five styled marks
+  (PharmaHealth, MediCare, LifePlus, HealthFirst, WellnessCo) as icon + wordmark.
+  These are design-reference names, not confirmed partnerships; replace them with
+  real partners (ideally CMS-backed) before publishing.
+
+Hero copy (eyebrow, heading, description), the about summary and the hero image
+are editable from the Admin CMS (Website Management → Settings). The stat cards
+and partner strip remain code-level placeholders until CMS fields are added.
+
+## Media assets
+
+| File                               | Source                    | License        |
+| ---------------------------------- | ------------------------- | -------------- |
+| `public/media/hero-background.png` | Supplied by project owner | Project asset  |
+| `public/media/about-clinic.jpg`    | Pexels (photo 4989168)    | Pexels License |
+| `public/royalcare-logo.png`        | Project asset             | Project asset  |
+
+`about-clinic.jpg` is a Pexels stock photo (free to use, no attribution
+required); replace it with a real RoyalCare facility photo when available. The
+hero background can be overridden without a code change by uploading a
+`hero_image` in the CMS.
+
 ## Deployment
 
 The app is a SPA — build with `npm run build` and serve `dist/` behind a web
