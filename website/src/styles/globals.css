@@ -108,6 +108,12 @@ body,
   height: 100%;
 }
 
+/* In-page section anchors (About page quick-jump chips) glide instead of
+   snapping. The reduced-motion block below resets this to auto. */
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   margin: 0;
   background: var(--color-canvas);
@@ -348,6 +354,63 @@ input[type="search"]::-webkit-search-decoration {
 }
 
 /* ----------------------------------------------------------------------------
+   Media asset protection (public website).
+   The logo and every image on the site cannot be right-click copied or
+   left-click dragged out of the page. -webkit-user-drag and the iOS
+   long-press callout cover WebKit/Blink; utils/imageProtection.js covers
+   Firefox and dynamically rendered images.
+---------------------------------------------------------------------------- */
+img,
+svg,
+picture,
+video,
+canvas,
+audio {
+  -webkit-user-drag: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Slow progress bar for the "News & Health" featured slider. The bar fills
+   over one full slide interval so the long dwell time is visible. */
+@keyframes featured-slide-progress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/* ----------------------------------------------------------------------------
+   Infinite facility marquee (About page). Each row renders its items twice and
+   slides by -50% for a seamless loop; the reverse row runs the same keyframes
+   backwards so the two rows drift toward each other. Hovering pauses the row
+   so photo captions can be read.
+---------------------------------------------------------------------------- */
+@keyframes marquee-left {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.marquee-track {
+  animation: marquee-left 55s linear infinite;
+}
+
+.marquee-track:hover {
+  animation-play-state: paused;
+}
+
+.marquee-track-reverse {
+  animation-direction: reverse;
+}
+
+/* ----------------------------------------------------------------------------
    "Our Team" 3D coverflow carousel.
    Cards are absolutely positioned on a perspective stage; each card receives
    its transform from JS based on its distance from the active profile.
@@ -373,6 +436,10 @@ input[type="search"]::-webkit-search-decoration {
     opacity: 1;
     transform: none;
     transition: none;
+  }
+
+  .marquee-track {
+    animation: none;
   }
 
   .carousel-card {

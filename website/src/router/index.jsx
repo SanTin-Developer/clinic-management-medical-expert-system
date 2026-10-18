@@ -4,6 +4,7 @@ import { Spinner } from '../components/ui/Skeleton.jsx'
 import { PageBanner, Section } from '../components/public/PublicUI.jsx'
 
 const PublicLayout = lazy(() => import('../components/public/PublicLayout.jsx'))
+const AboutPage = lazy(() => import('../pages/public/AboutPage.jsx'))
 const HomePage = lazy(() => import('../pages/public/HomePage.jsx'))
 const PageView = lazy(() => import('../pages/public/PageView.jsx'))
 const ServicesPage = lazy(() => import('../pages/public/ServicesPage.jsx'))
@@ -57,7 +58,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: withSuspense(<HomePage />) },
       { path: 'home', element: withSuspense(<HomePage />) },
-      { path: 'about', element: withSuspense(<PageView slug="about" />) },
+      { path: 'about', element: withSuspense(<AboutPage />) },
       { path: 'services', element: withSuspense(<ServicesPage />) },
       { path: 'team', element: withSuspense(<TeamPage />) },
       { path: 'gallery', element: withSuspense(<GalleryPage />) },

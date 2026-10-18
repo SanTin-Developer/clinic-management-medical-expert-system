@@ -37,6 +37,7 @@ use App\Http\Controllers\Api\PharmacyDashboardController;
 use App\Http\Controllers\Api\PharmacyPosController;
 use App\Http\Controllers\Api\PrescriptionController;
 use App\Http\Controllers\Api\PublicArticleController;
+use App\Http\Controllers\Api\PublicContactMessageController;
 use App\Http\Controllers\Api\PublicGalleryController;
 use App\Http\Controllers\Api\PublicMediaController;
 use App\Http\Controllers\Api\PublicPageController;
@@ -61,6 +62,7 @@ use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\VitalSignController;
 use App\Http\Controllers\Api\WardController;
 use App\Http\Controllers\Api\WebsiteArticleController;
+use App\Http\Controllers\Api\WebsiteContactMessageController;
 use App\Http\Controllers\Api\WebsiteDashboardController;
 use App\Http\Controllers\Api\WebsiteGalleryController;
 use App\Http\Controllers\Api\WebsiteMediaController;
@@ -114,6 +116,9 @@ Route::prefix('v1')->group(function () {
         Route::get('/articles', [PublicArticleController::class, 'index']);
         Route::get('/articles/{article:slug}', [PublicArticleController::class, 'show']);
         Route::get('/media/{mediaAsset}', [PublicMediaController::class, 'show'])->name('website.media.show');
+
+        // Contact page intake (public, unauthenticated)
+        Route::post('/contact', [PublicContactMessageController::class, 'store']);
     });
 
     // Protected routes
@@ -345,6 +350,13 @@ Route::prefix('v1')->group(function () {
             Route::get('/media', [WebsiteMediaController::class, 'index']);
             Route::post('/media', [WebsiteMediaController::class, 'store']);
             Route::delete('/media/{mediaAsset}', [WebsiteMediaController::class, 'destroy']);
+
+            // Contact page inbox (messages sent from the public website)
+            Route::get('/contact-messages', [WebsiteContactMessageController::class, 'index']);
+            Route::get('/contact-messages/{contactMessage}', [WebsiteContactMessageController::class, 'show']);
+            Route::post('/contact-messages/{contactMessage}/read', [WebsiteContactMessageController::class, 'markRead']);
+            Route::post('/contact-messages/{contactMessage}/unread', [WebsiteContactMessageController::class, 'markUnread']);
+            Route::delete('/contact-messages/{contactMessage}', [WebsiteContactMessageController::class, 'destroy']);
         });
 
         // Staff leave requests (self-service with manager approval)

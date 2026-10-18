@@ -148,6 +148,7 @@ class RolePermissionSeeder extends Seeder
             'website.articles.publish',
             'website.media.manage',
             'website.seo.manage',
+            'website.contact.manage',
 
             // Leave Management
             'leave.view',

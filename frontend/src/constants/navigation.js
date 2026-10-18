@@ -11,6 +11,7 @@ import {
   FolderOpen,
   Globe,
   Images,
+  Inbox,
   LayoutDashboard,
   ListOrdered,
   MailPlus,
@@ -291,6 +292,12 @@ export const NAV_SECTIONS = [
         label: "News & Health",
         icon: Newspaper,
         permissions: ["website.articles.view"],
+      },
+      {
+        to: "/website/contact-messages",
+        label: "Contact Messages",
+        icon: Inbox,
+        permissions: ["website.view"],
       },
       {
         to: "/website/media",

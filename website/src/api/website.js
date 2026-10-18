@@ -13,4 +13,5 @@ export const publicWebsiteApi = {
   listGallery: (params) => api.get('/website/gallery', { params }),
   listArticles: (params) => api.get('/website/articles', { params }),
   getArticle: (slug) => api.get(`/website/articles/${slug}`),
+  submitContactMessage: (payload) => api.post('/website/contact', payload),
 }

@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   Clock,
   HeartPulse,
+  MapPin,
   ShieldCheck,
   Users,
 } from 'lucide-react'
@@ -246,32 +247,91 @@ export function AboutSection({ settings = {} }) {
   )
 }
 
+// Clinic location (used by the home page CTA map).
+const CLINIC_COORDS = { lat: 11.589353, lng: 104.928170 }
+
+// Backdrop photo for the home page "Ready to visit us?" banner.
+const CTA_BACKGROUND_IMAGE =
+  'https://res.cloudinary.com/drercy9vt/image/upload/v1792296154/Home/Clinic%20Management%20System%20and%20Medical%20Expert%20systems/website/media/0afda111-e83c-48c7-898d-172acd364d24.jpg'
+
 export function CtaBanner({ settings = {} }) {
   const phone = settings.primary_phone ?? settings.secondary_phone
+  const address = settings.address
+
+  // Keyless Google Maps embed pinned to the clinic's exact coordinates, with
+  // the address as the search label so the pin is labelled correctly.
+  const coords = `${CLINIC_COORDS.lat},${CLINIC_COORDS.lng}`
+  const mapQuery = encodeURIComponent(address ? `${address} (${coords})` : coords)
+  const mapSrc = `https://maps.google.com/maps?q=${mapQuery}&z=16&ll=${coords}&output=embed`
+  const directionsHref = `https://www.google.com/maps/dir/?api=1&destination=${coords}`
+
   return (
     <section className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6">
-      <Reveal className="brand-gradient-deep hero-glow relative overflow-hidden rounded-hero px-8 py-14 text-center">
-        <div className="relative mx-auto max-w-2xl text-white">
-          <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">Ready to visit us?</h2>
-          <p className="mt-3 text-sm text-white/80 sm:text-base">
-            Reach out to schedule an appointment or ask us anything about our services.
-          </p>
-          <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <Link
-              to="/contact"
-              className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-accent px-6 py-3.5 text-sm font-semibold text-accent-ink transition-colors hover:bg-accent-dark sm:w-auto"
-            >
-              Contact Us
-            </Link>
-            {phone ? (
-              <a
-                href={`tel:${phone}`}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/40 bg-white/10 px-6 py-3.5 text-sm font-semibold text-white backdrop-blur transition-colors hover:bg-white/20 sm:w-auto"
+      <Reveal className="brand-gradient-deep hero-glow relative overflow-hidden rounded-hero px-8 py-14">
+        {/* Clinic photo backdrop, dimmed so the white copy and map stay readable. */}
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: `url("${CTA_BACKGROUND_IMAGE}")` }}
+          aria-hidden
+        />
+        <div
+          className="absolute inset-0 bg-gradient-to-r from-[#0a2d4e]/92 via-[#0a2d4e]/78 to-[#0f4c7a]/60"
+          aria-hidden
+        />
+        <div className="relative z-10 grid items-center gap-10 lg:grid-cols-2 lg:gap-14">
+          <div className="text-center text-white lg:text-left">
+            <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">Ready to visit us?</h2>
+            <p className="mt-3 text-sm text-white/80 sm:text-base">
+              Reach out to schedule an appointment or ask us anything about our services.
+            </p>
+            <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row lg:justify-start">
+              <Link
+                to="/contact"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-accent px-6 py-3.5 text-sm font-semibold text-accent-ink transition-colors hover:bg-accent-dark sm:w-auto"
               >
-                <HeartPulse className="size-4" aria-hidden />
-                Call {phone}
+                Contact Us
+              </Link>
+              {phone ? (
+                <a
+                  href={`tel:${phone}`}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/40 bg-white/10 px-6 py-3.5 text-sm font-semibold text-white backdrop-blur transition-colors hover:bg-white/20 sm:w-auto"
+                >
+                  <HeartPulse className="size-4" aria-hidden />
+                  Call {phone}
+                </a>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="overflow-hidden rounded-3xl border border-white/25 bg-white/10 p-2 shadow-[var(--shadow-float)] backdrop-blur">
+            <div className="relative h-64 w-full overflow-hidden rounded-2xl sm:h-72">
+              <iframe
+                title="Clinic location map"
+                src={mapSrc}
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                className="absolute inset-0 h-full w-full border-0"
+              />
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-3 text-white">
+              {address ? (
+                <span className="inline-flex min-w-0 items-center gap-2 text-sm">
+                  <MapPin className="size-4 shrink-0" aria-hidden />
+                  <span className="truncate">{address}</span>
+                </span>
+              ) : (
+                <span />
+              )}
+              <a
+                href={directionsHref}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-white/15 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-white/25"
+              >
+                Get directions
+                <ArrowRight className="size-3.5" aria-hidden />
               </a>
-            ) : null}
+            </div>
           </div>
         </div>
       </Reveal>

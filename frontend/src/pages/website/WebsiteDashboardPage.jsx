@@ -5,6 +5,7 @@ import {
   FileText,
   FolderOpen,
   Images,
+  Inbox,
   Newspaper,
   Settings,
   Stethoscope,
@@ -30,6 +31,7 @@ const SHORTCUTS = [
   { to: '/website/team', label: 'Our Team', description: 'Public doctor and staff profiles', icon: Users },
   { to: '/website/gallery', label: 'Gallery', description: 'Facility and clinic photos', icon: Images },
   { to: '/website/articles', label: 'News & Health', description: 'Articles published on the website', icon: Newspaper },
+  { to: '/website/contact-messages', label: 'Contact Messages', description: 'Messages from the public Contact page', icon: Inbox },
   { to: '/website/media', label: 'Media Library', description: 'Uploaded images and files', icon: FolderOpen },
 ]
 

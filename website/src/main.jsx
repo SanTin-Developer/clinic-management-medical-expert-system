@@ -5,7 +5,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import '@fontsource-variable/geist'
 import '@fontsource-variable/kantumruy-pro'
 import { router } from './router/index.jsx'
+import { installImageProtection } from './utils/imageProtection.js'
 import './styles/globals.css'
+
+// Protect the logo and every image: block right-click copy and left-click drag.
+installImageProtection()
 
 const queryClient = new QueryClient({
   defaultOptions: {

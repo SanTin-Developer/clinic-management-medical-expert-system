@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import {
@@ -83,6 +83,7 @@ function navLinkClass({ isActive }) {
 export default function PublicLayout() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  const navigatedRef = useRef(false)
   const location = useLocation()
 
   const { data } = useQuery({
@@ -113,6 +114,16 @@ export default function PublicLayout() {
 
   useEffect(() => {
     setMenuOpen(false)
+
+    // Reset scroll on client-side navigation so a new page always starts at
+    // the top. Instant behavior overrides the global smooth scroll rule,
+    // which would otherwise animate from the previous page's position. The
+    // first render is skipped so direct links with a #hash still land on it.
+    if (navigatedRef.current) {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+    } else {
+      navigatedRef.current = true
+    }
   }, [location.pathname])
 
   useEffect(() => {

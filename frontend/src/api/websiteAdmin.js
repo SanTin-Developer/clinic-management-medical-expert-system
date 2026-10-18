@@ -74,4 +74,10 @@ export const websiteAdminApi = {
   listMedia: (params) => api.get('/website/admin/media', { params }),
   uploadMedia: (payload) => create('/website/admin/media', payload),
   deleteMedia: (id) => api.delete(`/website/admin/media/${id}`),
+
+  listContactMessages: (params) => api.get('/website/admin/contact-messages', { params }),
+  getContactMessage: (id) => withData(api.get(`/website/admin/contact-messages/${id}`)),
+  markContactMessageRead: (id) => withData(api.post(`/website/admin/contact-messages/${id}/read`)),
+  markContactMessageUnread: (id) => withData(api.post(`/website/admin/contact-messages/${id}/unread`)),
+  deleteContactMessage: (id) => api.delete(`/website/admin/contact-messages/${id}`),
 }

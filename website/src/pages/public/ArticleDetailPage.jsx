@@ -101,6 +101,16 @@ export default function ArticleDetailPage() {
               ))}
             </div>
           ) : null}
+
+          <div className="mt-10 border-t border-line pt-8">
+            <Link
+              to="/health-news"
+              className="inline-flex items-center gap-2 rounded-full bg-azure-500 px-6 py-3 text-sm font-semibold text-white shadow-[var(--shadow-card)] transition-colors hover:bg-azure-600"
+            >
+              <ArrowLeft className="size-4" aria-hidden />
+              Back to News &amp; Health
+            </Link>
+          </div>
         </div>
 
         {related.length > 0 ? (
