@@ -105,7 +105,7 @@ export default function WebsiteGalleryPage() {
               >
                 <div className="relative">
                   {row.image?.url ? (
-                    <img src={row.image.url} alt={row.title ?? ''} className="h-40 w-full object-cover" />
+                    <img src={row.image.url} alt={row.title ?? ''} className="h-40 w-full bg-canvas object-contain" />
                   ) : (
                     <div className="grid h-40 w-full place-items-center bg-brand-soft text-brand">
                       <Images className="size-6" aria-hidden />

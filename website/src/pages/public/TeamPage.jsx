@@ -7,7 +7,7 @@ import { Spinner } from '../../components/ui/Skeleton.jsx'
 import { EmptyState, ErrorState } from '../../components/ui/State.jsx'
 import { cn } from '../../utils/cn.js'
 import { Reveal } from '../../components/public/Reveal.jsx'
-import { Section, SectionHeading } from '../../components/public/PublicUI.jsx'
+import { BannerBackdrop, Section, SectionHeading } from '../../components/public/PublicUI.jsx'
 import TeamGrid from '../../components/public/TeamGrid.jsx'
 
 /**
@@ -93,16 +93,7 @@ export default function TeamPage() {
       {/* Section 1 — Cinematic hero: headline, live member count with an
           avatar cluster, and a specialization ticker built from the data. */}
       <section className="relative isolate overflow-hidden bg-[#06243d]">
-        <span
-          aria-hidden
-          className="animate-aurora absolute -left-28 -top-24 size-[440px] rounded-full bg-azure-500/35 blur-[120px]"
-        />
-        <span
-          aria-hidden
-          className="animate-aurora absolute -right-24 top-1/3 size-[360px] rounded-full bg-accent/25 blur-[110px]"
-          style={{ animationDelay: '-7s' }}
-        />
-        <span aria-hidden className="auth-grid absolute inset-0 opacity-40" />
+        <BannerBackdrop />
 
         <Section reveal={false} className="relative pb-14 pt-32 text-center sm:pt-40">
           <Reveal>
@@ -249,10 +240,7 @@ export default function TeamPage() {
       {/* Section 3 — Closing CTA: dark bookend echoing the hero. */}
       {!isLoading && !isError && team.length > 0 ? (
         <section className="relative isolate overflow-hidden bg-[#06243d]">
-          <span
-            aria-hidden
-            className="animate-aurora absolute left-1/2 top-0 size-[520px] -translate-x-1/2 -translate-y-1/3 rounded-full bg-azure-500/30 blur-[130px]"
-          />
+          <BannerBackdrop />
           <span
             aria-hidden
             className="absolute left-1/2 top-1/2 size-[520px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/10"
@@ -261,7 +249,6 @@ export default function TeamPage() {
             aria-hidden
             className="absolute left-1/2 top-1/2 size-[840px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/5"
           />
-          <span aria-hidden className="auth-grid absolute inset-0 opacity-30" />
 
           <Section reveal={false} className="relative py-20 text-center sm:py-24">
             <Reveal className="mx-auto max-w-2xl text-white">

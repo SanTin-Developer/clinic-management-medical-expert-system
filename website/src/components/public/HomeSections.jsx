@@ -2,6 +2,7 @@ import { Fragment } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ArrowRight,
+  Calendar,
   CheckCircle2,
   Clock,
   HeartPulse,
@@ -17,6 +18,7 @@ import {
   HERO_DESCRIPTION,
   HERO_EYEBROW,
   HERO_HEADING,
+  HERO_HIGHLIGHT,
   HERO_STATS,
   PARTNER_PLACEHOLDERS,
 } from '../../constants/index.js'
@@ -60,7 +62,7 @@ function StatCard({ stat, className, style }) {
     <article
       style={style}
       className={cn(
-        'flex w-[210px] items-start gap-3 rounded-[20px] border border-white/50 bg-white/65 p-4 shadow-[0_10px_30px_rgba(11,74,143,0.08)] backdrop-blur-[12px]',
+        'flex w-full min-[720px]:w-[210px] items-start gap-3 rounded-[20px] border border-white/50 bg-white/65 p-4 shadow-[0_10px_30px_rgba(11,74,143,0.08)] backdrop-blur-[12px]',
         className,
       )}
     >
@@ -77,7 +79,12 @@ function StatCard({ stat, className, style }) {
 }
 
 export function HeroSection({ settings = {} }) {
-  const heroImage = settings.heroMedia?.url ?? DEFAULT_HERO_IMAGE
+  // API serializes the relation as snake_case (`hero_media`), not `heroMedia`.
+  const heroImage = settings.hero_media?.url ?? DEFAULT_HERO_IMAGE
+  const eyebrow = settings.tagline?.trim() || HERO_EYEBROW
+  const heroTitle = settings.hero_title?.trim()
+  const description = settings.hero_subtitle?.trim() || HERO_DESCRIPTION
+  const highlight = settings.about_summary?.trim() || HERO_HIGHLIGHT
 
   return (
     <section className="relative flex min-h-[clamp(640px,52vw,900px)] flex-col overflow-hidden bg-[#F8FBFF]">
@@ -86,12 +93,18 @@ export function HeroSection({ settings = {} }) {
         alt="Smiling RoyalCare Clinic doctor holding a clipboard in the bright clinic lobby"
         className="animate-hero-image-in absolute inset-0 h-full w-full object-cover object-[60%_12%]"
       />
+      {/* Desktop: white veil fades left-to-right behind the copy. */}
       <div
-        className="absolute inset-0"
+        className="absolute inset-0 hidden lg:block"
         style={{
           backgroundImage:
             'linear-gradient(90deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.4) 30%, rgba(255,255,255,0) 55%)',
         }}
+        aria-hidden
+      />
+      {/* Phones/tablets: vertical veil so every line stays readable over the photo. */}
+      <div
+        className="absolute inset-0 bg-gradient-to-b from-white/90 via-white/75 to-white/55 lg:hidden"
         aria-hidden
       />
       <div
@@ -124,41 +137,73 @@ export function HeroSection({ settings = {} }) {
 
       <div className="relative mx-auto flex w-full max-w-[1200px] flex-1 items-center px-4 pb-[80px] pt-[110px] sm:px-6">
         <div className="mt-6 max-w-[640px]">
-          <p className="reveal reveal-1 text-[13px] font-bold uppercase tracking-[0.2em] text-[#1E88C8]">
-            {HERO_EYEBROW}
+          {/* Eyebrow: the CMS tagline in a glass pill with a live pulse dot. */}
+          <p className="reveal reveal-1 inline-flex items-center gap-2.5 rounded-full border border-[#1E88C8]/25 bg-white/70 px-4 py-2 text-[13px] font-semibold text-[#0B4A8F] shadow-[0_14px_34px_-22px_rgb(11_74_143_/_0.8)] backdrop-blur-md">
+            <span className="relative flex size-2 shrink-0" aria-hidden>
+              <span className="absolute inline-flex size-full animate-ping rounded-full bg-accent opacity-75 motion-reduce:hidden" />
+              <span className="relative inline-flex size-2 rounded-full bg-accent" />
+            </span>
+            {eyebrow}
           </p>
 
-          <h1 className="reveal reveal-2 mt-4 font-display text-[clamp(40px,4vw,58px)] font-extrabold leading-[1.1] tracking-[-0.02em]">
-            <span className="block text-[#0B4A8F]">{HERO_HEADING[0]}</span>
-            <span className="block bg-gradient-to-r from-[#43A047] to-[#66BB6A] bg-clip-text text-transparent sm:whitespace-nowrap">
-              {HERO_HEADING[1]}
-            </span>
+          {/* Headline: brand-blue gradient when the CMS supplies a single title. */}
+          <h1 className="reveal reveal-2 mt-5 font-display text-[clamp(36px,5vw,66px)] font-extrabold leading-[1.04] tracking-[-0.03em]">
+            {heroTitle ? (
+              <span className="block bg-gradient-to-r from-[#0B4A8F] via-[#155E9E] to-[#1E88C8] bg-clip-text text-transparent">
+                {heroTitle}
+              </span>
+            ) : (
+              <>
+                <span className="block text-[#0B4A8F]">{HERO_HEADING[0]}</span>
+                <span className="block bg-gradient-to-r from-[#43A047] to-[#66BB6A] bg-clip-text text-transparent sm:whitespace-nowrap">
+                  {HERO_HEADING[1]}
+                </span>
+              </>
+            )}
           </h1>
 
-          <p className="reveal reveal-3 mt-5 max-w-[520px] text-[17px] leading-relaxed text-[#4A5568] lg:text-lg">
-            {HERO_DESCRIPTION}
+          <p className="reveal reveal-3 mt-5 max-w-[540px] text-[18px] leading-[1.75] text-[#4A5568]">
+            {description}
           </p>
 
-          <div className="reveal reveal-4 mt-7">
+          {/* CMS About summary as a glass callout card with green text. */}
+          <div className="reveal reveal-4 mt-6 flex max-w-[580px] items-start gap-3 rounded-2xl border border-accent/30 bg-white/75 p-4 shadow-[0_20px_44px_-30px_rgb(11_74_143_/_0.9)] backdrop-blur-md">
+            <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-full bg-accent/15 text-accent-dark">
+              <ShieldCheck className="size-4" aria-hidden />
+            </span>
+            <p className="text-[15px] font-semibold leading-snug text-[#2E7D32] lg:text-base">{highlight}</p>
+          </div>
+
+          {/* Primary (green, matches header CTA) + secondary appointment CTA.
+              Stacked full-width on phones, side-by-side from 480px. */}
+          <div className="reveal reveal-5 mt-8 flex flex-col gap-3 min-[480px]:flex-row min-[480px]:flex-wrap min-[480px]:items-center min-[480px]:gap-4">
             <Link
               to="/services"
-              className="inline-flex items-center gap-2 rounded-full bg-[#4CAF50] px-7 py-3.5 text-sm font-semibold text-white shadow-[0_16px_34px_-14px_rgb(76_175_80_/_0.75)] transition-transform hover:-translate-y-0.5 hover:bg-[#43A047]"
+              className="group inline-flex w-full items-center justify-center gap-2 rounded-full bg-accent px-7 py-3.5 text-sm font-semibold text-accent-ink shadow-[0_18px_38px_-16px_rgb(76_175_80_/_0.9)] transition hover:-translate-y-0.5 hover:bg-accent-dark min-[480px]:w-auto"
             >
               Explore Our Services
-              <ArrowRight className="size-4" aria-hidden />
+              <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" aria-hidden />
+            </Link>
+            <Link
+              to="/contact"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-[#0B4A8F]/25 bg-white/75 px-6 py-3.5 text-sm font-semibold text-[#0B4A8F] shadow-[var(--shadow-card)] backdrop-blur-md transition hover:-translate-y-0.5 hover:border-[#0B4A8F]/50 hover:bg-white min-[480px]:w-auto"
+            >
+              <Calendar className="size-4" aria-hidden />
+              Book an Appointment
             </Link>
           </div>
         </div>
       </div>
 
+      {/* Stat strip for phones/tablets: tidy 2-up grid, then a scroll row. */}
       <div className="relative pb-10 min-[1100px]:hidden">
         <div className="mx-auto w-full max-w-[1200px] px-4 sm:px-6">
-          <div className="flex gap-3 overflow-x-auto">
+          <div className="grid grid-cols-2 gap-3 min-[720px]:flex min-[720px]:snap-x min-[720px]:overflow-x-auto">
             {HERO_STATS.map((stat, index) => (
               <StatCard
                 key={stat.key}
                 stat={stat}
-                className="animate-float-subtle shrink-0"
+                className="animate-float-subtle shrink-0 min-[720px]:snap-start"
                 style={{ animationDelay: `${index * 0.8}s` }}
               />
             ))}

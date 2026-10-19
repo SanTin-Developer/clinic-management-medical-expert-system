@@ -318,7 +318,7 @@ export default function NewsPage() {
               <img
                 src={viewing.poster_url}
                 alt=""
-                className="max-h-80 w-full rounded-xl border border-line object-cover"
+                className="max-h-80 w-full rounded-xl border border-line object-contain"
               />
             ) : null}
             <p className="whitespace-pre-wrap text-sm text-ink">{viewing.body}</p>

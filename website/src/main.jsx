@@ -11,6 +11,14 @@ import './styles/globals.css'
 // Protect the logo and every image: block right-click copy and left-click drag.
 installImageProtection()
 
+// Progressive Web App: register the offline shell. Production builds only, so
+// the dev server's module graph is never served from a stale cache.
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => undefined)
+  })
+}
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

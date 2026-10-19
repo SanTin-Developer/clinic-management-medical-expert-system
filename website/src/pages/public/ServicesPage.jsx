@@ -8,6 +8,7 @@ import { Spinner } from '../../components/ui/Skeleton.jsx'
 import { EmptyState, ErrorState } from '../../components/ui/State.jsx'
 import { Reveal } from '../../components/public/Reveal.jsx'
 import {
+  BannerBackdrop,
   resolveIcon,
   Section,
   SectionHeading,
@@ -218,16 +219,7 @@ export default function ServicesPage() {
       {/* Section 1 — Cinematic hero: mirrors the About page hero family with a
           left-aligned headline and a glass preview panel of live CMS titles. */}
       <section className="relative isolate overflow-hidden bg-[#06243d]">
-        <span
-          aria-hidden
-          className="animate-aurora absolute -left-28 -top-24 size-[440px] rounded-full bg-azure-500/35 blur-[120px]"
-        />
-        <span
-          aria-hidden
-          className="animate-aurora absolute -right-24 top-1/3 size-[360px] rounded-full bg-accent/25 blur-[110px]"
-          style={{ animationDelay: '-7s' }}
-        />
-        <span aria-hidden className="auth-grid absolute inset-0 opacity-40" />
+        <BannerBackdrop />
 
         <Section reveal={false} className="relative pb-16 pt-32 sm:pt-40">
           <div className="grid items-center gap-12 lg:grid-cols-[1.1fr_0.9fr] lg:gap-16">
@@ -501,16 +493,7 @@ export default function ServicesPage() {
           {/* Section 4 — Closing CTA: dark band echoing the hero, with a glass
               card carrying the live contact details from the CMS settings. */}
           <section className="relative isolate overflow-hidden bg-[#06243d]">
-            <span
-              aria-hidden
-              className="animate-aurora absolute -right-20 top-0 size-[440px] rounded-full bg-azure-500/30 blur-[120px]"
-            />
-            <span
-              aria-hidden
-              className="animate-aurora absolute -left-24 bottom-0 size-[340px] rounded-full bg-accent/20 blur-[110px]"
-              style={{ animationDelay: '-9s' }}
-            />
-            <span aria-hidden className="auth-grid absolute inset-0 opacity-30" />
+            <BannerBackdrop />
 
             <Section
               reveal={false}

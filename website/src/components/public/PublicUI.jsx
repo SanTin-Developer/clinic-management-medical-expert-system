@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link, useOutletContext } from 'react-router-dom'
 import {
   Activity,
   Ambulance,
@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { cn } from '../../utils/cn.js'
 import { formatDate } from '../../utils/format.js'
+import { APP_NAME, DEFAULT_HERO_IMAGE } from '../../constants/index.js'
 import { useInView } from './Reveal.jsx'
 
 const ICONS = {
@@ -59,14 +60,44 @@ export function Section({ children, className, reveal = true }) {
   )
 }
 
-export function PageBanner({ title, description, image }) {
+/**
+ * Shared inner-page banner backdrop (the About-page look): dark navy base, a
+ * very faint background image hidden behind the text, a dark blue-green
+ * gradient overlay, aurora glows and the grid texture. Falls back to the CMS
+ * hero image, then to the bundled design asset.
+ */
+export function BannerBackdrop({ image }) {
+  const { settings } = useOutletContext() ?? {}
+  const src = image || settings?.hero_media?.url || DEFAULT_HERO_IMAGE
+
   return (
-    <section className="brand-gradient hero-glow relative overflow-hidden">
-      {image ? (
-        <img src={image} alt="" className="absolute inset-0 size-full object-cover opacity-20" />
-      ) : null}
+    <div aria-hidden className="pointer-events-none absolute inset-0 bg-[#06243d]">
+      <img
+        src={src}
+        alt=""
+        className="absolute inset-0 size-full object-cover object-[50%_30%] opacity-30 mix-blend-luminosity"
+      />
+      <div className="absolute inset-0 bg-gradient-to-b from-[#06243d]/90 via-[#0a2d4e]/85 to-[#06243d]" />
+      <span className="animate-aurora absolute -left-28 -top-24 size-[440px] rounded-full bg-azure-500/35 blur-[120px]" />
+      <span
+        className="animate-aurora absolute -right-24 top-1/3 size-[360px] rounded-full bg-accent/25 blur-[110px]"
+        style={{ animationDelay: '-7s' }}
+      />
+      <span className="auth-grid absolute inset-0 opacity-40" />
+    </div>
+  )
+}
+
+export function PageBanner({ title, description, image }) {
+  const { settings } = useOutletContext() ?? {}
+
+  return (
+    <section className="relative isolate overflow-hidden bg-[#06243d]">
+      <BannerBackdrop image={image} />
       <Section className="relative pb-14 pt-28 sm:pb-16 sm:pt-32">
-        <p className="text-xs font-bold uppercase tracking-[0.25em] text-white/75">RoyalCare</p>
+        <p className="text-xs font-bold uppercase tracking-[0.25em] text-white/75">
+          {settings?.site_name || APP_NAME}
+        </p>
         <h1 className="mt-3 text-3xl font-bold tracking-tight text-white sm:text-4xl lg:text-5xl">{title}</h1>
         {description ? <p className="mt-4 max-w-2xl text-sm text-white/85 sm:text-base">{description}</p> : null}
       </Section>

@@ -18,7 +18,7 @@ import { publicWebsiteApi } from '../../api/website.js'
 import { RowSkeleton, Spinner } from '../../components/ui/Skeleton.jsx'
 import { EmptyState, ErrorState } from '../../components/ui/State.jsx'
 import { Reveal } from '../../components/public/Reveal.jsx'
-import { Section, SectionHeading } from '../../components/public/PublicUI.jsx'
+import { BannerBackdrop, Section, SectionHeading } from '../../components/public/PublicUI.jsx'
 import TeamGrid from '../../components/public/TeamGrid.jsx'
 import { cn } from '../../utils/cn.js'
 import { ABOUT_CLINIC_IMAGE, APP_NAME } from '../../constants/index.js'
@@ -33,7 +33,6 @@ import { ABOUT_CLINIC_IMAGE, APP_NAME } from '../../constants/index.js'
  * CMS gap: `website_settings` has no about/mission/vision/values columns, so
  * this copy stays here until those fields (and their admin inputs) exist.
  */
-const ABOUT_EYEBROW = 'About RoyalCare'
 const ABOUT_HEADING = 'Caring for Your Health, Every Step of the Way'
 const ABOUT_INTRO =
   'Discover our approach to patient-centered healthcare, clear communication, and helping individuals and families make informed decisions about their well-being.'
@@ -307,33 +306,14 @@ export default function AboutPage() {
   const lead = settings.about_summary || plainText(page.excerpt) || FALLBACK_SUMMARY
   const bodyText = plainText(page.body)
   const heroImage = page.cover?.url || ABOUT_CLINIC_IMAGE
-  const aboutImage = settings.heroMedia?.url || ABOUT_CLINIC_IMAGE
+  const aboutImage = settings.hero_media?.url || ABOUT_CLINIC_IMAGE
 
   return (
     <>
       {/* Section 1 — Cinematic hero: dark full-bleed banner with aurora glow,
           a masked cover photo, quick-jump chips and a scroll cue. */}
       <section className="relative isolate overflow-hidden bg-[#06243d]">
-        <img
-          src={heroImage}
-          alt=""
-          aria-hidden
-          className="absolute inset-0 size-full object-cover object-[50%_30%] opacity-30 mix-blend-luminosity"
-        />
-        <div
-          aria-hidden
-          className="absolute inset-0 bg-gradient-to-b from-[#06243d]/90 via-[#0a2d4e]/85 to-[#06243d]"
-        />
-        <span
-          aria-hidden
-          className="animate-aurora absolute -left-28 -top-24 size-[440px] rounded-full bg-azure-500/35 blur-[120px]"
-        />
-        <span
-          aria-hidden
-          className="animate-aurora absolute -right-24 top-1/3 size-[360px] rounded-full bg-accent/25 blur-[110px]"
-          style={{ animationDelay: '-7s' }}
-        />
-        <span aria-hidden className="auth-grid absolute inset-0 opacity-40" />
+        <BannerBackdrop image={heroImage} />
 
         <Section reveal={false} className="relative pb-20 pt-32 text-center sm:pb-24 sm:pt-40">
           <Reveal>
@@ -345,7 +325,7 @@ export default function AboutPage() {
                 />
                 <span className="relative inline-flex size-1.5 rounded-full bg-accent" />
               </span>
-              {ABOUT_EYEBROW}
+              About {settings.site_name || 'RoyalCare'}
             </span>
           </Reveal>
 
@@ -728,10 +708,7 @@ export default function AboutPage() {
       {/* Section 8 — Final Call to Action: full-bleed dark band with concentric
           rings, closing the page the way the hero opened it. */}
       <section className="relative isolate overflow-hidden bg-[#06243d]">
-        <span
-          aria-hidden
-          className="animate-aurora absolute left-1/2 top-0 size-[520px] -translate-x-1/2 -translate-y-1/3 rounded-full bg-azure-500/30 blur-[130px]"
-        />
+        <BannerBackdrop />
         <span
           aria-hidden
           className="absolute left-1/2 top-1/2 size-[520px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/10"
@@ -740,7 +717,6 @@ export default function AboutPage() {
           aria-hidden
           className="absolute left-1/2 top-1/2 size-[840px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/5"
         />
-        <span aria-hidden className="auth-grid absolute inset-0 opacity-30" />
 
         <Section reveal={false} className="relative py-20 sm:py-24">
           <Reveal className="mx-auto max-w-2xl text-center text-white">

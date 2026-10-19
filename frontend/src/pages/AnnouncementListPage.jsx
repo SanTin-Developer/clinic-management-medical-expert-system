@@ -326,7 +326,7 @@ export default function AnnouncementListPage() {
                             <img
                               src={announcement.poster_url}
                               alt=""
-                              className="size-9 shrink-0 rounded-lg border border-line object-cover"
+                              className="size-9 shrink-0 rounded-lg border border-line object-contain"
                               loading="lazy"
                             />
                           ) : null}
@@ -482,7 +482,7 @@ export default function AnnouncementListPage() {
               <img
                 src={viewing.poster_url}
                 alt=""
-                className="max-h-80 w-full rounded-xl border border-line object-cover"
+                className="max-h-80 w-full rounded-xl border border-line object-contain"
               />
             ) : null}
             <p className="whitespace-pre-wrap text-sm text-ink">{viewing.body}</p>

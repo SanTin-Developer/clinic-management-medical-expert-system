@@ -7,6 +7,7 @@ import Input from '../ui/Input.jsx'
 import Select from '../ui/Select.jsx'
 import Textarea from '../ui/Textarea.jsx'
 import FileDropzone from '../ui/FileDropzone.jsx'
+import ImageField from '../ui/ImageField.jsx'
 import { staffApi } from '../../api/staff.js'
 import { useAuth } from '../../hooks/useAuth.js'
 import {
@@ -478,12 +479,13 @@ export default function StaffFormModal({ open, onClose, initial, onSaved }) {
                   error={errors.photo}
                   hint="Not displayed in the system — stored privately as a staff document like the CV."
                 >
-                  <FileDropzone
+                  <ImageField
                     id="staff-photo-file"
-                    value={photoFile}
-                    onSelect={handlePhotoChange}
+                    file={photoFile}
                     accept=".jpg,.jpeg,.png,.webp"
                     hint="JPG, JPEG, PNG, WEBP · up to 10MB · scanned & stored privately"
+                    onFile={handlePhotoChange}
+                    onRemove={() => handlePhotoChange(null)}
                   />
                 </Field>
               </div>

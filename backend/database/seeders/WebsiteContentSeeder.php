@@ -24,6 +24,7 @@ class WebsiteContentSeeder extends Seeder
             'about_summary' => $settings->about_summary ?: 'RoyalCare is a full-service medical clinic committed to providing accessible, high-quality healthcare to our community.',
             'seo_title' => $settings->seo_title ?: 'RoyalCare Medical Clinic',
             'seo_description' => $settings->seo_description ?: 'RoyalCare Medical Clinic — compassionate, expert healthcare for you and your family.',
+            'business_hours' => $settings->business_hours ?: 'Every day: Open 24 hours',
         ])->save();
 
         $pages = [

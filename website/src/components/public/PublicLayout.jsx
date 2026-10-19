@@ -13,6 +13,9 @@ import {
 import { publicWebsiteApi } from '../../api/website.js'
 import { APP_NAME, FOOTER_LINKS, PRIMARY_NAV, SECONDARY_NAV } from '../../constants/index.js'
 import { cn } from '../../utils/cn.js'
+import BackToTop from './BackToTop.jsx'
+import InstallPrompt from './InstallPrompt.jsx'
+import MobileTabBar from './MobileTabBar.jsx'
 
 const SOCIALS = [
   {
@@ -80,6 +83,24 @@ function navLinkClass({ isActive }) {
   )
 }
 
+/**
+ * Create, update or remove a `<meta>` tag so the CMS SEO defaults are applied
+ * to the document head.
+ */
+function applyMeta(attribute, name, content) {
+  const existing = document.head.querySelector(`meta[${attribute}="${name}"]`)
+  if (!content) {
+    existing?.remove()
+    return
+  }
+  const tag = existing ?? document.createElement('meta')
+  if (!existing) {
+    tag.setAttribute(attribute, name)
+    document.head.appendChild(tag)
+  }
+  tag.content = content
+}
+
 export default function PublicLayout() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
@@ -126,18 +147,36 @@ export default function PublicLayout() {
     }
   }, [location.pathname])
 
+  // Hide the menu on any outside tap or Escape — opening it on a phone or
+  // tablet must never strand the page behind a stuck menu.
   useEffect(() => {
-    document.title = settings.seo_title || settings.site_name || APP_NAME
-
-    if (settings.seo_description) {
-      let meta = document.querySelector("meta[name='description']")
-      if (!meta) {
-        meta = document.createElement('meta')
-        meta.name = 'description'
-        document.head.appendChild(meta)
-      }
-      meta.content = settings.seo_description
+    if (!menuOpen) return undefined
+    const onPointerDown = (event) => {
+      if (!event.target.closest?.('header')) setMenuOpen(false)
     }
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') setMenuOpen(false)
+    }
+    document.addEventListener('pointerdown', onPointerDown)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [menuOpen])
+
+  useEffect(() => {
+    const title = settings.seo_title || settings.site_name || APP_NAME
+    document.title = title
+
+    applyMeta('name', 'description', settings.seo_description)
+    applyMeta('name', 'keywords', settings.seo_keywords)
+
+    const shareImage = settings.hero_media?.url ?? settings.logo?.url
+    applyMeta('property', 'og:title', title)
+    applyMeta('property', 'og:description', settings.seo_description)
+    applyMeta('property', 'og:image', shareImage)
+    applyMeta('property', 'og:type', 'website')
 
     if (settings.favicon?.url) {
       let link = document.querySelector("link[rel='icon']")
@@ -148,13 +187,21 @@ export default function PublicLayout() {
       }
       link.href = settings.favicon.url
     }
-  }, [settings.seo_title, settings.site_name, settings.seo_description, settings.favicon?.url])
+  }, [
+    settings.seo_title,
+    settings.site_name,
+    settings.seo_description,
+    settings.seo_keywords,
+    settings.hero_media?.url,
+    settings.logo?.url,
+    settings.favicon?.url,
+  ])
 
   const phone = settings.primary_phone ?? settings.secondary_phone
   const year = new Date().getFullYear()
 
   return (
-    <div className="flex min-h-screen flex-col bg-canvas text-ink">
+    <div className="flex min-h-screen flex-col bg-canvas text-ink pb-[calc(4rem_+_env(safe-area-inset-bottom))] md:pb-0">
       <header
         className={cn(
           'fixed inset-x-0 top-0 z-50 transition-all duration-300',
@@ -164,20 +211,22 @@ export default function PublicLayout() {
         )}
       >
         <div className="relative mx-auto flex h-16 w-full max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
-          <Link to="/home" className="flex items-center gap-3">
+          <Link to="/home" className="flex min-w-0 items-center gap-3">
             <BrandMark settings={settings} className="size-11" />
-            <div className="flex flex-col leading-tight">
-              <span className="text-[24px] font-extrabold tracking-tight text-[#0B4A8F]" style={{ fontFamily: 'var(--font-display, "Plus Jakarta Sans", system-ui, sans-serif)' }}>
-                RoyalCare
+            <div className="flex min-w-0 flex-col leading-tight">
+              <span className="max-w-[46vw] truncate text-[24px] font-extrabold tracking-tight text-[#0B4A8F] sm:max-w-[280px]" style={{ fontFamily: 'var(--font-display, "Plus Jakarta Sans", system-ui, sans-serif)' }}>
+                {settings.site_name || APP_NAME}
               </span>
-              <span className="text-[15px] font-medium text-[#1E88C8]" style={{ fontFamily: 'var(--font-display, "Plus Jakarta Sans", system-ui, sans-serif)' }}>
-                Clinic
-              </span>
+              {settings.tagline ? (
+                <span className="max-w-[46vw] truncate text-[15px] font-medium text-[#1E88C8] sm:max-w-[280px]" style={{ fontFamily: 'var(--font-display, "Plus Jakarta Sans", system-ui, sans-serif)' }}>
+                  {settings.tagline}
+                </span>
+              ) : null}
             </div>
           </Link>
 
           <nav
-            className="absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 items-center gap-1 lg:flex"
+            className="absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 items-center gap-1 xl:flex"
             aria-label="Primary"
           >
             {PRIMARY_NAV.map((item) => (
@@ -201,7 +250,7 @@ export default function PublicLayout() {
               onClick={() => setMenuOpen((v) => !v)}
               aria-label={menuOpen ? 'Close menu' : 'Open menu'}
               aria-expanded={menuOpen}
-              className="grid size-10 place-items-center rounded-xl border border-line bg-surface/70 text-ink lg:hidden"
+              className="grid size-10 place-items-center rounded-xl border border-line bg-surface/70 text-ink xl:hidden"
             >
               {menuOpen ? <X className="size-5" aria-hidden /> : <Menu className="size-5" aria-hidden />}
             </button>
@@ -209,7 +258,14 @@ export default function PublicLayout() {
         </div>
 
         {menuOpen ? (
-          <nav className="border-t border-line bg-surface px-4 py-3 lg:hidden" aria-label="Mobile">
+          <nav
+            className="border-t border-line bg-surface px-4 py-3 xl:hidden"
+            aria-label="Mobile"
+            onClick={(event) => {
+              // Choosing any destination hides the menu — even the current page.
+              if (event.target.closest('a')) setMenuOpen(false)
+            }}
+          >
             <div className="flex flex-col">
               {[...PRIMARY_NAV, ...SECONDARY_NAV].map((item) => (
                 <NavLink
@@ -354,6 +410,10 @@ export default function PublicLayout() {
           </div>
         </div>
       </footer>
+
+      <MobileTabBar />
+      <BackToTop />
+      <InstallPrompt />
     </div>
   )
 }

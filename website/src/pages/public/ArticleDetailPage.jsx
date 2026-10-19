@@ -5,7 +5,7 @@ import { publicWebsiteApi } from '../../api/website.js'
 import { Spinner } from '../../components/ui/Skeleton.jsx'
 import { ErrorState } from '../../components/ui/State.jsx'
 import { formatDate } from '../../utils/format.js'
-import { ArticleCard, Section } from '../../components/public/PublicUI.jsx'
+import { ArticleCard, BannerBackdrop, Section } from '../../components/public/PublicUI.jsx'
 
 export default function ArticleDetailPage() {
   const { slug } = useParams()
@@ -40,7 +40,8 @@ export default function ArticleDetailPage() {
 
   return (
     <>
-      <section className="brand-gradient hero-glow relative overflow-hidden">
+      <section className="relative isolate overflow-hidden bg-[#06243d]">
+        <BannerBackdrop image={article.cover?.url} />
         <Section className="relative pb-14 pt-28 sm:pb-16 sm:pt-32">
           <div className="mx-auto max-w-3xl">
             <Link

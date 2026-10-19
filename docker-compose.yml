@@ -7,6 +7,11 @@ services:
     working_dir: /var/www/html
     volumes:
       - ./backend:/var/www/html
+      # These files are COPY'd into the image at build time; mount them so
+      # edits to backend/docker/* apply on `docker compose up -d` without a
+      # rebuild (and survive `docker compose down && up -d`).
+      - ./backend/docker/nginx.conf:/etc/nginx/sites-available/default
+      - ./backend/docker/php.ini:/usr/local/etc/php/conf.d/zz-app.ini
     ports:
       - "${BACKEND_PORT}:8000"
       - "${REVERB_PORT:-8080}:8080"

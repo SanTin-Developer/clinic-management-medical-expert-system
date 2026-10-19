@@ -6,7 +6,7 @@ import { publicWebsiteApi } from '../../api/website.js'
 import Button from '../../components/ui/Button.jsx'
 import Input from '../../components/ui/Input.jsx'
 import { Reveal } from '../../components/public/Reveal.jsx'
-import { Section, SectionHeading } from '../../components/public/PublicUI.jsx'
+import { BannerBackdrop, Section, SectionHeading } from '../../components/public/PublicUI.jsx'
 import { cn } from '../../utils/cn.js'
 
 /**
@@ -266,16 +266,7 @@ export default function ContactPage() {
       {/* Section 1 — Cinematic hero: headline plus instant glass action chips
           (call, email, directions) straight from the CMS settings. */}
       <section className="relative isolate overflow-hidden bg-[#06243d]">
-        <span
-          aria-hidden
-          className="animate-aurora absolute -left-28 -top-24 size-[440px] rounded-full bg-azure-500/35 blur-[120px]"
-        />
-        <span
-          aria-hidden
-          className="animate-aurora absolute -right-24 top-1/3 size-[360px] rounded-full bg-accent/25 blur-[110px]"
-          style={{ animationDelay: '-7s' }}
-        />
-        <span aria-hidden className="auth-grid absolute inset-0 opacity-40" />
+        <BannerBackdrop />
 
         <Section reveal={false} className="relative pb-16 pt-32 text-center sm:pt-40">
           <Reveal>
@@ -447,16 +438,7 @@ export default function ContactPage() {
           id="find"
           className="relative isolate scroll-mt-24 overflow-hidden bg-[#06243d]"
         >
-          <span
-            aria-hidden
-            className="animate-aurora absolute -right-20 top-0 size-[440px] rounded-full bg-azure-500/30 blur-[120px]"
-          />
-          <span
-            aria-hidden
-            className="animate-aurora absolute -left-24 bottom-0 size-[340px] rounded-full bg-accent/20 blur-[110px]"
-            style={{ animationDelay: '-9s' }}
-          />
-          <span aria-hidden className="auth-grid absolute inset-0 opacity-30" />
+          <BannerBackdrop />
 
           <Section
             reveal={false}

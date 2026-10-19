@@ -481,4 +481,30 @@ audio {
   .animate-float-subtle-reverse {
     animation: none;
   }
+
+  .animate-sheet-in {
+    animation: none;
+  }
+}
+
+/* Native-app feel on touch devices: no blue tap flash, no text inflation. */
+html {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Slide-up entrance for the install alert. */
+@keyframes sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(28px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-sheet-in {
+  animation: sheet-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
 }

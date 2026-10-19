@@ -25,7 +25,7 @@ export const FOOTER_LINKS = [...PRIMARY_NAV.slice(1), ...SECONDARY_NAV]
 /**
  * Developer-locked design imagery shipped with the app. These are layout
  * assets, not CMS content. An admin-supplied hero photo overrides
- * DEFAULT_HERO_IMAGE through the CMS `hero_image` field (settings.heroMedia).
+ * DEFAULT_HERO_IMAGE through the CMS `hero_image` field (settings.hero_media).
  */
 export const DEFAULT_HERO_IMAGE = '/media/hero-background.png'
 export const ABOUT_CLINIC_IMAGE = '/media/about-clinic.jpg'
@@ -37,6 +37,13 @@ export const HERO_DESCRIPTION =
   'At RoyalCare Clinic, we provide compassionate, high-quality healthcare with modern facilities and expert medical professionals.'
 
 /**
+ * Green highlight line under the hero subtitle. Normally the CMS "About
+ * summary" (settings.about_summary) is shown here; this constant is only the
+ * fallback when that field is empty.
+ */
+export const HERO_HIGHLIGHT = 'Open 24 hours a day, 7 days a week — your health never waits.'
+
+/**
  * ⚠️ UNVERIFIED REFERENCE COPY — NOT CONFIRMED CLINIC STATISTICS.
  * These figures reproduce the design reference only. They have not been
  * verified against real clinic data. Confirm them (or replace with CMS-backed
@@ -45,7 +52,7 @@ export const HERO_DESCRIPTION =
 export const HERO_STATS = [
   { key: 'patients', title: 'Trusted by', value: '10,000+', label: 'Happy Patients' },
   { key: 'doctors', title: 'Expert Doctors', value: '50+', label: 'Specialists' },
-  { key: 'hours', title: 'Open Daily', value: '8AM - 8PM', label: 'Your Health, Always' },
+  { key: 'hours', title: 'Open Daily', value: '24 Hours', label: 'Your Health, Always' },
 ]
 
 /**

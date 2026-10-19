@@ -6,7 +6,7 @@ import Field from '../ui/Field.jsx'
 import Input from '../ui/Input.jsx'
 import Select from '../ui/Select.jsx'
 import Textarea from '../ui/Textarea.jsx'
-import FileDropzone from '../ui/FileDropzone.jsx'
+import ImageField from '../ui/ImageField.jsx'
 import { announcementApi } from '../../api/announcements.js'
 import {
   ANNOUNCEMENT_AUDIENCE_OPTIONS,
@@ -45,7 +45,6 @@ export default function AnnouncementFormModal({ open, onClose, onSaved, announce
   const [saving, setSaving] = useState(false)
   const [posterFile, setPosterFile] = useState(null)
   const [posterRemoved, setPosterRemoved] = useState(false)
-  const [posterPreview, setPosterPreview] = useState(null)
 
   useEffect(() => {
     if (!open) return
@@ -67,19 +66,6 @@ export default function AnnouncementFormModal({ open, onClose, onSaved, announce
         : EMPTY,
     )
   }, [open, announcement])
-
-  useEffect(() => {
-    if (!posterFile) {
-      setPosterPreview(null)
-      return undefined
-    }
-    const url = URL.createObjectURL(posterFile)
-    setPosterPreview(url)
-    return () => URL.revokeObjectURL(url)
-  }, [posterFile])
-
-  const existingPoster = editing && !posterRemoved ? announcement?.poster_url : null
-  const shownPoster = posterPreview ?? existingPoster
 
   const set = (key) => (value) => setForm((f) => ({ ...f, [key]: value }))
 
@@ -174,32 +160,21 @@ export default function AnnouncementFormModal({ open, onClose, onSaved, announce
           htmlFor="announcement-poster"
           hint="Optional. Shown in the news feed and sent with Telegram notices."
         >
-          {shownPoster ? (
-            <div className="relative overflow-hidden rounded-2xl border border-line">
-              <img src={shownPoster} alt="Announcement poster preview" className="h-44 w-full object-cover" />
-              <button
-                type="button"
-                onClick={() => {
-                  setPosterFile(null)
-                  setPosterRemoved(true)
-                }}
-                className="absolute right-2 top-2 rounded-lg bg-black/60 px-2.5 py-1 text-xs font-semibold text-white transition-colors hover:bg-black/80"
-              >
-                Remove
-              </button>
-            </div>
-          ) : (
-            <FileDropzone
-              id="announcement-poster"
-              value={posterFile}
-              accept=".jpg,.jpeg,.png,.webp"
-              hint="JPG, PNG or WEBP · up to 10MB"
-              onSelect={(file) => {
-                setPosterFile(file)
-                if (file) setPosterRemoved(false)
-              }}
-            />
-          )}
+          <ImageField
+            id="announcement-poster"
+            file={posterFile}
+            existingUrl={editing && !posterRemoved ? announcement?.poster_url : null}
+            accept=".jpg,.jpeg,.png,.webp"
+            hint="JPG, PNG or WEBP · up to 10MB"
+            onFile={(file) => {
+              setPosterFile(file)
+              setPosterRemoved(false)
+            }}
+            onRemove={() => {
+              setPosterFile(null)
+              setPosterRemoved(true)
+            }}
+          />
         </Field>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

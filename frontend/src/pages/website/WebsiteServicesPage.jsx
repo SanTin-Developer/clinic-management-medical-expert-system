@@ -109,7 +109,7 @@ export default function WebsiteServicesPage() {
                     <Td>
                       <div className="flex items-center gap-3">
                         {row.image?.url ? (
-                          <img src={row.image.url} alt="" className="size-10 rounded-lg object-cover" />
+                          <img src={row.image.url} alt="" className="size-10 rounded-lg bg-canvas object-contain" />
                         ) : (
                           <span className="grid size-10 place-items-center rounded-lg bg-brand-soft text-brand">
                             <Activity className="size-4" aria-hidden />

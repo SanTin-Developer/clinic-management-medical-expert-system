@@ -10,7 +10,7 @@ import Input from '../../components/ui/Input.jsx'
 import Textarea from '../../components/ui/Textarea.jsx'
 import { Spinner } from '../../components/ui/Skeleton.jsx'
 import { ErrorState } from '../../components/ui/State.jsx'
-import ImageField from '../../components/website/ImageField.jsx'
+import ImageField from '../../components/ui/ImageField.jsx'
 import { websiteAdminApi } from '../../api/websiteAdmin.js'
 
 const EMPTY = {
@@ -121,10 +121,10 @@ export default function WebsiteSettingsPage() {
       <div className="grid gap-6 lg:grid-cols-2">
         <Card title="Branding">
           <div className="space-y-4">
-            <Field label="Site name" htmlFor="site_name">
+            <Field label="Site name" htmlFor="site_name" hint="Shown in the website header, footer and page titles.">
               <Input id="site_name" value={form.site_name} onChange={(e) => set('site_name')(e.target.value)} />
             </Field>
-            <Field label="Tagline" htmlFor="tagline" hint="Short phrase shown in the hero and footer.">
+            <Field label="Tagline" htmlFor="tagline" hint="Short phrase shown in the header, hero and footer.">
               <Input id="tagline" value={form.tagline} onChange={(e) => set('tagline')(e.target.value)} />
             </Field>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -146,6 +146,7 @@ export default function WebsiteSettingsPage() {
               <Field label="Favicon" htmlFor="favicon" hint="Square icon (32×32 or larger).">
                 <ImageField
                   id="favicon"
+                  aspect={1}
                   file={favicon}
                   existingUrl={removed.favicon ? null : settings?.favicon?.url}
                   onFile={(file) => {
@@ -164,17 +165,17 @@ export default function WebsiteSettingsPage() {
 
         <Card title="Homepage hero">
           <div className="space-y-4">
-            <Field label="Hero title" htmlFor="hero_title">
+            <Field label="Hero title" htmlFor="hero_title" hint="Large headline shown on the homepage hero.">
               <Input id="hero_title" value={form.hero_title} onChange={(e) => set('hero_title')(e.target.value)} />
             </Field>
-            <Field label="Hero subtitle" htmlFor="hero_subtitle">
+            <Field label="Hero subtitle" htmlFor="hero_subtitle" hint="Paragraph shown under the hero title.">
               <Textarea id="hero_subtitle" rows={2} value={form.hero_subtitle} onChange={(e) => set('hero_subtitle')(e.target.value)} />
             </Field>
             <Field label="Hero image" htmlFor="hero_image" hint="Large banner image (1600px wide or more).">
               <ImageField
                 id="hero_image"
                 file={hero}
-                existingUrl={removed.hero ? null : settings?.heroMedia?.url}
+                existingUrl={removed.hero ? null : settings?.hero_media?.url}
                 onFile={(file) => {
                   setHero(file)
                   setRemoved((r) => ({ ...r, hero: false }))
@@ -185,7 +186,7 @@ export default function WebsiteSettingsPage() {
                 }}
               />
             </Field>
-            <Field label="About summary" htmlFor="about_summary" hint="Shown on the homepage and footer.">
+            <Field label="About summary" htmlFor="about_summary" hint="Green highlight line under the homepage hero, plus the About section and footer.">
               <Textarea id="about_summary" rows={4} value={form.about_summary} onChange={(e) => set('about_summary')(e.target.value)} />
             </Field>
           </div>
@@ -237,10 +238,10 @@ export default function WebsiteSettingsPage() {
 
           <Card title="SEO defaults">
             <div className="space-y-4">
-              <Field label="SEO title" htmlFor="seo_title">
+              <Field label="SEO title" htmlFor="seo_title" hint="Browser tab title and search-result headline.">
                 <Input id="seo_title" value={form.seo_title} onChange={(e) => set('seo_title')(e.target.value)} />
               </Field>
-              <Field label="SEO description" htmlFor="seo_description">
+              <Field label="SEO description" htmlFor="seo_description" hint="Search-result snippet and social share text.">
                 <Textarea id="seo_description" rows={3} value={form.seo_description} onChange={(e) => set('seo_description')(e.target.value)} />
               </Field>
               <Field label="SEO keywords" htmlFor="seo_keywords" hint="Comma separated.">

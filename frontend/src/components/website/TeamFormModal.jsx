@@ -5,7 +5,7 @@ import Field from '../ui/Field.jsx'
 import Input from '../ui/Input.jsx'
 import Textarea from '../ui/Textarea.jsx'
 import Button from '../ui/Button.jsx'
-import ImageField from './ImageField.jsx'
+import ImageField from '../ui/ImageField.jsx'
 import { websiteAdminApi } from '../../api/websiteAdmin.js'
 
 const EMPTY = { name: '', position: '', specialization: '', bio: '', email: '', phone: '', is_featured: false, is_published: false, sort_order: 0 }

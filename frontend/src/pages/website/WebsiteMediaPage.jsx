@@ -10,7 +10,7 @@ import Input from '../../components/ui/Input.jsx'
 import SearchInput from '../../components/ui/SearchInput.jsx'
 import ConfirmDialog from '../../components/ui/ConfirmDialog.jsx'
 import Pagination from '../../components/ui/Pagination.jsx'
-import FileDropzone from '../../components/ui/FileDropzone.jsx'
+import ImageField from '../../components/ui/ImageField.jsx'
 import { Skeleton } from '../../components/ui/Skeleton.jsx'
 import { EmptyState, ErrorState } from '../../components/ui/State.jsx'
 import { usePaginated } from '../../hooks/usePaginated.js'
@@ -112,7 +112,7 @@ export default function WebsiteMediaPage() {
               <div key={item.id} className="group overflow-hidden rounded-2xl border border-line bg-surface">
                 <div className="relative">
                   {item.url ? (
-                    <img src={item.url} alt={item.name ?? ''} className="h-40 w-full object-cover" />
+                    <img src={item.url} alt={item.name ?? ''} className="h-40 w-full bg-canvas object-contain" />
                   ) : (
                     <div className="grid h-40 w-full place-items-center bg-brand-soft text-brand">
                       <FolderOpen className="size-6" aria-hidden />
@@ -153,13 +153,12 @@ export default function WebsiteMediaPage() {
         }
       >
         <form id="media-form" onSubmit={submitUpload} className="space-y-4">
-          <Field label="Image" htmlFor="media-file" required>
-            <FileDropzone
+          <Field label="Image" htmlFor="media-file" required hint="JPG, PNG, WEBP or GIF · up to 10MB">
+            <ImageField
               id="media-file"
-              value={file}
-              accept=".jpg,.jpeg,.png,.webp,.gif"
-              hint="JPG, PNG, WEBP or GIF · up to 10MB"
-              onSelect={setFile}
+              file={file}
+              onFile={setFile}
+              onRemove={() => setFile(null)}
             />
           </Field>
           <Field label="Name" htmlFor="media-name" hint="Optional label to help you find this file later.">

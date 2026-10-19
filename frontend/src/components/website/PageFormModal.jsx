@@ -6,7 +6,7 @@ import Input from '../ui/Input.jsx'
 import Textarea from '../ui/Textarea.jsx'
 import Select from '../ui/Select.jsx'
 import Button from '../ui/Button.jsx'
-import ImageField from './ImageField.jsx'
+import ImageField from '../ui/ImageField.jsx'
 import { websiteAdminApi } from '../../api/websiteAdmin.js'
 
 const EMPTY = { title: '', slug: '', excerpt: '', body: '', status: 'draft', show_in_footer: false, seo_title: '', seo_description: '' }

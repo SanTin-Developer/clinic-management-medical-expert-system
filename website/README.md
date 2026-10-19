@@ -84,7 +84,7 @@ Some homepage copy reproduces the design reference and is **not** verified
 clinic data. Confirm or replace it before publishing:
 
 - **Hero highlights** — "10,000+ Happy Patients", "50+ Specialists" and
-  "8AM - 8PM" (`HERO_STATS` in `src/constants/index.js`). These are reference
+  "24 Hours" (`HERO_STATS` in `src/constants/index.js`). These are reference
   figures, not confirmed statistics.
 - **Partner strip** — `PARTNER_PLACEHOLDERS` renders five styled marks
   (PharmaHealth, MediCare, LifePlus, HealthFirst, WellnessCo) as icon + wordmark.

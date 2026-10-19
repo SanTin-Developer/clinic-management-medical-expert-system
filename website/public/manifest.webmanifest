@@ -1,0 +1,17 @@
+{
+  "name": "RoyalCare Clinic — Healthcare Made Accessible",
+  "short_name": "RoyalCare",
+  "description": "Compassionate, high-quality healthcare with modern facilities and expert medical professionals. Explore services, meet the team and book an appointment.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f8fbff",
+  "theme_color": "#06243d",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
