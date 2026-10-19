@@ -18,10 +18,10 @@ import { cn } from '../../utils/cn.js'
 const CONTACT_EYEBROW = 'Get in Touch'
 const CONTACT_HEADING = 'Contact Us'
 const CONTACT_DESCRIPTION =
-  'We are here to help. Reach out to us through any of the channels below.'
+  'We are here to help. Reach out to us through any of the channels below — we’ll respond as quickly as we can.'
 const REACH_HEADING = 'Ways to Reach Us'
 const REACH_LEAD =
-  'Pick whichever is easiest — every channel reaches the same clinic team.'
+  'Pick whichever is easiest — every channel reaches the same RoyalCare Clinic team.'
 const FIND_HEADING = 'Visit Our Clinic'
 
 /**
@@ -30,7 +30,7 @@ const FIND_HEADING = 'Visit Our Clinic'
  */
 const SEND_HEADING = 'Send Us a Message'
 const SEND_LEAD =
-  'Fill the form and your message goes straight to our clinic team — or use any of the channels above.'
+  'Fill out the form and your message goes straight to our clinic team — or use any of the channels above.'
 const SEND_NOTE = "We'll get back to you as soon as we can."
 const SEND_ERROR_FALLBACK = 'Something went wrong. Please try again.'
 const SEND_SUCCESS_FALLBACK = 'Thanks! Your message has been sent.'
@@ -420,7 +420,7 @@ export default function ContactPage() {
           <Reveal>
             <SectionHeading
               align="center"
-              eyebrow="02 — Send a Message"
+              eyebrow="03 — Send a Message"
               title={SEND_HEADING}
               description={SEND_LEAD}
             />

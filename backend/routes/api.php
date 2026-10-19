@@ -63,6 +63,7 @@ use App\Http\Controllers\Api\VitalSignController;
 use App\Http\Controllers\Api\WardController;
 use App\Http\Controllers\Api\WebsiteArticleController;
 use App\Http\Controllers\Api\WebsiteContactMessageController;
+use App\Http\Controllers\Api\WebsiteContentBlockController;
 use App\Http\Controllers\Api\WebsiteDashboardController;
 use App\Http\Controllers\Api\WebsiteGalleryController;
 use App\Http\Controllers\Api\WebsiteMediaController;
@@ -346,6 +347,11 @@ Route::prefix('v1')->group(function () {
             Route::apiResource('articles', WebsiteArticleController::class);
             Route::post('/articles/{article}/publish', [WebsiteArticleController::class, 'publish']);
             Route::post('/articles/{article}/unpublish', [WebsiteArticleController::class, 'unpublish']);
+
+            Route::get('/content-blocks', [WebsiteContentBlockController::class, 'index']);
+            Route::get('/content-blocks/{contentBlock}', [WebsiteContentBlockController::class, 'show']);
+            Route::match(['put', 'patch'], '/content-blocks/{contentBlock}', [WebsiteContentBlockController::class, 'update']);
+            Route::post('/content-blocks/bulk', [WebsiteContentBlockController::class, 'bulkUpdate']);
 
             Route::get('/media', [WebsiteMediaController::class, 'index']);
             Route::post('/media', [WebsiteMediaController::class, 'store']);

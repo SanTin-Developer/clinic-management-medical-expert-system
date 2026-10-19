@@ -2,10 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Models\ContentBlock;
 use App\Models\PublicPage;
 use App\Models\Service;
 use App\Models\WebsiteSetting;
 use App\Services\Website\WebsiteMediaStorage;
+use Database\Seeders\AboutContentBlockSeeder;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -165,5 +167,43 @@ class WebsiteManagementTest extends TestCase
             ->assertJsonPath('data.facebook_url', 'https://facebook.com/royalcare');
 
         $this->assertSame('RoyalCare Medical Center', WebsiteSetting::current()->site_name);
+    }
+
+    public function test_admin_can_bulk_update_and_create_content_blocks(): void
+    {
+        Sanctum::actingAs($this->userWithRole('Admin'));
+
+        $this->seed(AboutContentBlockSeeder::class);
+
+        $this->postJson('/api/v1/website/admin/content-blocks/bulk', [
+            'blocks' => [
+                ['key' => 'about_story_heading', 'body' => 'A whole new story heading'],
+                ['key' => 'about_values', 'data' => [['title' => 'Kindness', 'text' => 'We care.']]],
+                ['key' => 'about_brand_new_block', 'group' => 'about', 'body' => 'Created on the fly'],
+            ],
+        ])->assertOk();
+
+        $this->assertSame(
+            'A whole new story heading',
+            ContentBlock::where('key', 'about_story_heading')->where('group', 'about')->value('body')
+        );
+        $this->assertSame(
+            'Kindness',
+            ContentBlock::where('key', 'about_values')->first()->data[0]['title']
+        );
+        $this->assertDatabaseHas('content_blocks', [
+            'key' => 'about_brand_new_block',
+            'group' => 'about',
+            'body' => 'Created on the fly',
+        ]);
+    }
+
+    public function test_non_admin_cannot_update_content_blocks(): void
+    {
+        Sanctum::actingAs($this->userWithRole('Nurse'));
+
+        $this->postJson('/api/v1/website/admin/content-blocks/bulk', [
+            'blocks' => [['key' => 'about_story_heading', 'body' => 'Nope']],
+        ])->assertForbidden();
     }
 }

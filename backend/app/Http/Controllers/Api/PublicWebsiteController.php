@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Article;
+use App\Models\ContentBlock;
 use App\Models\GalleryItem;
 use App\Models\PublicPage;
 use App\Models\PublicTeamProfile;
@@ -33,6 +34,11 @@ class PublicWebsiteController extends Controller
                 ->published()
                 ->ordered()
                 ->get(['id', 'title', 'slug']),
+            'content_blocks' => ContentBlock::query()
+                ->with('image')
+                ->orderBy('group')
+                ->orderBy('key')
+                ->get(),
         ]);
     }
 

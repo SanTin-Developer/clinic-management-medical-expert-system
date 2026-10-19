@@ -71,6 +71,11 @@ export const websiteAdminApi = {
   publishArticle: (id) => withData(api.post(`/website/admin/articles/${id}/publish`)),
   unpublishArticle: (id) => withData(api.post(`/website/admin/articles/${id}/unpublish`)),
 
+  listContentBlocks: (params) => api.get('/website/admin/content-blocks', { params }),
+  getContentBlock: (id) => withData(api.get(`/website/admin/content-blocks/${id}`)),
+  updateContentBlock: (id, payload) => update(`/website/admin/content-blocks/${id}`, payload),
+  bulkUpdateContentBlocks: (payload) => withData(api.post('/website/admin/content-blocks/bulk', payload)),
+
   listMedia: (params) => api.get('/website/admin/media', { params }),
   uploadMedia: (payload) => create('/website/admin/media', payload),
   deleteMedia: (id) => api.delete(`/website/admin/media/${id}`),

@@ -35,8 +35,8 @@ import { ABOUT_CLINIC_IMAGE, APP_NAME } from '../../constants/index.js'
  */
 const ABOUT_HEADING = 'Caring for Your Health, Every Step of the Way'
 const ABOUT_INTRO =
-  'Discover our approach to patient-centered healthcare, clear communication, and helping individuals and families make informed decisions about their well-being.'
-const WHO_HEADING = 'Respectful Care, Clear Communication'
+  'We’re committed to patient-centered care, clear communication, and empowering individuals and families to make informed decisions about their health and well-being.'
+const WHO_HEADING = 'Respectful Care. Clear Communication. Trusted Expertise.'
 /** Mirrors the fallback already published in HomeSections' AboutSection. */
 const FALLBACK_SUMMARY =
   'RoyalCare Clinic brings together experienced clinicians, modern facilities and a patient-first approach to deliver care you and your family can trust.'
@@ -50,23 +50,47 @@ const HEADING_COMMA = ABOUT_HEADING.indexOf(',')
 const HEADING_MAIN = HEADING_COMMA > 0 ? ABOUT_HEADING.slice(0, HEADING_COMMA + 1) : ABOUT_HEADING
 const HEADING_ACCENT = HEADING_COMMA > 0 ? ABOUT_HEADING.slice(HEADING_COMMA + 1).trim() : ''
 
-/** In-page anchors surfaced as quick-jump chips in the hero. */
+/** In-page anchors surfaced as quick-jump chips in the hero (labels are CMS-editable). */
 const SECTION_LINKS = [
-  { href: '#story', label: 'Our Story' },
-  { href: '#mission', label: 'Mission & Vision' },
-  { href: '#values', label: 'Core Values' },
-  { href: '#facilities', label: 'Our Facilities' },
-  { href: '#team', label: 'Our Team' },
+  { href: '#story', label: 'Our Story', key: 'about_nav_story_label' },
+  { href: '#mission', label: 'Mission & Vision', key: 'about_nav_mission_label' },
+  { href: '#values', label: 'Core Values', key: 'about_nav_values_label' },
+  { href: '#facilities', label: 'Our Facilities', key: 'about_nav_facilities_label' },
+  { href: '#team', label: 'Our Team', key: 'about_nav_team_label' },
 ]
+
+/** Section eyebrow labels ("01 — Who We Are", …) — admin-editable via content blocks. */
+const SECTION_EYEBROWS = {
+  story: '01 — Who We Are',
+  mission: '02 — Our Direction',
+  values: '03 — What Guides Us',
+  facilities: '04 — Our Facilities',
+  team: '05 — Our People',
+  commitment: '06 — Our Commitment',
+  cta: '07 — Next Steps',
+}
+
+/** Facilities and team section headings + button labels (CMS-editable). */
+const FACILITIES_COPY = {
+  heading: 'A Glimpse Inside',
+  text: 'Take a look at our clinic, modern spaces, and the people committed to providing compassionate care.',
+  link: 'View All Facilities',
+}
+
+const TEAM_COPY = {
+  heading: 'The People Behind Your Care',
+  text: 'Meet our dedicated team of healthcare professionals committed to your health, comfort, and wellbeing.',
+  link: 'Meet Our Team',
+}
 
 const MISSION = {
   title: 'Our Mission',
-  text: 'Support informed healthcare decisions through respectful communication and accessible health information.',
+  text: 'To provide compassionate, patient-centered care by supporting informed healthcare decisions through clear communication, respect, and accessible health information.',
 }
 
 const VISION = {
   title: 'Our Vision',
-  text: 'Work toward a healthcare experience where people feel informed, respected, and supported.',
+  text: 'To create a healthcare experience where every person feels informed, respected, heard, and fully supported on their journey to better health.',
 }
 
 const CORE_VALUES = [
@@ -93,7 +117,7 @@ const CORE_VALUES = [
   {
     icon: Cpu,
     title: 'Responsible Healthcare Technology',
-    text: 'Modern tools used thoughtfully to support — never replace — human care.',
+    text: 'Modern tools are used thoughtfully to enhance care — never to replace the human connection.',
   },
 ]
 
@@ -122,12 +146,31 @@ const COMMITMENTS = [
 
 const CLOSING = {
   heading: 'We’re Here to Help',
-  text: 'Have questions about RoyalCare Clinic? Contact our team to learn more about our clinic and available services.',
+  text: 'Have questions about RoyalCare Clinic? Contact our team to learn more about our clinic, services, and how we can support your health journey.',
 }
+
+/** Button labels — kept as developer defaults, overridable from the admin. */
+const HERO_PRIMARY_LINK = 'Contact Us'
+const HERO_SECONDARY_LINK = 'Explore Our Facilities'
+const CTA_PRIMARY_LINK = 'Contact Us'
+const CTA_SECONDARY_LINK = 'Explore Health Articles'
 
 /** Edge fade so the facility marquee appears to drift in from the page. */
 const MARQUEE_EDGE_MASK =
   'linear-gradient(90deg, transparent 0%, #000 5%, #000 95%, transparent 100%)'
+
+/**
+ * Turns the bootstrap `content_blocks` array into a key → block map so each
+ * section can look up its admin-editable copy. Blocks the admin has not saved
+ * yet simply fall back to the developer defaults above.
+ */
+function indexBlocks(blocks) {
+  const map = {}
+  for (const block of blocks ?? []) {
+    map[block.key] = block
+  }
+  return map
+}
 
 /**
  * Renders CMS rich-text bodies as readable plain text so no raw HTML from the
@@ -247,6 +290,92 @@ export default function AboutPage() {
     .filter((item) => item.image?.url)
     .slice(0, 6)
 
+  /**
+   * Admin-editable copy. Each section prefers the saved CMS block, then falls
+   * back to the developer default so the page never renders empty.
+   */
+  const blocks = indexBlocks(bootstrapQuery.data?.content_blocks)
+  const body = (key, fallback) => blocks[key]?.body?.trim() || fallback
+  const list = (key, fallback) => {
+    const value = blocks[key]?.data
+    return Array.isArray(value) && value.length > 0 ? value : fallback
+  }
+
+  const heroHeading = body('about_hero_title', ABOUT_HEADING)
+  const heroComma = heroHeading.indexOf(',')
+  const heroMain = heroComma > 0 ? heroHeading.slice(0, heroComma + 1) : heroHeading
+  const heroAccent = heroComma > 0 ? heroHeading.slice(heroComma + 1).trim() : ''
+  const heroIntro = body('about_hero_subtitle', ABOUT_INTRO)
+  const heroBadge = body('about_hero_badge', '')
+
+  const storyHeading = body('about_story_heading', WHO_HEADING)
+  const storySubheading = body('about_story_subheading', '')
+  const storyNote = body('about_story_note', '')
+  const storyImageUrl = blocks.about_story_image?.image?.url || settings.hero_media?.url || ABOUT_CLINIC_IMAGE
+
+  const missionHeading = body('about_mission_heading', 'Mission and Vision')
+  const mission = {
+    title: body('about_mission_title', MISSION.title),
+    text: body('about_mission_text', MISSION.text),
+  }
+  const vision = {
+    title: body('about_vision_title', VISION.title),
+    text: body('about_vision_text', VISION.text),
+  }
+
+  const valuesHeading = body('about_values_heading', 'Our Core Values')
+  const valuesSubheading = body('about_values_subheading', '')
+  const values = list('about_values', CORE_VALUES).map((item, index) => ({
+    icon: CORE_VALUES[index]?.icon ?? HeartPulse,
+    title: item.title ?? '',
+    text: item.text ?? '',
+  }))
+
+  const commitmentHeading = body('about_commitment_heading', 'Our Commitment to Patients')
+  const commitmentSubheading = body('about_commitment_subheading', '')
+  const commitments = list('about_commitments', COMMITMENTS).map((item, index) => ({
+    icon: COMMITMENTS[index]?.icon ?? MessageCircle,
+    title: item.title ?? '',
+    text: item.text ?? '',
+  }))
+
+  const ctaHeading = body('about_cta_heading', CLOSING.heading)
+  const ctaSubheading = body('about_cta_subheading', CLOSING.text)
+
+  /** Section eyebrow labels and link/button texts, all overridable from the admin. */
+  const eyebrows = {
+    story: body('about_story_eyebrow', SECTION_EYEBROWS.story),
+    mission: body('about_mission_eyebrow', SECTION_EYEBROWS.mission),
+    values: body('about_values_eyebrow', SECTION_EYEBROWS.values),
+    facilities: body('about_facilities_eyebrow', SECTION_EYEBROWS.facilities),
+    team: body('about_team_eyebrow', SECTION_EYEBROWS.team),
+    commitment: body('about_commitment_eyebrow', SECTION_EYEBROWS.commitment),
+    cta: body('about_cta_eyebrow', SECTION_EYEBROWS.cta),
+  }
+
+  const sectionLinks = SECTION_LINKS.map((item) => ({
+    href: item.href,
+    label: body(item.key, item.label),
+  }))
+
+  const heroPrimaryLabel = body('about_hero_primary_link', HERO_PRIMARY_LINK)
+  const heroSecondaryLabel = body('about_hero_secondary_link', HERO_SECONDARY_LINK)
+
+  const facilities = {
+    heading: body('about_facilities_heading', FACILITIES_COPY.heading),
+    text: body('about_facilities_text', FACILITIES_COPY.text),
+    link: body('about_facilities_link', FACILITIES_COPY.link),
+  }
+
+  const teamSection = {
+    heading: body('about_team_heading', TEAM_COPY.heading),
+    text: body('about_team_text', TEAM_COPY.text),
+    link: body('about_team_link', TEAM_COPY.link),
+  }
+
+  const ctaPrimaryLabel = body('about_cta_primary_link', CTA_PRIMARY_LINK)
+  const ctaSecondaryLabel = body('about_cta_secondary_link', CTA_SECONDARY_LINK)
+
   const seoTitle =
     page.seo_title || (page.title ? `${page.title} — ${settings.site_name || APP_NAME}` : '')
   const seoDescription = page.seo_description || plainText(page.excerpt)
@@ -304,7 +433,8 @@ export default function AboutPage() {
   }
 
   const lead = settings.about_summary || plainText(page.excerpt) || FALLBACK_SUMMARY
-  const bodyText = plainText(page.body)
+  const bodyHtml = page.body ?? ''
+  const bodyText = bodyHtml ? (/<[a-z][\s\S]*>/i.test(bodyHtml) ? '' : plainText(bodyHtml)) : plainText(page.excerpt)
   const heroImage = page.cover?.url || ABOUT_CLINIC_IMAGE
   const aboutImage = settings.hero_media?.url || ABOUT_CLINIC_IMAGE
 
@@ -325,16 +455,16 @@ export default function AboutPage() {
                 />
                 <span className="relative inline-flex size-1.5 rounded-full bg-accent" />
               </span>
-              About {settings.site_name || 'RoyalCare'}
+              {heroBadge || `About ${settings.site_name || 'RoyalCare'}`}
             </span>
           </Reveal>
 
           <Reveal delay={90}>
             <h1 className="mx-auto mt-6 max-w-4xl font-display text-[clamp(36px,5.4vw,68px)] font-extrabold leading-[1.06] tracking-[-0.02em]">
-              <span className="block text-white">{HEADING_MAIN}</span>
-              {HEADING_ACCENT ? (
+              <span className="block text-white">{heroMain}</span>
+              {heroAccent ? (
                 <span className="block bg-gradient-to-r from-[#4CAF50] to-[#66BB6A] bg-clip-text text-transparent">
-                  {HEADING_ACCENT}
+                  {heroAccent}
                 </span>
               ) : null}
             </h1>
@@ -342,7 +472,7 @@ export default function AboutPage() {
 
           <Reveal delay={170}>
             <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-white/75 sm:text-lg">
-              {ABOUT_INTRO}
+              {heroIntro}
             </p>
           </Reveal>
 
@@ -352,14 +482,14 @@ export default function AboutPage() {
                 to="/contact"
                 className="inline-flex items-center gap-2 rounded-full bg-accent px-7 py-3.5 text-sm font-semibold text-accent-ink shadow-[0_16px_34px_-14px_rgb(76_175_80_/_0.75)] transition-transform hover:-translate-y-0.5 hover:bg-accent-dark"
               >
-                Contact Us
+                {heroPrimaryLabel}
                 <ArrowRight className="size-4" aria-hidden />
               </Link>
               <Link
                 to="/gallery"
                 className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/10 px-7 py-3.5 text-sm font-semibold text-white backdrop-blur transition-colors hover:bg-white/20"
               >
-                Explore Our Facilities
+                {heroSecondaryLabel}
               </Link>
             </div>
           </Reveal>
@@ -369,7 +499,7 @@ export default function AboutPage() {
               aria-label="About page sections"
               className="mx-auto mt-10 flex max-w-3xl flex-wrap items-center justify-center gap-2"
             >
-              {SECTION_LINKS.filter(
+              {sectionLinks.filter(
                 (item) => item.href !== '#team' || team.length > 0,
               ).map((item) => (
                 <a
@@ -403,7 +533,7 @@ export default function AboutPage() {
           <Reveal className="relative order-2 lg:order-1">
             <div className="overflow-hidden rounded-[2rem] border border-line shadow-[var(--shadow-float)]">
               <img
-                src={aboutImage}
+                src={storyImageUrl}
                 alt="Inside RoyalCare Clinic"
                 loading="lazy"
                 className="block aspect-[4/3] w-full object-cover"
@@ -413,27 +543,36 @@ export default function AboutPage() {
               aria-hidden
               className="absolute -left-4 -top-4 hidden size-24 rounded-2xl border-2 border-azure-200 sm:block"
             />
-            <div className="absolute -bottom-5 right-4 inline-flex max-w-[88%] items-center gap-3 rounded-2xl border border-white/60 bg-white/90 px-5 py-4 shadow-[var(--shadow-float)] backdrop-blur">
-              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-azure-50 text-azure-600">
-                <MessageCircle className="size-5" aria-hidden />
-              </span>
-              <span className="text-sm font-semibold text-ink">
-                Clear communication at every step
-              </span>
-            </div>
+            {storyNote ? (
+              <div className="absolute -bottom-5 right-4 inline-flex max-w-[88%] items-center gap-3 rounded-2xl border border-white/60 bg-white/90 px-5 py-4 shadow-[var(--shadow-float)] backdrop-blur">
+                <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-azure-50 text-azure-600">
+                  <MessageCircle className="size-5" aria-hidden />
+                </span>
+                <span className="text-sm font-semibold text-ink">{storyNote}</span>
+              </div>
+            ) : null}
           </Reveal>
 
           <Reveal delay={90} className="order-1 lg:order-2">
             <p className="flex items-center gap-3 text-xs font-bold uppercase tracking-[0.28em] text-azure-600">
               <span aria-hidden className="h-px w-10 bg-azure-400" />
-              01 — Who We Are
+              {eyebrows.story}
             </p>
             <h2 className="mt-4 font-display text-3xl font-extrabold leading-tight tracking-tight text-ink sm:text-4xl">
-              {WHO_HEADING}
+              {storyHeading}
             </h2>
+            {storySubheading ? (
+              <p className="mt-5 text-base leading-relaxed text-ink-muted sm:text-lg">{storySubheading}</p>
+            ) : null}
             <p className="mt-5 text-base leading-relaxed text-ink-muted sm:text-lg">{lead}</p>
-            {bodyText ? (
-              <p className="mt-4 whitespace-pre-line text-sm leading-relaxed text-ink-muted sm:text-base">
+            {/<[a-z][\s\S]*>/i.test(bodyHtml) &&
+            !bodyHtml.toLowerCase().includes('edit this page from the website management') ? (
+              <div
+                className="prose prose-slate mt-4 max-w-none prose-p:leading-relaxed prose-p:text-ink-muted prose-strong:text-ink"
+                dangerouslySetInnerHTML={{ __html: bodyHtml }}
+              />
+            ) : bodyText && !bodyText.toLowerCase().includes('edit this page from the website management') ? (
+              <p className="mt-4 whitespace-pre-line text-base leading-relaxed text-ink-muted sm:text-[17px]">
                 {bodyText}
               </p>
             ) : null}
@@ -461,10 +600,10 @@ export default function AboutPage() {
         <Section reveal={false} className="relative py-16 sm:py-20">
           <Reveal className="mx-auto max-w-2xl text-center">
             <p className="text-xs font-bold uppercase tracking-[0.28em] text-white/60">
-              02 — Our Direction
+              {eyebrows.mission}
             </p>
             <h2 className="mt-3 font-display text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
-              Mission and Vision
+              {missionHeading}
             </h2>
           </Reveal>
 
@@ -478,7 +617,7 @@ export default function AboutPage() {
               className="absolute left-1/2 top-1/2 hidden size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/50 bg-accent shadow-[0_0_28px_rgba(76,175,80,0.9)] lg:block"
             />
 
-            {[MISSION, VISION].map((item, index) => {
+            {[mission, vision].map((item, index) => {
               const Icon = index === 0 ? Target : Eye
               return (
                 <Reveal
@@ -511,14 +650,14 @@ export default function AboutPage() {
           <Reveal>
             <SectionHeading
               align="center"
-              eyebrow="03 — What Guides Us"
-              title="Our Core Values"
-              description="Five principles that shape every appointment, conversation and decision at RoyalCare."
+              eyebrow={eyebrows.values}
+              title={valuesHeading}
+              description={valuesSubheading || undefined}
             />
           </Reveal>
 
           <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {CORE_VALUES.map((value, index) => {
+            {values.map((value, index) => {
               const Icon = value.icon
               const isDark = index === 0
               const isWide = index === 0 || index >= 3
@@ -583,9 +722,9 @@ export default function AboutPage() {
         <Section reveal={false} className="flex flex-wrap items-end justify-between gap-4">
           <Reveal>
             <SectionHeading
-              eyebrow="04 — Our Facilities"
-              title="A Glimpse Inside"
-              description="Take a look at our clinic, our spaces and the people behind your care."
+              eyebrow={eyebrows.facilities}
+              title={facilities.heading}
+              description={facilities.text}
             />
           </Reveal>
           <Reveal delay={80}>
@@ -593,7 +732,7 @@ export default function AboutPage() {
               to="/gallery"
               className="inline-flex items-center gap-1.5 rounded-full border border-line px-5 py-2.5 text-sm font-semibold text-azure-700 transition-colors hover:border-azure-400 hover:bg-azure-50"
             >
-              View All Facilities
+              {facilities.link}
               <ArrowRight className="size-4" aria-hidden />
             </Link>
           </Reveal>
@@ -633,9 +772,9 @@ export default function AboutPage() {
             <Reveal>
               <SectionHeading
                 align="center"
-                eyebrow="05 — Our People"
-                title="The People Behind Your Care"
-                description="Meet the dedicated professionals committed to your health and wellbeing."
+                eyebrow={eyebrows.team}
+                title={teamSection.heading}
+                description={teamSection.text}
               />
             </Reveal>
             <div className="mt-10">
@@ -646,7 +785,7 @@ export default function AboutPage() {
                 to="/team"
                 className="inline-flex items-center gap-1.5 text-sm font-semibold text-azure-700 transition-colors hover:text-azure-600"
               >
-                Meet Our Team
+                {teamSection.link}
                 <ArrowRight className="size-4" aria-hidden />
               </Link>
             </div>
@@ -665,14 +804,13 @@ export default function AboutPage() {
             <Reveal>
               <p className="flex items-center gap-3 text-xs font-bold uppercase tracking-[0.28em] text-azure-600">
                 <span aria-hidden className="h-px w-10 bg-azure-400" />
-                06 — Our Commitment
+                {eyebrows.commitment}
               </p>
               <h2 className="mt-4 font-display text-3xl font-extrabold leading-tight tracking-tight text-ink sm:text-4xl">
-                Our Commitment to Patients
+                {commitmentHeading}
               </h2>
               <p className="mt-4 max-w-md text-base leading-relaxed text-ink-muted">
-                How we intend to communicate, protect your privacy and support the decisions you
-                make about your health.
+                {commitmentSubheading}
               </p>
             </Reveal>
           </div>
@@ -721,26 +859,26 @@ export default function AboutPage() {
         <Section reveal={false} className="relative py-20 sm:py-24">
           <Reveal className="mx-auto max-w-2xl text-center text-white">
             <p className="text-xs font-bold uppercase tracking-[0.28em] text-white/60">
-              07 — Next Steps
+              {eyebrows.cta}
             </p>
             <h2 className="mt-4 font-display text-3xl font-extrabold tracking-tight sm:text-4xl">
-              {CLOSING.heading}
+              {ctaHeading}
             </h2>
             <p className="mt-4 text-sm leading-relaxed text-white/75 sm:text-base">
-              {CLOSING.text}
+              {ctaSubheading}
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Link
                 to="/contact"
                 className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-accent px-7 py-3.5 text-sm font-semibold text-accent-ink transition-colors hover:bg-accent-dark sm:w-auto"
               >
-                Contact Us
+                {ctaPrimaryLabel}
               </Link>
               <Link
                 to="/health-news"
                 className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/30 bg-white/10 px-7 py-3.5 text-sm font-semibold text-white backdrop-blur transition-colors hover:bg-white/20 sm:w-auto"
               >
-                Explore Health Articles
+                {ctaSecondaryLabel}
               </Link>
             </div>
           </Reveal>

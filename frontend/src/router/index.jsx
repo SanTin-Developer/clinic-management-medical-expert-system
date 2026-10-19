@@ -69,6 +69,7 @@ const WebsiteArticlesPage = lazy(() => import('../pages/website/WebsiteArticlesP
 const WebsiteArticleDetailPage = lazy(() => import('../pages/website/WebsiteArticleDetailPage.jsx'))
 const WebsiteMediaPage = lazy(() => import('../pages/website/WebsiteMediaPage.jsx'))
 const WebsiteContactMessagesPage = lazy(() => import('../pages/website/WebsiteContactMessagesPage.jsx'))
+const WebsiteContentBlocksPage = lazy(() => import('../pages/website/WebsiteContentBlocksPage.jsx'))
 
 function withSuspense(element) {
   return (
@@ -377,6 +378,14 @@ export const router = createBrowserRouter([
         element: withSuspense(
           <Guard permission="website.settings.view">
             <WebsiteSettingsPage />
+          </Guard>,
+        ),
+      },
+      {
+        path: 'website/content-blocks',
+        element: withSuspense(
+          <Guard permission="website.settings.view">
+            <WebsiteContentBlocksPage />
           </Guard>,
         ),
       },

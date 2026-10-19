@@ -264,6 +264,12 @@ export const NAV_SECTIONS = [
         permissions: ["website.settings.view"],
       },
       {
+        to: "/website/content-blocks",
+        label: "Page Content",
+        icon: FileText,
+        permissions: ["website.settings.view"],
+      },
+      {
         to: "/website/pages",
         label: "Pages",
         icon: FileText,
