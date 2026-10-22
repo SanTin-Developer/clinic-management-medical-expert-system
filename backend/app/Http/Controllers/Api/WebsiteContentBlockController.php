@@ -61,6 +61,7 @@ class WebsiteContentBlockController extends Controller
             'remove_image' => ['nullable', 'boolean'],
         ]);
 
+        $previousMediaId = $contentBlock->image_media_id;
         $contentBlock->image_media_id = $this->resolveMediaId(
             $request,
             $this->media,
@@ -76,6 +77,11 @@ class WebsiteContentBlockController extends Controller
         return response()->json([
             'message' => 'Content block updated successfully.',
             'data' => $contentBlock->fresh(['image']),
+            'media_cleanup' => $this->cleanupReplacedMedia(
+                $this->media,
+                $previousMediaId,
+                $contentBlock->image_media_id,
+            ),
         ]);
     }
 
@@ -93,14 +99,19 @@ class WebsiteContentBlockController extends Controller
         ]);
 
         foreach ($validated['blocks'] as $block) {
+            // Only the fields present in the payload are written, so an image
+            // block keeps its text and a text block keeps its list.
+            $attributes = ['updated_by' => $request->user()->id];
+
+            foreach (['title', 'body', 'data'] as $field) {
+                if (array_key_exists($field, $block)) {
+                    $attributes[$field] = $block[$field];
+                }
+            }
+
             ContentBlock::updateOrCreate(
                 ['key' => $block['key'], 'group' => $block['group'] ?? self::DEFAULT_GROUP],
-                [
-                    'title' => $block['title'] ?? null,
-                    'body' => $block['body'] ?? null,
-                    'data' => $block['data'] ?? null,
-                    'updated_by' => $request->user()->id,
-                ]
+                $attributes
             );
         }
 

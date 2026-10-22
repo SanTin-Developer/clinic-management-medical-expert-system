@@ -96,6 +96,7 @@ class WebsiteArticleController extends Controller
             );
         }
 
+        $previousMediaId = $article->cover_media_id;
         $article->cover_media_id = $this->resolveMediaId($request, $this->media, 'cover', $article->cover_media_id, 'remove_cover');
         $this->applyStatus($article);
         $article->save();
@@ -103,6 +104,11 @@ class WebsiteArticleController extends Controller
         return response()->json([
             'message' => 'Article updated successfully.',
             'data' => $article->fresh('cover'),
+            'media_cleanup' => $this->cleanupReplacedMedia(
+                $this->media,
+                $previousMediaId,
+                $article->cover_media_id,
+            ),
         ]);
     }
 
@@ -110,9 +116,13 @@ class WebsiteArticleController extends Controller
     {
         $this->authorize('website.articles.manage');
 
+        $mediaId = $article->cover_media_id;
         $article->delete();
 
-        return response()->json(['message' => 'Article deleted successfully.']);
+        return response()->json([
+            'message' => 'Article deleted successfully.',
+            'media_cleanup' => $this->media->cleanupIfUnused($mediaId),
+        ]);
     }
 
     public function publish(Article $article): JsonResponse

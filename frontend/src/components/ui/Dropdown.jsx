@@ -26,6 +26,7 @@ export default function Dropdown({ trigger, children, align = 'right', width = '
     onClick: () => setOpen((o) => !o),
     'aria-haspopup': 'menu',
     'aria-expanded': open,
+    'data-open': open,
   }
 
   return (

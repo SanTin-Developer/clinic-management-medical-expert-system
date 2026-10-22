@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { publicWebsiteApi } from '../../api/website.js'
 import { APP_NAME, FOOTER_LINKS, PRIMARY_NAV, SECONDARY_NAV } from '../../constants/index.js'
+import { blockImage, blockText, indexBlocks } from '../../utils/content.js'
 import { cn } from '../../utils/cn.js'
 import BackToTop from './BackToTop.jsx'
 import InstallPrompt from './InstallPrompt.jsx'
@@ -51,6 +52,20 @@ function SocialGlyph({ path, label }) {
       <path d={path} />
     </svg>
   )
+}
+
+/**
+ * Content-block key suffix for each menu destination, so the admin can rename
+ * any nav label from the Header tab of Page Content.
+ */
+const NAV_BLOCK_KEYS = {
+  '/home': 'home',
+  '/about': 'about',
+  '/services': 'services',
+  '/health-news': 'news',
+  '/contact': 'contact',
+  '/team': 'team',
+  '/gallery': 'gallery',
 }
 
 function RoyalCareLogo({ className }) {
@@ -114,8 +129,23 @@ export default function PublicLayout() {
   })
 
   const settings = data?.settings ?? {}
-  const footerPages = data?.footer_pages ?? []
+  // The CMS `about` record feeds the canonical /about page, so it must not be
+  // repeated as a /pages/about link in the footer. Quick Links already has an
+  // About Us entry that points to /about.
+  const footerPages = (data?.footer_pages ?? []).filter((page) => page.slug !== 'about')
   const services = data?.services ?? []
+
+  // Admin-editable copy from the Header/Footer tabs of Page Content.
+  const blocks = indexBlocks(data?.content_blocks)
+  const navLabel = (item) => {
+    const key = NAV_BLOCK_KEYS[item.to]
+    return key ? blockText(blocks, `header_nav_${key}`, item.label) : item.label
+  }
+  const ctaLabel = blockText(blocks, 'header_cta_label', 'Book an Appointment')
+  // The footer blurb is edited in the Footer tab of Page Content.
+  const footerAbout = blockText(blocks, 'footer_about_text', '')
+  // The homepage hero photo doubles as the social share image.
+  const heroImage = blockImage(blocks, 'home_hero_image')
 
   // Only the home page opens with a hero image, so that is where the header can
   // start fully transparent. Other pages have dark banners that need the glass.
@@ -172,7 +202,7 @@ export default function PublicLayout() {
     applyMeta('name', 'description', settings.seo_description)
     applyMeta('name', 'keywords', settings.seo_keywords)
 
-    const shareImage = settings.hero_media?.url ?? settings.logo?.url
+    const shareImage = heroImage ?? settings.logo?.url
     applyMeta('property', 'og:title', title)
     applyMeta('property', 'og:description', settings.seo_description)
     applyMeta('property', 'og:image', shareImage)
@@ -192,7 +222,7 @@ export default function PublicLayout() {
     settings.site_name,
     settings.seo_description,
     settings.seo_keywords,
-    settings.hero_media?.url,
+    heroImage,
     settings.logo?.url,
     settings.favicon?.url,
   ])
@@ -231,7 +261,7 @@ export default function PublicLayout() {
           >
             {PRIMARY_NAV.map((item) => (
               <NavLink key={item.to} to={item.to} className={navLinkClass}>
-                {item.label}
+                {navLabel(item)}
               </NavLink>
             ))}
           </nav>
@@ -242,7 +272,7 @@ export default function PublicLayout() {
               className="hidden items-center gap-2 rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-ink shadow-[var(--shadow-card)] transition-transform hover:-translate-y-0.5 hover:bg-accent-dark lg:inline-flex"
             >
               <Calendar className="size-4" aria-hidden />
-              Book an Appointment
+              {ctaLabel}
             </Link>
 
             <button
@@ -278,7 +308,7 @@ export default function PublicLayout() {
                     )
                   }
                 >
-                  {item.label}
+                  {navLabel(item)}
                 </NavLink>
               ))}
               <Link
@@ -286,7 +316,7 @@ export default function PublicLayout() {
                 className="mt-2 inline-flex items-center justify-center gap-2 rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-accent-ink shadow-[var(--shadow-card)]"
               >
                 <Calendar className="size-4" aria-hidden />
-                Book an Appointment
+                {ctaLabel}
               </Link>
             </div>
           </nav>
@@ -307,8 +337,8 @@ export default function PublicLayout() {
             {settings.tagline ? (
               <p className="mt-3 text-sm font-medium text-azure-700">{settings.tagline}</p>
             ) : null}
-            {settings.about_summary ? (
-              <p className="mt-2 line-clamp-4 text-sm text-ink-muted">{settings.about_summary}</p>
+            {footerAbout ? (
+              <p className="mt-2 line-clamp-4 text-sm text-ink-muted">{footerAbout}</p>
             ) : null}
             <div className="mt-4 flex items-center gap-2">
               {SOCIALS.filter((s) => settings[s.key]).map((s) => (
@@ -327,7 +357,9 @@ export default function PublicLayout() {
           </div>
 
           <div>
-            <h2 className="text-sm font-semibold text-ink">Quick Links</h2>
+            <h2 className="text-sm font-semibold text-ink">
+              {blockText(blocks, 'footer_quick_links_heading', 'Quick Links')}
+            </h2>
             <ul className="mt-3 space-y-2 text-sm">
               {FOOTER_LINKS.map((item) => (
                 <li key={item.to}>
@@ -340,7 +372,9 @@ export default function PublicLayout() {
           </div>
 
           <div>
-            <h2 className="text-sm font-semibold text-ink">Our Services</h2>
+            <h2 className="text-sm font-semibold text-ink">
+              {blockText(blocks, 'footer_services_heading', 'Our Services')}
+            </h2>
             <ul className="mt-3 space-y-2 text-sm">
               {services.slice(0, 6).map((service) => (
                 <li key={service.id}>
@@ -352,7 +386,7 @@ export default function PublicLayout() {
               {services.length === 0 ? (
                 <li>
                   <Link to="/services" className="text-ink-muted transition-colors hover:text-azure-600">
-                    View our services
+                    {blockText(blocks, 'footer_services_link', 'View our services')}
                   </Link>
                 </li>
               ) : null}
@@ -360,7 +394,9 @@ export default function PublicLayout() {
           </div>
 
           <div>
-            <h2 className="text-sm font-semibold text-ink">Get in Touch</h2>
+            <h2 className="text-sm font-semibold text-ink">
+              {blockText(blocks, 'footer_contact_heading', 'Get in Touch')}
+            </h2>
             <ul className="mt-3 space-y-3 text-sm text-ink-muted">
               {settings.address ? (
                 <li className="flex gap-2">
@@ -398,7 +434,8 @@ export default function PublicLayout() {
         <div className="border-t border-line">
           <div className="mx-auto flex w-full max-w-7xl flex-col gap-2 px-4 py-4 text-xs text-ink-muted sm:flex-row sm:items-center sm:justify-between sm:px-6">
             <p>
-              © {year} {settings.site_name ?? APP_NAME}. All rights reserved.
+              © {year} {settings.site_name ?? APP_NAME}.{' '}
+              {blockText(blocks, 'footer_rights_text', 'All rights reserved.')}
             </p>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
               {footerPages.map((page) => (

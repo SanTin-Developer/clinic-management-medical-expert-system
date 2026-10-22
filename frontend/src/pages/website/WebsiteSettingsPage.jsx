@@ -1,24 +1,32 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Link, useBlocker } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useQuery } from '@tanstack/react-query'
-import { Save } from 'lucide-react'
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Globe,
+  RotateCcw,
+  Save,
+} from 'lucide-react'
 import PageHeader from '../../components/ui/PageHeader.jsx'
 import Card from '../../components/ui/Card.jsx'
 import Button from '../../components/ui/Button.jsx'
 import Field from '../../components/ui/Field.jsx'
 import Input from '../../components/ui/Input.jsx'
 import Textarea from '../../components/ui/Textarea.jsx'
+import Tabs from '../../components/ui/Tabs.jsx'
+import ConfirmDialog from '../../components/ui/ConfirmDialog.jsx'
 import { Spinner } from '../../components/ui/Skeleton.jsx'
 import { ErrorState } from '../../components/ui/State.jsx'
 import ImageField from '../../components/ui/ImageField.jsx'
 import { websiteAdminApi } from '../../api/websiteAdmin.js'
+import { PUBLIC_SITE_URL } from '../../constants/sitePreview.js'
+import { cn } from '../../utils/cn.js'
 
 const EMPTY = {
   site_name: '',
   tagline: '',
-  hero_title: '',
-  hero_subtitle: '',
-  about_summary: '',
   primary_phone: '',
   secondary_phone: '',
   email: '',
@@ -37,38 +45,234 @@ const EMPTY = {
 
 const TEXT_FIELDS = Object.keys(EMPTY)
 
+const TABS = [
+  { value: 'branding', label: 'Branding' },
+  { value: 'contact', label: 'Contact' },
+  { value: 'social', label: 'Social links' },
+  { value: 'seo', label: 'SEO' },
+]
+
+const SOCIAL_FIELDS = [
+  { key: 'facebook_url', label: 'Facebook', placeholder: 'https://facebook.com/yourclinic' },
+  { key: 'twitter_url', label: 'Twitter / X', placeholder: 'https://x.com/yourclinic' },
+  { key: 'instagram_url', label: 'Instagram', placeholder: 'https://instagram.com/yourclinic' },
+  { key: 'linkedin_url', label: 'LinkedIn', placeholder: 'https://linkedin.com/company/yourclinic' },
+  { key: 'youtube_url', label: 'YouTube', placeholder: 'https://youtube.com/@yourclinic' },
+]
+
+/**
+ * Character guidance for the SEO fields. `max` mirrors a server-side rule and
+ * blocks saving; `recommended` only turns the counter amber so an admin can
+ * still save a longer snippet if the search result genuinely needs one.
+ */
+const SEO_COUNTERS = {
+  seo_title: { recommended: 60, max: 255, note: 'Aim for 50–60 characters.' },
+  seo_description: { recommended: 160, note: 'Aim for 140–160 characters.' },
+  seo_keywords: { recommended: 250, max: 500, note: 'A short, focused list works best.' },
+}
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const URL_PATTERN = /^https?:\/\/[^\s/$.?#][^\s]*$/i
+
+/**
+ * Client-side mirror of the settings endpoint's validation, plus the format
+ * checks the server cannot express. Returns null when the field is acceptable.
+ */
+function fieldError(key, rawValue) {
+  const value = (rawValue ?? '').trim()
+  if (!value) return null
+
+  if (key === 'email') {
+    return EMAIL_PATTERN.test(value)
+      ? null
+      : 'Enter a valid email address, such as clinic@example.com.'
+  }
+
+  if (key === 'map_embed_url') {
+    return /^(https?:\/\/|<iframe[\s>])/i.test(value)
+      ? null
+      : 'Paste a Google Maps embed URL, or a complete <iframe> tag.'
+  }
+
+  if (key.endsWith('_url')) {
+    return URL_PATTERN.test(value)
+      ? null
+      : 'Enter a full web address starting with http:// or https://.'
+  }
+
+  const limits = SEO_COUNTERS[key]
+  if (limits?.max && value.length > limits.max) {
+    return `Keep this to ${limits.max} characters or fewer (currently ${value.length}).`
+  }
+
+  return null
+}
+
+/**
+ * A settings input with its hint, inline validation message and — for the SEO
+ * fields — a live character counter. Keeps every text field on the page
+ * consistent instead of repeating the label/hint/error wiring by hand.
+ */
+function TextField({
+  id,
+  label,
+  hint,
+  value,
+  onChange,
+  multiline,
+  rows,
+  placeholder,
+  type = 'text',
+  className,
+}) {
+  const error = fieldError(id, value)
+  const counter = SEO_COUNTERS[id]
+  const length = value.length
+
+  let counterText = null
+  let counterTone = 'text-ink-muted'
+  if (counter) {
+    counterText = counter.max ? `${length} / ${counter.max}` : `${length}`
+    if (counter.max && length > counter.max) counterTone = 'text-red-600'
+    else if (counter.recommended && length > counter.recommended) counterTone = 'text-amber-700'
+  }
+
+  return (
+    <Field
+      label={label}
+      htmlFor={id}
+      error={error}
+      className={className}
+      hint={
+        <span className="flex items-baseline justify-between gap-3">
+          <span>
+            {hint}
+            {counter?.note && counter.recommended && length > counter.recommended ? (
+              <span className="font-medium text-amber-700"> {counter.note}</span>
+            ) : null}
+          </span>
+          {counterText ? (
+            <span className={cn('shrink-0 font-medium tabular-nums', counterTone)}>
+              {counterText}
+            </span>
+          ) : null}
+        </span>
+      }
+    >
+      {multiline ? (
+        <Textarea
+          id={id}
+          rows={rows ?? 2}
+          value={value}
+          placeholder={placeholder}
+          invalid={Boolean(error)}
+          onChange={(e) => onChange(e.target.value)}
+        />
+      ) : (
+        <Input
+          id={id}
+          type={type}
+          value={value}
+          placeholder={placeholder}
+          invalid={Boolean(error)}
+          onChange={(e) => onChange(e.target.value)}
+        />
+      )}
+    </Field>
+  )
+}
+
+/** Flattens the settings row into the flat key → string shape the form uses. */
+function snapshot(settings) {
+  return Object.fromEntries(TEXT_FIELDS.map((key) => [key, settings?.[key] ?? '']))
+}
+
+/** Domain shown in the SEO snippet preview breadcrumb. */
+const PREVIEW_DOMAIN =
+  PUBLIC_SITE_URL.replace(/^https?:\/\//, '').replace(/\/$/, '') || 'your-clinic-site.com'
+
 export default function WebsiteSettingsPage() {
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['website', 'admin', 'settings'],
     queryFn: websiteAdminApi.getSettings,
   })
 
+  const settings = data?.data
+
   const [form, setForm] = useState(EMPTY)
   const [logo, setLogo] = useState(null)
   const [favicon, setFavicon] = useState(null)
-  const [hero, setHero] = useState(null)
-  const [removed, setRemoved] = useState({ logo: false, favicon: false, hero: false })
+  const [removed, setRemoved] = useState({ logo: false, favicon: false })
   const [saving, setSaving] = useState(false)
+  const [tab, setTab] = useState(TABS[0].value)
 
-  const settings = data?.data
+  // Signature of the last payload we hydrated from, so a background refetch
+  // with unchanged data never overwrites what the admin is busy typing.
+  const hydratedRef = useRef(null)
+
+  const resetTo = useCallback((nextSettings) => {
+    setForm(snapshot(nextSettings))
+    setLogo(null)
+    setFavicon(null)
+    setRemoved({ logo: false, favicon: false })
+  }, [])
 
   useEffect(() => {
     if (!settings) return
-    const next = { ...EMPTY }
-    TEXT_FIELDS.forEach((key) => {
-      next[key] = settings[key] ?? ''
-    })
-    setForm(next)
-    setLogo(null)
-    setFavicon(null)
-    setHero(null)
-    setRemoved({ logo: false, favicon: false, hero: false })
-  }, [settings])
+    const signature = JSON.stringify(snapshot(settings))
+    if (hydratedRef.current === signature) return
+    hydratedRef.current = signature
+    resetTo(settings)
+  }, [settings, resetTo])
 
-  const set = (key) => (value) => setForm((f) => ({ ...f, [key]: value }))
+  const set = (key) => (value) => setForm((current) => ({ ...current, [key]: value }))
+
+  const imageChanged = Boolean(logo) || Boolean(favicon) || removed.logo || removed.favicon
+
+  // Server values the form was hydrated from — the baseline for the dirty check.
+  const baseline = useMemo(() => snapshot(settings), [settings])
+
+  const isDirty = useMemo(
+    () => imageChanged || TEXT_FIELDS.some((key) => form[key] !== baseline[key]),
+    [form, baseline, imageChanged],
+  )
+
+  const errors = useMemo(() => {
+    const next = {}
+    for (const key of TEXT_FIELDS) {
+      const message = fieldError(key, form[key])
+      if (message) next[key] = message
+    }
+    return next
+  }, [form])
+  const errorCount = Object.keys(errors).length
+
+  // Warn before a tab close, refresh or external link throws away the edits.
+  useEffect(() => {
+    if (!isDirty) return undefined
+    const onBeforeUnload = (event) => {
+      event.preventDefault()
+      event.returnValue = ''
+    }
+    window.addEventListener('beforeunload', onBeforeUnload)
+    return () => window.removeEventListener('beforeunload', onBeforeUnload)
+  }, [isDirty])
+
+  // React Router navigation guard, resolved through the confirmation dialog.
+  const blocker = useBlocker(isDirty)
+
+  const discard = () => {
+    if (settings) resetTo(settings)
+  }
 
   const submit = async (event) => {
     event.preventDefault()
+
+    if (errorCount > 0) {
+      toast.error('Fix the highlighted fields before saving.')
+      return
+    }
+
     setSaving(true)
     try {
       const payload = { ...form }
@@ -76,15 +280,13 @@ export default function WebsiteSettingsPage() {
       else if (removed.logo) payload.remove_logo = true
       if (favicon) payload.favicon = favicon
       else if (removed.favicon) payload.remove_favicon = true
-      if (hero) payload.hero_image = hero
-      else if (removed.hero) payload.remove_hero_image = true
 
       await websiteAdminApi.updateSettings(payload)
+      hydratedRef.current = null
       toast.success('Website settings updated.')
       setLogo(null)
       setFavicon(null)
-      setHero(null)
-      setRemoved({ logo: false, favicon: false, hero: false })
+      setRemoved({ logo: false, favicon: false })
       refetch()
     } catch (err) {
       toast.error(err.message)
@@ -92,6 +294,8 @@ export default function WebsiteSettingsPage() {
       setSaving(false)
     }
   }
+
+  const enabledSocials = SOCIAL_FIELDS.filter((field) => form[field.key].trim())
 
   if (isLoading) {
     return (
@@ -106,158 +310,345 @@ export default function WebsiteSettingsPage() {
   }
 
   return (
-    <form onSubmit={submit}>
+    <form onSubmit={submit} noValidate>
       <PageHeader
         title="Website Settings"
-        description="Branding, contact details and SEO for the public website."
+        description="Site-wide branding, contact details and SEO for the public website."
         actions={
-          <Button type="submit" loading={saving}>
-            <Save className="size-4" aria-hidden />
-            Save changes
-          </Button>
+          <span
+            className={cn(
+              'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ring-1 ring-inset',
+              isDirty
+                ? 'bg-amber-50 text-amber-700 ring-amber-200'
+                : 'bg-emerald-50 text-emerald-700 ring-emerald-200',
+            )}
+          >
+            {isDirty ? (
+              <AlertTriangle className="size-3.5" aria-hidden />
+            ) : (
+              <CheckCircle2 className="size-3.5" aria-hidden />
+            )}
+            {isDirty ? 'Unsaved changes' : 'All changes saved'}
+          </span>
         }
       />
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card title="Branding">
-          <div className="space-y-4">
-            <Field label="Site name" htmlFor="site_name" hint="Shown in the website header, footer and page titles.">
-              <Input id="site_name" value={form.site_name} onChange={(e) => set('site_name')(e.target.value)} />
-            </Field>
-            <Field label="Tagline" htmlFor="tagline" hint="Short phrase shown in the header, hero and footer.">
-              <Input id="tagline" value={form.tagline} onChange={(e) => set('tagline')(e.target.value)} />
-            </Field>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <Field label="Logo" htmlFor="logo" hint="PNG or SVG recommended.">
-                <ImageField
-                  id="logo"
-                  file={logo}
-                  existingUrl={removed.logo ? null : settings?.logo?.url}
-                  onFile={(file) => {
-                    setLogo(file)
-                    setRemoved((r) => ({ ...r, logo: false }))
-                  }}
-                  onRemove={() => {
-                    setLogo(null)
-                    setRemoved((r) => ({ ...r, logo: true }))
-                  }}
+      <div className="mb-6 flex gap-3 rounded-xl border border-line bg-brand-faint px-4 py-3">
+        <Globe className="mt-0.5 size-4 shrink-0 text-brand" aria-hidden />
+        <p className="text-sm text-ink">
+          Everything here applies everywhere at once — the header, the footer, contact details and the
+          default SEO tags. Page copy such as the hero headline, section headings and banners is
+          edited separately under{' '}
+          <Link
+            to="/website/content-blocks"
+            className="font-semibold text-brand hover:underline"
+          >
+            Page Content
+          </Link>
+          .
+        </p>
+      </div>
+
+      <Tabs className="mb-6" tabs={TABS} value={tab} onChange={setTab} />
+
+      <div role="tabpanel" aria-label={TABS.find((item) => item.value === tab)?.label}>
+        {tab === 'branding' ? (
+          <div className="grid gap-6">
+            <Card title="Identity" subtitle="How the clinic is named and described across the site.">
+              <div className="space-y-4">
+                <TextField
+                  id="site_name"
+                  label="Site name"
+                  hint="Shown in the website header, the footer and the browser tab."
+                  placeholder="RoyalCare Clinic"
+                  value={form.site_name}
+                  onChange={set('site_name')}
                 />
-              </Field>
-              <Field label="Favicon" htmlFor="favicon" hint="Square icon (32×32 or larger).">
-                <ImageField
-                  id="favicon"
-                  aspect={1}
-                  file={favicon}
-                  existingUrl={removed.favicon ? null : settings?.favicon?.url}
-                  onFile={(file) => {
-                    setFavicon(file)
-                    setRemoved((r) => ({ ...r, favicon: false }))
-                  }}
-                  onRemove={() => {
-                    setFavicon(null)
-                    setRemoved((r) => ({ ...r, favicon: true }))
-                  }}
+                <TextField
+                  id="tagline"
+                  label="Tagline"
+                  hint="One short line under the site name in the header and the footer."
+                  placeholder="Your Health, Our Priority"
+                  value={form.tagline}
+                  onChange={set('tagline')}
                 />
-              </Field>
+              </div>
+            </Card>
+
+            <Card
+              title="Logo & favicon"
+              subtitle="Branding marks used by the public website."
+              bodyClassName="p-5"
+            >
+              <div className="grid gap-6 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <p className="text-sm font-medium text-ink">Logo</p>
+                  <ImageField
+                    id="logo"
+                    file={logo}
+                    existingUrl={removed.logo ? null : settings?.logo?.url}
+                    hint="PNG or SVG recommended · up to 10MB"
+                    onFile={(file) => {
+                      setLogo(file)
+                      setRemoved((r) => ({ ...r, logo: false }))
+                    }}
+                    onRemove={() => {
+                      setLogo(null)
+                      setRemoved((r) => ({ ...r, logo: true }))
+                    }}
+                  />
+                  <p className="text-xs text-ink-muted">
+                    Shown at the top-left of every public page and used as the social share image when a
+                    page has no photo of its own.
+                  </p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <p className="text-sm font-medium text-ink">Favicon</p>
+                  <ImageField
+                    id="favicon"
+                    aspect={1}
+                    file={favicon}
+                    existingUrl={removed.favicon ? null : settings?.favicon?.url}
+                    hint="Square icon (32×32 or larger) · up to 10MB"
+                    onFile={(file) => {
+                      setFavicon(file)
+                      setRemoved((r) => ({ ...r, favicon: false }))
+                    }}
+                    onRemove={() => {
+                      setFavicon(null)
+                      setRemoved((r) => ({ ...r, favicon: true }))
+                    }}
+                  />
+                  <p className="text-xs text-ink-muted">
+                    The small icon shown in the browser tab and on bookmarks.
+                  </p>
+                </div>
+              </div>
+            </Card>
+          </div>
+        ) : null}
+
+        {tab === 'contact' ? (
+          <div className="grid gap-6">
+            <Card title="Contact details" subtitle="How patients can reach the clinic.">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <TextField
+                  id="primary_phone"
+                  label="Primary phone"
+                  hint="Shown first in the header menu and footer."
+                  placeholder="+855 12 345 678"
+                  value={form.primary_phone}
+                  onChange={set('primary_phone')}
+                />
+                <TextField
+                  id="secondary_phone"
+                  label="Secondary phone"
+                  hint="Appended after the primary number in the footer."
+                  placeholder="+855 12 345 679"
+                  value={form.secondary_phone}
+                  onChange={set('secondary_phone')}
+                />
+                <TextField
+                  id="email"
+                  label="Email"
+                  hint="Used for the mailto link in the footer and on the contact page."
+                  type="email"
+                  placeholder="clinic@royalcare.example"
+                  value={form.email}
+                  onChange={set('email')}
+                  className="sm:col-span-2"
+                />
+              </div>
+            </Card>
+
+            <Card title="Location & hours" subtitle="Where to find the clinic and when it is open.">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <TextField
+                  id="address"
+                  label="Address"
+                  hint="Shown on the contact page and in the footer."
+                  value={form.address}
+                  onChange={set('address')}
+                  className="sm:col-span-2"
+                />
+                <TextField
+                  id="business_hours"
+                  label="Business hours"
+                  multiline
+                  rows={3}
+                  hint="One line per entry, e.g. Mon–Fri: 8:00am – 6:00pm"
+                  value={form.business_hours}
+                  onChange={set('business_hours')}
+                />
+                <TextField
+                  id="map_embed_url"
+                  label="Map embed URL"
+                  multiline
+                  rows={3}
+                  hint="Paste a Google Maps embed URL, or a full <iframe> embed code."
+                  placeholder="https://www.google.com/maps/embed?pb=…"
+                  value={form.map_embed_url}
+                  onChange={set('map_embed_url')}
+                />
+              </div>
+            </Card>
+          </div>
+        ) : null}
+
+        {tab === 'social' ? (
+          <Card
+            title="Social links"
+            subtitle="Leave a field empty to hide that icon from the footer."
+          >
+            <div className="grid gap-4 sm:grid-cols-2">
+              {SOCIAL_FIELDS.map((field) => (
+                <TextField
+                  key={field.key}
+                  id={field.key}
+                  label={field.label}
+                  placeholder={field.placeholder}
+                  value={form[field.key]}
+                  onChange={set(field.key)}
+                  className={field.key === 'youtube_url' ? 'sm:col-span-2' : undefined}
+                />
+              ))}
             </div>
-          </div>
-        </Card>
 
-        <Card title="Homepage hero">
-          <div className="space-y-4">
-            <Field label="Hero title" htmlFor="hero_title" hint="Large headline shown on the homepage hero.">
-              <Input id="hero_title" value={form.hero_title} onChange={(e) => set('hero_title')(e.target.value)} />
-            </Field>
-            <Field label="Hero subtitle" htmlFor="hero_subtitle" hint="Paragraph shown under the hero title.">
-              <Textarea id="hero_subtitle" rows={2} value={form.hero_subtitle} onChange={(e) => set('hero_subtitle')(e.target.value)} />
-            </Field>
-            <Field label="Hero image" htmlFor="hero_image" hint="Large banner image (1600px wide or more).">
-              <ImageField
-                id="hero_image"
-                file={hero}
-                existingUrl={removed.hero ? null : settings?.hero_media?.url}
-                onFile={(file) => {
-                  setHero(file)
-                  setRemoved((r) => ({ ...r, hero: false }))
-                }}
-                onRemove={() => {
-                  setHero(null)
-                  setRemoved((r) => ({ ...r, hero: true }))
-                }}
-              />
-            </Field>
-            <Field label="About summary" htmlFor="about_summary" hint="Green highlight line under the homepage hero, plus the About section and footer.">
-              <Textarea id="about_summary" rows={4} value={form.about_summary} onChange={(e) => set('about_summary')(e.target.value)} />
-            </Field>
-          </div>
-        </Card>
-
-        <Card title="Contact information">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Primary phone" htmlFor="primary_phone">
-              <Input id="primary_phone" value={form.primary_phone} onChange={(e) => set('primary_phone')(e.target.value)} />
-            </Field>
-            <Field label="Secondary phone" htmlFor="secondary_phone">
-              <Input id="secondary_phone" value={form.secondary_phone} onChange={(e) => set('secondary_phone')(e.target.value)} />
-            </Field>
-            <Field label="Email" htmlFor="email" className="sm:col-span-2">
-              <Input id="email" type="email" value={form.email} onChange={(e) => set('email')(e.target.value)} />
-            </Field>
-            <Field label="Address" htmlFor="address" className="sm:col-span-2">
-              <Input id="address" value={form.address} onChange={(e) => set('address')(e.target.value)} />
-            </Field>
-            <Field label="Map embed URL" htmlFor="map_embed_url" className="sm:col-span-2" hint="Google Maps embed URL or full <iframe> embed code.">
-              <Textarea id="map_embed_url" rows={2} value={form.map_embed_url} onChange={(e) => set('map_embed_url')(e.target.value)} />
-            </Field>
-            <Field label="Business hours" htmlFor="business_hours" className="sm:col-span-2" hint="One line per entry, e.g. Mon–Fri: 8:00am – 6:00pm">
-              <Textarea id="business_hours" rows={3} value={form.business_hours} onChange={(e) => set('business_hours')(e.target.value)} />
-            </Field>
-          </div>
-        </Card>
-
-        <div className="space-y-6">
-          <Card title="Social links">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <Field label="Facebook" htmlFor="facebook_url">
-                <Input id="facebook_url" value={form.facebook_url} onChange={(e) => set('facebook_url')(e.target.value)} placeholder="https://facebook.com/…" />
-              </Field>
-              <Field label="Twitter / X" htmlFor="twitter_url">
-                <Input id="twitter_url" value={form.twitter_url} onChange={(e) => set('twitter_url')(e.target.value)} placeholder="https://x.com/…" />
-              </Field>
-              <Field label="Instagram" htmlFor="instagram_url">
-                <Input id="instagram_url" value={form.instagram_url} onChange={(e) => set('instagram_url')(e.target.value)} placeholder="https://instagram.com/…" />
-              </Field>
-              <Field label="LinkedIn" htmlFor="linkedin_url">
-                <Input id="linkedin_url" value={form.linkedin_url} onChange={(e) => set('linkedin_url')(e.target.value)} placeholder="https://linkedin.com/…" />
-              </Field>
-              <Field label="YouTube" htmlFor="youtube_url" className="sm:col-span-2">
-                <Input id="youtube_url" value={form.youtube_url} onChange={(e) => set('youtube_url')(e.target.value)} placeholder="https://youtube.com/…" />
-              </Field>
-            </div>
+            {enabledSocials.length > 0 ? (
+              <div className="mt-5 rounded-xl border border-line bg-canvas/60 px-4 py-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                  Will appear in the footer
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {enabledSocials.map((field) => (
+                    <span
+                      key={field.key}
+                      className="rounded-full bg-surface px-3 py-1 text-xs font-medium text-ink ring-1 ring-line"
+                    >
+                      {field.label}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <p className="mt-5 rounded-xl border border-dashed border-line px-4 py-4 text-center text-sm text-ink-muted">
+                No social links yet — the footer hides the social row entirely.
+              </p>
+            )}
           </Card>
+        ) : null}
 
-          <Card title="SEO defaults">
-            <div className="space-y-4">
-              <Field label="SEO title" htmlFor="seo_title" hint="Browser tab title and search-result headline.">
-                <Input id="seo_title" value={form.seo_title} onChange={(e) => set('seo_title')(e.target.value)} />
-              </Field>
-              <Field label="SEO description" htmlFor="seo_description" hint="Search-result snippet and social share text.">
-                <Textarea id="seo_description" rows={3} value={form.seo_description} onChange={(e) => set('seo_description')(e.target.value)} />
-              </Field>
-              <Field label="SEO keywords" htmlFor="seo_keywords" hint="Comma separated.">
-                <Input id="seo_keywords" value={form.seo_keywords} onChange={(e) => set('seo_keywords')(e.target.value)} />
-              </Field>
-            </div>
-          </Card>
+        {tab === 'seo' ? (
+          <div className="grid gap-6">
+            <Card
+              title="Default SEO"
+              subtitle="Used on every page that does not set its own title or description."
+            >
+              <div className="space-y-4">
+                <TextField
+                  id="seo_title"
+                  label="SEO title"
+                  hint="The browser tab title and the headline in search results."
+                  value={form.seo_title}
+                  onChange={set('seo_title')}
+                />
+                <TextField
+                  id="seo_description"
+                  label="SEO description"
+                  multiline
+                  rows={3}
+                  hint="The snippet under the headline in search results, and the social share text."
+                  value={form.seo_description}
+                  onChange={set('seo_description')}
+                />
+                <TextField
+                  id="seo_keywords"
+                  label="SEO keywords"
+                  hint="Comma separated."
+                  value={form.seo_keywords}
+                  onChange={set('seo_keywords')}
+                />
+              </div>
+
+              <div className="mt-5 rounded-xl border border-line bg-canvas/60 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                  Search result preview
+                </p>
+                <div className="mt-3 rounded-lg bg-white px-4 py-3 shadow-sm ring-1 ring-slate-200">
+                  <p className="truncate text-[19px] leading-tight text-[#1a0dab]">
+                    {form.seo_title || form.site_name || 'RoyalCare Clinic'}
+                  </p>
+                  <p className="mt-0.5 truncate text-xs text-[#4d5156]">
+                    {PREVIEW_DOMAIN} › home
+                  </p>
+                  <p className="mt-1 line-clamp-2 text-sm text-[#4d5156]">
+                    {form.seo_description ||
+                      'Add an SEO description to control the snippet shown under your headline in search results.'}
+                  </p>
+                </div>
+                <p className="mt-2 text-xs text-ink-muted">
+                  Individual pages can override these defaults from their own editor in{' '}
+                  <Link to="/website/pages" className="font-medium text-brand hover:underline">
+                    Pages
+                  </Link>
+                  .
+                </p>
+              </div>
+            </Card>
+          </div>
+        ) : null}
+      </div>
+
+      <div className="sticky bottom-0 z-30 -mx-4 mt-6 border-t border-line bg-surface/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="flex items-center gap-2 text-sm">
+            {errorCount > 0 ? (
+              <>
+                <AlertTriangle className="size-4 text-red-500" aria-hidden />
+                <span className="text-red-600">
+                  {errorCount} {errorCount === 1 ? 'field needs' : 'fields need'} attention before saving.
+                </span>
+              </>
+            ) : isDirty ? (
+              <>
+                <AlertTriangle className="size-4 text-amber-500" aria-hidden />
+                <span className="text-ink-muted">You have unsaved changes.</span>
+              </>
+            ) : (
+              <>
+                <CheckCircle2 className="size-4 text-emerald-500" aria-hidden />
+                <span className="text-ink-muted">All changes saved.</span>
+              </>
+            )}
+          </p>
+
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={discard}
+              disabled={!isDirty || saving}
+            >
+              <RotateCcw className="size-4" aria-hidden />
+              Discard
+            </Button>
+            <Button type="submit" loading={saving} disabled={errorCount > 0}>
+              <Save className="size-4" aria-hidden />
+              Save changes
+            </Button>
+          </div>
         </div>
       </div>
 
-      <div className="mt-6 flex justify-end">
-        <Button type="submit" loading={saving}>
-          <Save className="size-4" aria-hidden />
-          Save changes
-        </Button>
-      </div>
+      <ConfirmDialog
+        open={blocker.state === 'blocked'}
+        onClose={() => blocker.reset?.()}
+        onConfirm={() => blocker.proceed?.()}
+        title="Leave without saving?"
+        message="Your changes to the website settings will be lost."
+        confirmLabel="Leave page"
+      />
     </form>
   )
 }

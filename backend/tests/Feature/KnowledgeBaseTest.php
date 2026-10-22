@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Disease;
+use App\Models\ExpertRule;
 use App\Models\Symptom;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -102,6 +103,38 @@ class KnowledgeBaseTest extends TestCase
         ])->assertCreated()
             ->assertJsonPath('data.code', 'RULE-TEST')
             ->assertJsonCount(1, 'data.conditions');
+    }
+
+    public function test_expert_rule_index_reports_confidence_stats(): void
+    {
+        $this->actingAsRole('Admin');
+
+        $disease = Disease::create(['code' => 'DIS-RSTAT', 'name' => 'Stats disease']);
+
+        ExpertRule::create([
+            'code' => 'RULE-HIGH',
+            'name' => 'High confidence rule',
+            'disease_id' => $disease->id,
+            'confidence_score' => 0.85,
+        ]);
+        ExpertRule::create([
+            'code' => 'RULE-MED',
+            'name' => 'Medium confidence rule',
+            'disease_id' => $disease->id,
+            'confidence_score' => 0.7,
+        ]);
+        ExpertRule::create([
+            'code' => 'RULE-LOW',
+            'name' => 'Low confidence rule',
+            'disease_id' => $disease->id,
+            'confidence_score' => 0.4,
+        ]);
+
+        $this->getJson('/api/v1/knowledge-base/expert-rules')
+            ->assertOk()
+            ->assertJsonPath('stats.total', 3)
+            ->assertJsonPath('stats.high_confidence', 1)
+            ->assertJsonPath('stats.medium_confidence', 1);
     }
 
     public function test_expert_rule_rejects_duplicate_conditions_in_same_group(): void

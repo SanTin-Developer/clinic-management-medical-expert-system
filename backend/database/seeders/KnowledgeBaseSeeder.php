@@ -431,6 +431,7 @@ class KnowledgeBaseSeeder extends Seeder
                 'groups' => [
                     1 => [$this->present('SYM-HIGH-FEVER'), $this->present('SYM-BODY-ACHE'), $this->present('SYM-DRY-COUGH')],
                     2 => [$this->present('SYM-HIGH-FEVER'), $this->present('SYM-CHILLS'), $this->present('SYM-FATIGUE')],
+                    3 => [$this->present('SYM-FEVER'), $this->present('SYM-CHILLS'), $this->present('SYM-BODY-ACHE')],
                 ],
             ],
             [

@@ -25,6 +25,8 @@ class MediaAsset extends Model
     protected $fillable = [
         'name',
         'file_path',
+        'public_id',
+        'resource_type',
         'disk',
         'mime_type',
         'size',

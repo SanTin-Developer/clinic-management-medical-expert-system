@@ -13,6 +13,8 @@ class DatabaseSeeder extends Seeder
             AdminUserSeeder::class,
             ShiftTemplateSeeder::class,
             WebsiteContentSeeder::class,
+            AboutContentBlockSeeder::class,
+            WebsitePageContentSeeder::class,
         ]);
 
         if (app()->environment(['local', 'testing'])) {

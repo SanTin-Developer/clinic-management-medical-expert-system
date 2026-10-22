@@ -157,7 +157,7 @@ export default function WebsiteTeamPage() {
         onClose={() => setDeleting(null)}
         onConfirm={confirmDelete}
         title="Delete team profile"
-        message={`Delete “${deleting?.name}”? This cannot be undone.`}
+        message={`Delete “${deleting?.name}”? This cannot be undone. If no other record uses the photo, it is also permanently deleted from Cloudinary.`}
         confirmLabel="Delete"
         loading={busy}
       />

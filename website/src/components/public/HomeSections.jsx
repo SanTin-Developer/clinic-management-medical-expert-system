@@ -11,9 +11,12 @@ import {
   Users,
 } from 'lucide-react'
 import { cn } from '../../utils/cn.js'
+import { blockImage, blockList, blockText, useContentBlocks } from '../../utils/content.js'
 import { Reveal } from './Reveal.jsx'
 import {
   ABOUT_CLINIC_IMAGE,
+  ABOUT_PILLARS,
+  CLINIC_SUMMARY,
   DEFAULT_HERO_IMAGE,
   HERO_DESCRIPTION,
   HERO_EYEBROW,
@@ -23,18 +26,14 @@ import {
   PARTNER_PLACEHOLDERS,
 } from '../../constants/index.js'
 
-const ABOUT_PILLARS = [
-  'Patient-first, respectful care',
-  'Experienced clinical team',
-  'Modern, comfortable facilities',
-  'Clear communication at every step',
-]
-
 const STAT_ICONS = {
   patients: Users,
   doctors: HeartPulse,
   hours: Clock,
 }
+
+/** Icon slot for each admin-editable statistic row, by position. */
+const STAT_KEYS = ['patients', 'doctors', 'hours']
 
 /**
  * Solid (filled) partner glyphs rendered via `fill="currentColor"` so the strip
@@ -79,12 +78,21 @@ function StatCard({ stat, className, style }) {
 }
 
 export function HeroSection({ settings = {} }) {
-  // API serializes the relation as snake_case (`hero_media`), not `heroMedia`.
-  const heroImage = settings.hero_media?.url ?? DEFAULT_HERO_IMAGE
+  // Every piece of hero copy and the photo come from the Home tab of Page
+  // Content. Only the tagline stays global, so it is read from the settings.
+  const blocks = useContentBlocks()
+  const heroImage = blockImage(blocks, 'home_hero_image') ?? DEFAULT_HERO_IMAGE
   const eyebrow = settings.tagline?.trim() || HERO_EYEBROW
-  const heroTitle = settings.hero_title?.trim()
-  const description = settings.hero_subtitle?.trim() || HERO_DESCRIPTION
-  const highlight = settings.about_summary?.trim() || HERO_HIGHLIGHT
+  const heroTitle = blockText(blocks, 'home_hero_title', '')
+  const description = blockText(blocks, 'home_hero_subtitle', HERO_DESCRIPTION)
+  const highlight = blockText(blocks, 'home_hero_highlight', HERO_HIGHLIGHT)
+
+  const stats = blockList(blocks, 'home_stats', HERO_STATS).map((stat, index) => ({
+    ...stat,
+    key: stat.key ?? STAT_KEYS[index] ?? 'hours',
+  }))
+  const primaryLabel = blockText(blocks, 'home_hero_primary_link', 'Explore Our Services')
+  const secondaryLabel = blockText(blocks, 'home_hero_secondary_link', 'Book an Appointment')
 
   return (
     <section className="relative flex min-h-[clamp(640px,52vw,900px)] flex-col overflow-hidden bg-[#F8FBFF]">
@@ -115,23 +123,29 @@ export function HeroSection({ settings = {} }) {
 
       <div className="reveal reveal-5 pointer-events-none absolute inset-0 hidden min-[1100px]:block">
         <div className="relative mx-auto h-full w-full max-w-[1200px] px-6">
-          <StatCard
-            stat={HERO_STATS[0]}
-            className="animate-float-subtle absolute left-[50%] top-[16%]"
-            style={{ animationDelay: '0s' }}
-          />
-          <div className="absolute right-[3%] top-[46%] z-[5] flex w-[210px] flex-col gap-4">
+          {stats[0] ? (
             <StatCard
-              stat={HERO_STATS[1]}
-              className="animate-float-subtle relative"
-              style={{ animationDelay: '0.9s' }}
+              stat={stats[0]}
+              className="animate-float-subtle absolute left-[50%] top-[16%]"
+              style={{ animationDelay: '0s' }}
             />
-            <StatCard
-              stat={HERO_STATS[2]}
-              className="animate-float-subtle relative"
-              style={{ animationDelay: '1.8s' }}
-            />
-          </div>
+          ) : null}
+          {stats.length > 1 ? (
+            <div className="absolute right-[3%] top-[46%] z-[5] flex w-[210px] flex-col gap-4">
+              <StatCard
+                stat={stats[1]}
+                className="animate-float-subtle relative"
+                style={{ animationDelay: '0.9s' }}
+              />
+              {stats[2] ? (
+                <StatCard
+                  stat={stats[2]}
+                  className="animate-float-subtle relative"
+                  style={{ animationDelay: '1.8s' }}
+                />
+              ) : null}
+            </div>
+          ) : null}
         </div>
       </div>
 
@@ -181,7 +195,7 @@ export function HeroSection({ settings = {} }) {
               to="/services"
               className="group inline-flex w-full items-center justify-center gap-2 rounded-full bg-accent px-7 py-3.5 text-sm font-semibold text-accent-ink shadow-[0_18px_38px_-16px_rgb(76_175_80_/_0.9)] transition hover:-translate-y-0.5 hover:bg-accent-dark min-[480px]:w-auto"
             >
-              Explore Our Services
+              {primaryLabel}
               <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" aria-hidden />
             </Link>
             <Link
@@ -189,7 +203,7 @@ export function HeroSection({ settings = {} }) {
               className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-[#0B4A8F]/25 bg-white/75 px-6 py-3.5 text-sm font-semibold text-[#0B4A8F] shadow-[var(--shadow-card)] backdrop-blur-md transition hover:-translate-y-0.5 hover:border-[#0B4A8F]/50 hover:bg-white min-[480px]:w-auto"
             >
               <Calendar className="size-4" aria-hidden />
-              Book an Appointment
+              {secondaryLabel}
             </Link>
           </div>
         </div>
@@ -199,7 +213,7 @@ export function HeroSection({ settings = {} }) {
       <div className="relative pb-10 min-[1100px]:hidden">
         <div className="mx-auto w-full max-w-[1200px] px-4 sm:px-6">
           <div className="grid grid-cols-2 gap-3 min-[720px]:flex min-[720px]:snap-x min-[720px]:overflow-x-auto">
-            {HERO_STATS.map((stat, index) => (
+            {stats.map((stat, index) => (
               <StatCard
                 key={stat.key}
                 stat={stat}
@@ -215,15 +229,20 @@ export function HeroSection({ settings = {} }) {
 }
 
 export function PartnersStrip() {
+  const blocks = useContentBlocks()
+  const heading = blockText(blocks, 'home_partners_heading', 'Trusted by Leading\nPartners')
+  const partners = blockList(blocks, 'home_partners', PARTNER_PLACEHOLDERS).map((partner, index) => ({
+    key: partner.key ?? `p${index + 1}`,
+    label: partner.title ?? partner.label ?? '',
+    icon: partner.text ?? partner.icon ?? 'leaf',
+  }))
+
   return (
     <section className="border-y border-line bg-white">
       <Reveal className="mx-auto flex w-full max-w-[1200px] flex-col gap-6 px-4 py-8 sm:px-6 lg:flex-row lg:items-center lg:gap-12">
-        <p className="shrink-0 text-sm font-medium leading-snug text-[#4A5568]">
-          <span className="block">Trusted by Leading</span>
-          <span className="block">Partners</span>
-        </p>
+        <p className="shrink-0 whitespace-pre-line text-sm font-medium leading-snug text-[#4A5568]">{heading}</p>
         <div className="flex flex-1 flex-wrap items-center gap-x-8 gap-y-4 lg:flex-nowrap lg:justify-between">
-          {PARTNER_PLACEHOLDERS.map((partner, index) => (
+          {partners.map((partner, index) => (
             <Fragment key={partner.key}>
               {index > 0 ? (
                 <span className="hidden h-8 w-px shrink-0 bg-line sm:block" aria-hidden />
@@ -240,23 +259,31 @@ export function PartnersStrip() {
   )
 }
 
-export function AboutSection({ settings = {} }) {
-  const summary =
-    settings.about_summary ??
-    'RoyalCare Clinic brings together experienced clinicians, modern facilities and a patient-first approach to deliver care you and your family can trust.'
+export function AboutSection() {
+  // Admin-editable copy from the Home tab of Page Content.
+  const blocks = useContentBlocks()
+  const summary = blockText(blocks, 'home_about_text', CLINIC_SUMMARY)
+  const eyebrow = blockText(blocks, 'home_about_eyebrow', 'About RoyalCare')
+  const heading = blockText(blocks, 'home_about_heading', 'Compassionate Care, Advanced Medicine')
+  const pillars = blockList(
+    blocks,
+    'home_about_pillars',
+    ABOUT_PILLARS.map((point) => ({ title: point })),
+  ).map((point) => point.title ?? '')
+  const linkLabel = blockText(blocks, 'home_about_link', 'More about us')
 
   return (
     <section className="mx-auto w-full max-w-7xl px-4 py-20 sm:px-6 lg:py-28">
       <Reveal className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.28em] text-azure-600">About RoyalCare</p>
+          <p className="text-xs font-bold uppercase tracking-[0.28em] text-azure-600">{eyebrow}</p>
           <h2 className="mt-4 text-3xl font-extrabold leading-tight tracking-tight text-ink sm:text-4xl lg:text-5xl">
-            Compassionate Care, Advanced Medicine
+            {heading}
           </h2>
           <p className="mt-5 whitespace-pre-line text-base leading-relaxed text-ink-muted">{summary}</p>
 
           <ul className="mt-7 grid gap-3 sm:grid-cols-2">
-            {ABOUT_PILLARS.map((point) => (
+            {pillars.map((point) => (
               <li key={point} className="flex items-start gap-3 rounded-2xl bg-canvas px-4 py-3">
                 <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-azure-500" aria-hidden />
                 <span className="text-sm font-medium text-ink">{point}</span>
@@ -268,7 +295,7 @@ export function AboutSection({ settings = {} }) {
             to="/about"
             className="mt-8 inline-flex items-center gap-2 rounded-full bg-brand px-6 py-3 text-sm font-semibold text-white transition-transform hover:-translate-y-0.5 hover:bg-brand-dark"
           >
-            More about us
+            {linkLabel}
             <ArrowRight className="size-4" aria-hidden />
           </Link>
         </div>
@@ -303,6 +330,16 @@ export function CtaBanner({ settings = {} }) {
   const phone = settings.primary_phone ?? settings.secondary_phone
   const address = settings.address
 
+  const blocks = useContentBlocks()
+  const heading = blockText(blocks, 'home_cta_heading', 'Ready to visit us?')
+  const text = blockText(
+    blocks,
+    'home_cta_text',
+    'Reach out to schedule an appointment or ask us anything about our services.',
+  )
+  const contactLabel = blockText(blocks, 'home_cta_contact_label', 'Contact Us')
+  const backgroundImage = blockImage(blocks, 'home_cta_image') ?? CTA_BACKGROUND_IMAGE
+
   // Keyless Google Maps embed pinned to the clinic's exact coordinates, with
   // the address as the search label so the pin is labelled correctly.
   const coords = `${CLINIC_COORDS.lat},${CLINIC_COORDS.lng}`
@@ -316,7 +353,7 @@ export function CtaBanner({ settings = {} }) {
         {/* Clinic photo backdrop, dimmed so the white copy and map stay readable. */}
         <div
           className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: `url("${CTA_BACKGROUND_IMAGE}")` }}
+          style={{ backgroundImage: `url("${backgroundImage}")` }}
           aria-hidden
         />
         <div
@@ -325,16 +362,14 @@ export function CtaBanner({ settings = {} }) {
         />
         <div className="relative z-10 grid items-center gap-10 lg:grid-cols-2 lg:gap-14">
           <div className="text-center text-white lg:text-left">
-            <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">Ready to visit us?</h2>
-            <p className="mt-3 text-sm text-white/80 sm:text-base">
-              Reach out to schedule an appointment or ask us anything about our services.
-            </p>
+            <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">{heading}</h2>
+            <p className="mt-3 text-sm text-white/80 sm:text-base">{text}</p>
             <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row lg:justify-start">
               <Link
                 to="/contact"
                 className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-accent px-6 py-3.5 text-sm font-semibold text-accent-ink transition-colors hover:bg-accent-dark sm:w-auto"
               >
-                Contact Us
+                {contactLabel}
               </Link>
               {phone ? (
                 <a

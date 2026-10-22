@@ -47,7 +47,7 @@ export default function Sidebar({ open, onClose, collapsed = false }) {
       ) : null}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-brand-darker text-white transition-[width,transform] duration-200 md:static md:translate-x-0 print:hidden dark:border-r dark:border-white/5 dark:bg-gradient-to-b dark:from-[#111f39] dark:to-[#0a1120]",
+          "fixed inset-y-0 left-0 z-50 flex h-screen w-64 shrink-0 flex-col bg-brand-darker text-white transition-[width,transform] duration-200 md:static md:h-screen md:translate-x-0 print:hidden dark:border-r dark:border-white/5 dark:bg-gradient-to-b dark:from-[#111f39] dark:to-[#0a1120]",
           open ? "translate-x-0" : "-translate-x-full md:static",
           isCollapsed ? "md:w-[80px]" : "md:w-64",
         )}
@@ -55,7 +55,7 @@ export default function Sidebar({ open, onClose, collapsed = false }) {
       >
         <div
           className={cn(
-            "flex h-16 items-center gap-2.5 px-4",
+            "flex h-16 shrink-0 items-center gap-2.5 px-4",
             isCollapsed && !open && "md:justify-center md:px-0",
           )}
         >
@@ -85,7 +85,7 @@ export default function Sidebar({ open, onClose, collapsed = false }) {
           </div>
         </div>
 
-        <nav className="flex-1 overflow-y-auto px-3 py-2">
+        <nav className="min-h-0 flex-1 overflow-y-auto px-3 py-2">
           {sections.map((section, index) => (
             <div
               key={section.id}
@@ -162,7 +162,7 @@ export default function Sidebar({ open, onClose, collapsed = false }) {
           ))}
         </nav>
 
-        <div className="border-t border-white/10 p-3">
+        <div className="mt-auto shrink-0 border-t border-white/10 p-3">
           <Link
             to="/settings"
             onClick={onClose}

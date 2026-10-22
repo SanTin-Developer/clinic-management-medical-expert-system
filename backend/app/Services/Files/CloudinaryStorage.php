@@ -18,22 +18,32 @@ class CloudinaryStorage implements DocumentStorage
         private readonly string $folder = 'clinic-documents',
     ) {}
 
-    public function store(UploadedFile $file, string $directory, string $filename): string
+    public function storeWithMetadata(UploadedFile $file, string $directory, string $filename): StoredFile
     {
         $publicId = pathinfo($filename, PATHINFO_FILENAME);
 
         return $this->client->upload($file, trim($this->folder.'/'.$directory, '/'), $publicId);
     }
 
+    public function store(UploadedFile $file, string $directory, string $filename): string
+    {
+        return $this->storeWithMetadata($file, $directory, $filename)->path;
+    }
+
+    public function deleteAsset(string $publicId, string $resourceType): bool
+    {
+        return $this->client->destroy($publicId, $resourceType);
+    }
+
     public function delete(string $path): void
     {
-        $publicId = $this->publicIdFromUrl($path);
+        $metadata = $this->metadataFromUrl($path);
 
-        if ($publicId === null) {
+        if ($metadata === null) {
             return;
         }
 
-        $this->client->destroy($publicId);
+        $this->client->destroy($metadata['public_id'], $metadata['resource_type']);
     }
 
     public function exists(string $path): bool
@@ -47,29 +57,33 @@ class CloudinaryStorage implements DocumentStorage
     }
 
     /**
-     * Derive the Cloudinary public id (including folder) from a secure delivery
-     * URL such as
-     * https://res.cloudinary.com/<cloud>/image/upload/v123/<folder>/<id>.png.
-     * Returns null when the value is not a Cloudinary delivery URL.
+     * Derive the Cloudinary public id and resource type from a delivery URL
+     * such as https://res.cloudinary.com/<cloud>/image/upload/v123/<folder>/<id>.png.
+     * This is only used for legacy document/poster paths; website media uses the
+     * identifiers stored on the media asset.
+     *
+     * @return array{public_id: string, resource_type: string}|null
      */
-    private function publicIdFromUrl(string $url): ?string
+    private function metadataFromUrl(string $url): ?array
     {
         if (! str_starts_with($url, 'http')) {
             return null;
         }
 
         $path = (string) parse_url($url, PHP_URL_PATH);
-        $marker = '/upload/';
 
-        if (! str_contains($path, $marker)) {
+        if (! preg_match('#/(image|raw|video)/upload/(?:v\d+/)?(.+)$#', $path, $matches)) {
             return null;
         }
 
-        $path = substr($path, strpos($path, $marker) + strlen($marker));
+        $publicId = rawurldecode((string) $matches[2]);
 
-        $path = (string) preg_replace('#^v\d+/#', '', $path);
-        $path = (string) preg_replace('#\.[a-zA-Z0-9]+$#', '', $path);
+        if ($matches[1] !== 'raw') {
+            $publicId = (string) preg_replace('#\.[a-zA-Z0-9]+$#', '', $publicId);
+        }
 
-        return $path === '' ? null : rawurldecode($path);
+        return $publicId === ''
+            ? null
+            : ['public_id' => $publicId, 'resource_type' => $matches[1]];
     }
 }

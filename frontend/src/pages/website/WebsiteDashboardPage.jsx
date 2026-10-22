@@ -6,6 +6,7 @@ import {
   FolderOpen,
   Images,
   Inbox,
+  Maximize2,
   Newspaper,
   Settings,
   Stethoscope,
@@ -19,10 +20,10 @@ import Button from '../../components/ui/Button.jsx'
 import Table, { TBody, Td, Th, THead, Tr } from '../../components/ui/Table.jsx'
 import { RowSkeleton } from '../../components/ui/Skeleton.jsx'
 import { ErrorState } from '../../components/ui/State.jsx'
+import SitePreview from '../../components/website/SitePreview.jsx'
 import { websiteAdminApi } from '../../api/websiteAdmin.js'
+import { PUBLIC_SITE_URL } from '../../constants/sitePreview.js'
 import { formatDate } from '../../utils/format.js'
-
-const PUBLIC_SITE_URL = import.meta.env.VITE_PUBLIC_SITE_URL ?? 'http://localhost:5174'
 
 const SHORTCUTS = [
   { to: '/website/settings', label: 'Website Settings', description: 'Branding, contact info and SEO', icon: Settings },
@@ -51,9 +52,15 @@ export default function WebsiteDashboardPage() {
         title="Website Management"
         description="Manage the public clinic website content."
         actions={
-          <Button variant="outline" onClick={() => window.open(PUBLIC_SITE_URL, '_blank', 'noopener')}>
-            View website
-          </Button>
+          <>
+            <Button variant="outline" onClick={() => window.open(PUBLIC_SITE_URL, '_blank', 'noopener')}>
+              Open website
+            </Button>
+            <Button onClick={() => navigate('/website/preview')}>
+              <Maximize2 className="size-4" aria-hidden />
+              Full preview
+            </Button>
+          </>
         }
       />
 
@@ -133,6 +140,20 @@ export default function WebsiteDashboardPage() {
               </div>
             </Card>
           </div>
+
+          <Card
+            title="Live website preview"
+            subtitle="See how your changes look on the public site."
+            actions={
+              <Button variant="outline" size="sm" onClick={() => navigate('/website/preview')}>
+                <Maximize2 className="size-4" aria-hidden />
+                Open full preview
+              </Button>
+            }
+            bodyClassName="p-0"
+          >
+            <SitePreview height={560} />
+          </Card>
         </>
       )}
     </>

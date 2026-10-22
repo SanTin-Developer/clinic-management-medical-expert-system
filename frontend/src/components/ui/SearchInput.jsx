@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useState } from 'react'
+import { forwardRef, useEffect, useRef, useState } from 'react'
 import { Search } from 'lucide-react'
 import Input from './Input.jsx'
 import { cn } from '../../utils/cn.js'
@@ -8,12 +8,20 @@ const SearchInput = forwardRef(function SearchInput(
   ref,
 ) {
   const [draft, setDraft] = useState('')
+  const onDebouncedRef = useRef(onDebounced)
+
+  // Track the latest callback so the debounce timer below only re-arms when
+  // the draft actually changes. Depending on the inline handler's identity
+  // would re-schedule the timer on every parent re-render (e.g. when a new
+  // page of data arrives), firing stale calls such as a page reset to 1.
+  useEffect(() => {
+    onDebouncedRef.current = onDebounced
+  })
 
   useEffect(() => {
-    if (!onDebounced) return undefined
-    const id = window.setTimeout(() => onDebounced(draft.trim()), debounceMs)
+    const id = window.setTimeout(() => onDebouncedRef.current?.(draft.trim()), debounceMs)
     return () => window.clearTimeout(id)
-  }, [draft, onDebounced, debounceMs])
+  }, [draft, debounceMs])
 
   return (
     <div className="relative">

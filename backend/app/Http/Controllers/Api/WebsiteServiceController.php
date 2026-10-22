@@ -81,12 +81,18 @@ class WebsiteServiceController extends Controller
             );
         }
 
+        $previousMediaId = $service->image_media_id;
         $service->image_media_id = $this->resolveMediaId($request, $this->media, 'image', $service->image_media_id, 'remove_image');
         $service->save();
 
         return response()->json([
             'message' => 'Service updated successfully.',
             'data' => $service->fresh('image'),
+            'media_cleanup' => $this->cleanupReplacedMedia(
+                $this->media,
+                $previousMediaId,
+                $service->image_media_id,
+            ),
         ]);
     }
 
@@ -94,9 +100,13 @@ class WebsiteServiceController extends Controller
     {
         $this->authorize('website.services.manage');
 
+        $mediaId = $service->image_media_id;
         $service->delete();
 
-        return response()->json(['message' => 'Service deleted successfully.']);
+        return response()->json([
+            'message' => 'Service deleted successfully.',
+            'media_cleanup' => $this->media->cleanupIfUnused($mediaId),
+        ]);
     }
 
     /**

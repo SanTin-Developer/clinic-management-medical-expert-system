@@ -24,7 +24,7 @@ class PublicWebsiteController extends Controller
     public function bootstrap(): JsonResponse
     {
         return response()->json([
-            'settings' => WebsiteSetting::current()->load(['logo', 'favicon', 'heroMedia']),
+            'settings' => WebsiteSetting::current()->load(['logo', 'favicon']),
             'footer_pages' => PublicPage::query()
                 ->published()
                 ->where('show_in_footer', true)
@@ -48,7 +48,7 @@ class PublicWebsiteController extends Controller
     public function home(): JsonResponse
     {
         return response()->json([
-            'settings' => WebsiteSetting::current()->load(['logo', 'favicon', 'heroMedia']),
+            'settings' => WebsiteSetting::current()->load(['logo', 'favicon']),
             'services' => Service::query()
                 ->published()
                 ->with('image')

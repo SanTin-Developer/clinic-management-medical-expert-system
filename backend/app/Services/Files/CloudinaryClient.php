@@ -25,16 +25,17 @@ class CloudinaryClient
     }
 
     /**
-     * Upload a file and return its secure delivery URL.
+     * Upload a file and return its delivery URL plus the identifiers needed for
+     * a later permanent deletion.
      */
-    public function upload(UploadedFile $file, string $folder, string $publicId): string
+    public function upload(UploadedFile $file, string $folder, string $publicId): StoredFile
     {
         if (! $this->isConfigured()) {
             throw new RuntimeException('Cloudinary is not fully configured (cloud name, API key and API secret are required).');
         }
 
         $timestamp = time();
-        $resource = $this->resourceType($file);
+        $resourceType = $this->resourceType($file);
 
         $params = array_filter([
             'folder' => $folder,
@@ -46,20 +47,38 @@ class CloudinaryClient
         $params['api_key'] = (string) $this->config['api_key'];
 
         $response = Http::asMultipart()
+            ->connectTimeout(5)
+            ->timeout(30)
             ->attach('file', file_get_contents($file->getRealPath()), $file->getClientOriginalName())
-            ->post($this->endpoint($resource), $params);
+            ->post($this->endpoint($resourceType, 'upload'), $params);
 
         if (! $response->successful()) {
             throw new RuntimeException('Cloudinary upload failed: '.$response->body());
         }
 
-        return (string) $response->json('secure_url');
+        $secureUrl = (string) $response->json('secure_url');
+        $storedPublicId = (string) ($response->json('public_id') ?: $publicId);
+        $storedResourceType = (string) ($response->json('resource_type') ?: $resourceType);
+
+        if ($secureUrl === '' || $storedPublicId === '') {
+            throw new RuntimeException('Cloudinary did not return the uploaded asset identifiers.');
+        }
+
+        return new StoredFile($secureUrl, $storedPublicId, $storedResourceType);
     }
 
-    public function destroy(string $publicId): void
+    /**
+     * Permanently delete a Cloudinary asset. "not found" is treated as success
+     * so a retry after a prior partial failure remains safe.
+     */
+    public function destroy(string $publicId, string $resourceType = 'image'): bool
     {
         if (! $this->isConfigured()) {
             throw new RuntimeException('Cloudinary is not fully configured.');
+        }
+
+        if ($publicId === '' || ! in_array($resourceType, ['image', 'raw', 'video'], true)) {
+            throw new RuntimeException('The Cloudinary asset identifier is invalid.');
         }
 
         $timestamp = time();
@@ -72,15 +91,34 @@ class CloudinaryClient
         $params['signature'] = $this->signature($params, (string) $this->config['api_secret']);
         $params['api_key'] = (string) $this->config['api_key'];
 
-        Http::asForm()->post(
-            'https://api.cloudinary.com/v1_1/'.$this->config['cloud_name'].'/image/destroy',
-            $params,
-        );
+        $response = Http::asForm()
+            ->connectTimeout(5)
+            ->timeout(15)
+            ->post(
+                $this->endpoint($resourceType, 'destroy'),
+                $params,
+            );
+
+        if (! $response->successful()) {
+            throw new RuntimeException('Cloudinary deletion failed with status '.$response->status().'.');
+        }
+
+        $result = (string) $response->json('result');
+
+        if ($result === 'not found') {
+            return false;
+        }
+
+        if ($result !== 'ok') {
+            throw new RuntimeException('Cloudinary did not confirm the asset deletion.');
+        }
+
+        return true;
     }
 
-    private function endpoint(string $resource): string
+    private function endpoint(string $resourceType, string $action): string
     {
-        return 'https://api.cloudinary.com/v1_1/'.$this->config['cloud_name'].'/'.$resource.'/upload';
+        return 'https://api.cloudinary.com/v1_1/'.$this->config['cloud_name'].'/'.$resourceType.'/'.$action;
     }
 
     private function resourceType(UploadedFile $file): string

@@ -176,7 +176,7 @@ export default function WebsiteServiceDetailPage() {
         onConfirm={confirmDelete}
         loading={busy}
         title="Delete service"
-        message={`Delete "${service.title}"? This cannot be undone.`}
+        message={`Delete "${service.title}"? This cannot be undone. If no other record uses its image, that image is also permanently deleted from Cloudinary.`}
         confirmLabel="Delete"
       />
     </>

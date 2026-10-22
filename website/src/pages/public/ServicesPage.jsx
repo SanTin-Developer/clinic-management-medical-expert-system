@@ -14,12 +14,14 @@ import {
   SectionHeading,
 } from '../../components/public/PublicUI.jsx'
 import { cn } from '../../utils/cn.js'
+import { blockText, splitHeading, useContentBlocks } from '../../utils/content.js'
 
 /**
- * Services positioning copy (developer-locked brand copy). These are
- * intentional statements — not verified facts, statistics, credentials or
- * claims about medical capabilities. Everything factual and variable (service
- * titles, descriptions, images, featured flags, contact details) is loaded
+ * Services positioning copy — the design defaults shown whenever the matching
+ * content block (Page Content → Services Page) is empty. These are intentional
+ * statements — not verified facts, statistics, credentials or claims about
+ * medical capabilities. Everything factual and variable (service titles,
+ * descriptions, images, featured flags, contact details) is loaded
  * from the CMS through the existing public endpoints.
  */
 const SERVICES_EYEBROW = 'What We Offer'
@@ -34,15 +36,6 @@ const CLOSING = {
   heading: 'Not Sure Where to Start?',
   text: 'Tell us what you are looking for and our team will help you find the right service for you and your family.',
 }
-
-/**
- * Splits the locked hero heading at its first space so the final word renders
- * as the gradient accent. The copy above stays the single source of truth.
- */
-const HEADING_SPACE = SERVICES_HEADING.indexOf(' ')
-const HEADING_LEAD = HEADING_SPACE > 0 ? SERVICES_HEADING.slice(0, HEADING_SPACE) : SERVICES_HEADING
-const HEADING_ACCENT =
-  HEADING_SPACE > 0 ? SERVICES_HEADING.slice(HEADING_SPACE + 1).trim() : ''
 
 /**
  * Renders CMS rich-text bodies as readable plain text so no raw HTML from the
@@ -214,6 +207,22 @@ export default function ServicesPage() {
   const featured = services.filter((service) => service.is_featured)
   const phone = settings?.primary_phone ?? settings?.secondary_phone
 
+  // Admin-editable copy (Page Content → Services Page).
+  const blocks = useContentBlocks()
+  const heading = splitHeading(blockText(blocks, 'services_heading', SERVICES_HEADING))
+  const copy = {
+    eyebrow: blockText(blocks, 'services_eyebrow', SERVICES_EYEBROW),
+    intro: blockText(blocks, 'services_intro', SERVICES_INTRO),
+    featuredEyebrow: blockText(blocks, 'services_featured_eyebrow', '01 — Spotlight'),
+    featuredHeading: blockText(blocks, 'services_featured_heading', FEATURED_HEADING),
+    featuredText: blockText(blocks, 'services_featured_text', FEATURED_DESCRIPTION),
+    catalogueEyebrow: blockText(blocks, 'services_catalogue_eyebrow', '02 — Full Catalogue'),
+    catalogueHeading: blockText(blocks, 'services_catalogue_heading', CATALOGUE_HEADING),
+    catalogueText: blockText(blocks, 'services_catalogue_text', CATALOGUE_DESCRIPTION),
+    closingHeading: blockText(blocks, 'services_closing_heading', CLOSING.heading),
+    closingText: blockText(blocks, 'services_closing_text', CLOSING.text),
+  }
+
   return (
     <>
       {/* Section 1 — Cinematic hero: mirrors the About page hero family with a
@@ -233,16 +242,16 @@ export default function ServicesPage() {
                     />
                     <span className="relative inline-flex size-1.5 rounded-full bg-accent" />
                   </span>
-                  {SERVICES_EYEBROW}
+                  {copy.eyebrow}
                 </span>
               </Reveal>
 
               <Reveal delay={90}>
                 <h1 className="mt-6 font-display text-[clamp(38px,5vw,64px)] font-extrabold leading-[1.06] tracking-[-0.02em]">
-                  <span className="text-white">{HEADING_LEAD} </span>
-                  {HEADING_ACCENT ? (
+                  <span className="text-white">{heading.lead} </span>
+                  {heading.accent ? (
                     <span className="bg-gradient-to-r from-[#4CAF50] to-[#66BB6A] bg-clip-text text-transparent">
-                      {HEADING_ACCENT}
+                      {heading.accent}
                     </span>
                   ) : null}
                 </h1>
@@ -250,7 +259,7 @@ export default function ServicesPage() {
 
               <Reveal delay={170}>
                 <p className="mt-5 max-w-xl text-base leading-relaxed text-white/75 sm:text-lg">
-                  {SERVICES_INTRO}
+                  {copy.intro}
                 </p>
               </Reveal>
 
@@ -348,9 +357,9 @@ export default function ServicesPage() {
               <Section reveal={false}>
                 <Reveal>
                   <SectionHeading
-                    eyebrow="01 — Spotlight"
-                    title={FEATURED_HEADING}
-                    description={FEATURED_DESCRIPTION}
+                    eyebrow={copy.featuredEyebrow}
+                    title={copy.featuredHeading}
+                    description={copy.featuredText}
                   />
                 </Reveal>
                 <div className="mt-10 grid gap-5 lg:grid-cols-2">
@@ -378,9 +387,9 @@ export default function ServicesPage() {
             <Section reveal={false}>
               <Reveal className="flex flex-wrap items-end justify-between gap-4">
                 <SectionHeading
-                  eyebrow="02 — Full Catalogue"
-                  title={CATALOGUE_HEADING}
-                  description={CATALOGUE_DESCRIPTION}
+                  eyebrow={copy.catalogueEyebrow}
+                  title={copy.catalogueHeading}
+                  description={copy.catalogueText}
                 />
                 <span className="rounded-full border border-line bg-surface px-4 py-2 text-xs font-bold text-azure-700 shadow-sm">
                   {services.length} {services.length === 1 ? 'service' : 'services'}
@@ -504,10 +513,10 @@ export default function ServicesPage() {
                   03 — Next Steps
                 </p>
                 <h2 className="mt-4 font-display text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
-                  {CLOSING.heading}
+                  {copy.closingHeading}
                 </h2>
                 <p className="mt-4 max-w-xl text-sm leading-relaxed text-white/75 sm:text-base">
-                  {CLOSING.text}
+                  {copy.closingText}
                 </p>
                 <div className="mt-8 flex flex-wrap items-center gap-3">
                   <Link

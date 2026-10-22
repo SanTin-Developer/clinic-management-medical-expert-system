@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Article;
+use App\Models\ContentBlock;
 use App\Models\GalleryItem;
 use App\Models\MediaAsset;
 use App\Models\PublicPage;
@@ -44,6 +45,54 @@ class WebsitePublicTest extends TestCase
             ->assertJsonPath('footer_pages.0.slug', 'about')
             ->assertJsonCount(1, 'services')
             ->assertJsonPath('services.0.title', 'Cardiology');
+    }
+
+    public function test_bootstrap_exposes_the_homepage_copy_from_content_blocks(): void
+    {
+        $asset = MediaAsset::factory()->create([
+            'file_path' => 'https://example.com/hero.jpg',
+            'disk' => 'cloudinary',
+        ]);
+
+        ContentBlock::create([
+            'group' => 'home',
+            'key' => 'home_hero_title',
+            'body' => 'World-class care, close to home.',
+        ]);
+
+        ContentBlock::create([
+            'group' => 'home',
+            'key' => 'home_hero_image',
+            'title' => 'Homepage hero image',
+            'image_media_id' => $asset->id,
+        ]);
+
+        $blocks = collect($this->getJson('/api/v1/website/bootstrap')->assertOk()->json('content_blocks'))
+            ->keyBy('key');
+
+        $this->assertSame('World-class care, close to home.', $blocks['home_hero_title']['body']);
+        $this->assertSame('https://example.com/hero.jpg', $blocks['home_hero_image']['image']['url']);
+    }
+
+    public function test_the_public_settings_payload_does_not_repeat_the_homepage_copy(): void
+    {
+        $settings = WebsiteSetting::factory()->create();
+
+        // A database that still holds the legacy values must not publish them:
+        // the homepage copy is served from the content blocks only.
+        $settings->forceFill([
+            'hero_title' => 'Legacy headline',
+            'hero_subtitle' => 'Legacy subtitle',
+            'about_summary' => 'Legacy blurb',
+        ])->save();
+
+        foreach (['/api/v1/website/bootstrap', '/api/v1/website/home'] as $endpoint) {
+            $payload = $this->getJson($endpoint)->assertOk()->json('settings');
+
+            foreach (['hero_title', 'hero_subtitle', 'about_summary', 'hero_media_id'] as $retired) {
+                $this->assertArrayNotHasKey($retired, $payload);
+            }
+        }
     }
 
     public function test_public_services_only_lists_published_services(): void

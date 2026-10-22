@@ -31,18 +31,24 @@ class AppointmentController extends Controller
 
         $today = now()->toDateString();
 
+        // One grouped query for every status bucket instead of one count per status.
+        $byStatus = (clone $query)
+            ->selectRaw('status, count(*) as total')
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
         $stats = [
             'total' => $appointments->total(),
             'today' => (clone $query)->whereDate('appointment_date', $today)->count(),
             'this_month' => (clone $query)->whereMonth('appointment_date', now()->month)
                 ->whereYear('appointment_date', now()->year)
                 ->count(),
-            'scheduled' => (clone $query)->where('status', 'scheduled')->count(),
-            'confirmed' => (clone $query)->where('status', 'confirmed')->count(),
-            'in_progress' => (clone $query)->where('status', 'in_progress')->count(),
-            'completed' => (clone $query)->where('status', 'completed')->count(),
-            'cancelled' => (clone $query)->where('status', 'cancelled')->count(),
-            'no_show' => (clone $query)->where('status', 'no_show')->count(),
+            'scheduled' => (int) ($byStatus['scheduled'] ?? 0),
+            'confirmed' => (int) ($byStatus['confirmed'] ?? 0),
+            'in_progress' => (int) ($byStatus['in_progress'] ?? 0),
+            'completed' => (int) ($byStatus['completed'] ?? 0),
+            'cancelled' => (int) ($byStatus['cancelled'] ?? 0),
+            'no_show' => (int) ($byStatus['no_show'] ?? 0),
         ];
 
         return response()->json(array_merge($appointments->toArray(), ['stats' => $stats]));

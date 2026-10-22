@@ -2,24 +2,37 @@ import { api } from './client.js'
 
 const withData = (promise) => promise.then((res) => res.data)
 
+/**
+ * Appends a value using PHP bracket notation so nested arrays/objects (content
+ * block lists, bulk payloads) arrive in Laravel as real arrays instead of the
+ * string "[object Object]".
+ */
+function appendValue(formData, key, value) {
+  if (value === undefined) return
+  if (value instanceof File) {
+    formData.append(key, value)
+    return
+  }
+  if (value === null) {
+    formData.append(key, '')
+    return
+  }
+  if (Array.isArray(value)) {
+    value.forEach((entry, index) => appendValue(formData, `${key}[${index}]`, entry))
+    return
+  }
+  if (typeof value === 'object') {
+    Object.entries(value).forEach(([childKey, childValue]) =>
+      appendValue(formData, `${key}[${childKey}]`, childValue),
+    )
+    return
+  }
+  formData.append(key, typeof value === 'boolean' ? (value ? '1' : '0') : value)
+}
+
 function toFormData(data) {
   const formData = new FormData()
-  Object.entries(data).forEach(([key, value]) => {
-    if (value === undefined) return
-    if (value instanceof File) {
-      formData.append(key, value)
-      return
-    }
-    if (value === null) {
-      formData.append(key, '')
-      return
-    }
-    if (Array.isArray(value)) {
-      value.forEach((entry) => formData.append(`${key}[]`, entry))
-      return
-    }
-    formData.append(key, typeof value === 'boolean' ? (value ? '1' : '0') : value)
-  })
+  Object.entries(data).forEach(([key, value]) => appendValue(formData, key, value))
   return formData
 }
 

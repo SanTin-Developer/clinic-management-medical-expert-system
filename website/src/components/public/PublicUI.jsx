@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { cn } from '../../utils/cn.js'
 import { formatDate } from '../../utils/format.js'
+import { blockImage, useContentBlocks } from '../../utils/content.js'
 import { APP_NAME, DEFAULT_HERO_IMAGE } from '../../constants/index.js'
 import { useInView } from './Reveal.jsx'
 
@@ -64,11 +65,11 @@ export function Section({ children, className, reveal = true }) {
  * Shared inner-page banner backdrop (the About-page look): dark navy base, a
  * very faint background image hidden behind the text, a dark blue-green
  * gradient overlay, aurora glows and the grid texture. Falls back to the CMS
- * hero image, then to the bundled design asset.
+ * hero photo, then to the bundled design asset.
  */
 export function BannerBackdrop({ image }) {
-  const { settings } = useOutletContext() ?? {}
-  const src = image || settings?.hero_media?.url || DEFAULT_HERO_IMAGE
+  const blocks = useContentBlocks()
+  const src = image || blockImage(blocks, 'home_hero_image') || DEFAULT_HERO_IMAGE
 
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0 bg-[#06243d]">

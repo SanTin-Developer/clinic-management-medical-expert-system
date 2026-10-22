@@ -36,8 +36,8 @@ class ExpertRuleController extends Controller
             'total' => $rules->total(),
             'active' => (clone $base)->where('is_active', true)->count(),
             'inactive' => (clone $base)->where('is_active', false)->count(),
-            'high_confidence' => (clone $base)->where('confidence_threshold', '>=', 0.8)->count(),
-            'medium_confidence' => (clone $base)->whereBetween('confidence_threshold', [0.6, 0.7999])->count(),
+            'high_confidence' => (clone $base)->where('confidence_score', '>=', 0.8)->count(),
+            'medium_confidence' => (clone $base)->whereBetween('confidence_score', [0.6, 0.7999])->count(),
         ];
 
         return response()->json(array_merge($rules->toArray(), ['stats' => $stats]));

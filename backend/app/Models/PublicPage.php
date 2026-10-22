@@ -34,6 +34,8 @@ class PublicPage extends Model
         'slug',
         'excerpt',
         'body',
+        'policy_content',
+        'internal_notes',
         'cover_media_id',
         'status',
         'is_system',
@@ -43,6 +45,9 @@ class PublicPage extends Model
         'published_at',
         'updated_by',
     ];
+
+    /** Internal editorial notes are never serialized to public clients. */
+    protected $hidden = ['internal_notes'];
 
     /**
      * @var array<string, mixed>
@@ -62,6 +67,7 @@ class PublicPage extends Model
             'is_system' => 'boolean',
             'show_in_footer' => 'boolean',
             'published_at' => 'datetime',
+            'policy_content' => 'array',
         ];
     }
 

@@ -26,7 +26,7 @@ class PublicPageController extends Controller
         abort_unless($page->isPublished(), 404);
 
         return response()->json([
-            'data' => $page->load('cover'),
+            'data' => $page->load('cover')->makeHidden('internal_notes'),
         ]);
     }
 }

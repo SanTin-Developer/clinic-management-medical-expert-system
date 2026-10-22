@@ -6,16 +6,17 @@ import { publicWebsiteApi } from '../../api/website.js'
 import { Spinner } from '../../components/ui/Skeleton.jsx'
 import { EmptyState, ErrorState } from '../../components/ui/State.jsx'
 import { cn } from '../../utils/cn.js'
+import { blockText, splitHeading, useContentBlocks } from '../../utils/content.js'
 import { Reveal } from '../../components/public/Reveal.jsx'
 import { BannerBackdrop, Section, SectionHeading } from '../../components/public/PublicUI.jsx'
 import TeamGrid from '../../components/public/TeamGrid.jsx'
 
 /**
- * Our Team positioning copy (developer-locked brand copy). These are
- * intentional statements — not verified facts. Everything factual and
- * variable (names, positions, specializations, bios, photos, contact
- * details) is loaded from the CMS through the existing public team
- * endpoint.
+ * Our Team positioning copy — the design defaults shown whenever the matching
+ * content block (Page Content → Team Page) is empty. These are intentional
+ * statements — not verified facts. Everything factual and variable (names,
+ * positions, specializations, bios, photos, contact details) is loaded from
+ * the CMS through the existing public team endpoint.
  */
 const TEAM_EYEBROW = 'Get to Know Us'
 const TEAM_HEADING = 'Our Team'
@@ -28,15 +29,6 @@ const CLOSING = {
   heading: 'Book With Our Team',
   text: 'Choose a service and reach out — we will help you find the right care for you and your family.',
 }
-
-/**
- * Splits the locked hero heading at its first space so the trailing word
- * renders as the gradient accent. The copy above stays the single source of
- * truth — this only decides where the line break falls.
- */
-const HEADING_SPACE = TEAM_HEADING.indexOf(' ')
-const HEADING_LEAD = HEADING_SPACE > 0 ? TEAM_HEADING.slice(0, HEADING_SPACE) : TEAM_HEADING
-const HEADING_ACCENT = HEADING_SPACE > 0 ? TEAM_HEADING.slice(HEADING_SPACE + 1).trim() : ''
 
 /**
  * Dark running ticker under the hero: every specialization found in the live
@@ -75,6 +67,19 @@ export default function TeamPage() {
 
   const team = data?.data ?? []
 
+  // Admin-editable copy (Page Content → Team Page).
+  const blocks = useContentBlocks()
+  const heading = splitHeading(blockText(blocks, 'team_heading', TEAM_HEADING))
+  const copy = {
+    eyebrow: blockText(blocks, 'team_eyebrow', TEAM_EYEBROW),
+    description: blockText(blocks, 'team_description', TEAM_DESCRIPTION),
+    peopleEyebrow: blockText(blocks, 'team_people_eyebrow', '01 — The People'),
+    peopleHeading: blockText(blocks, 'team_people_heading', PEOPLE_HEADING),
+    peopleText: blockText(blocks, 'team_people_text', PEOPLE_LEAD),
+    closingHeading: blockText(blocks, 'team_closing_heading', CLOSING.heading),
+    closingText: blockText(blocks, 'team_closing_text', CLOSING.text),
+  }
+
   // Live, CMS-derived values only — no invented counts.
   const specializations = useMemo(
     () => [...new Set(team.map((member) => member.specialization?.trim()).filter(Boolean))],
@@ -105,16 +110,16 @@ export default function TeamPage() {
                 />
                 <span className="relative inline-flex size-1.5 rounded-full bg-accent" />
               </span>
-              {TEAM_EYEBROW}
+              {copy.eyebrow}
             </span>
           </Reveal>
 
           <Reveal delay={90}>
             <h1 className="mx-auto mt-6 font-display text-[clamp(36px,5vw,62px)] font-extrabold leading-[1.06] tracking-[-0.02em]">
-              <span className="text-white">{HEADING_LEAD} </span>
-              {HEADING_ACCENT ? (
+              <span className="text-white">{heading.lead} </span>
+              {heading.accent ? (
                 <span className="bg-gradient-to-r from-[#4CAF50] to-[#66BB6A] bg-clip-text text-transparent">
-                  {HEADING_ACCENT}
+                  {heading.accent}
                 </span>
               ) : null}
             </h1>
@@ -122,7 +127,7 @@ export default function TeamPage() {
 
           <Reveal delay={170}>
             <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-white/75 sm:text-lg">
-              {TEAM_DESCRIPTION}
+              {copy.description}
             </p>
           </Reveal>
 
@@ -172,9 +177,9 @@ export default function TeamPage() {
           <Reveal>
             <SectionHeading
               align="center"
-              eyebrow="01 — The People"
-              title={PEOPLE_HEADING}
-              description={PEOPLE_LEAD}
+              eyebrow={copy.peopleEyebrow}
+              title={copy.peopleHeading}
+              description={copy.peopleText}
             />
           </Reveal>
 
@@ -256,10 +261,10 @@ export default function TeamPage() {
                 02 — Next Steps
               </p>
               <h2 className="mt-4 font-display text-3xl font-extrabold tracking-tight sm:text-4xl">
-                {CLOSING.heading}
+                {copy.closingHeading}
               </h2>
               <p className="mt-4 text-sm leading-relaxed text-white/75 sm:text-base">
-                {CLOSING.text}
+                {copy.closingText}
               </p>
               <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
                 <Link

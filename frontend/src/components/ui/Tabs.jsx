@@ -6,7 +6,7 @@ export default function Tabs({ tabs, value, onChange, className }) {
       role="tablist"
       aria-label="Section tabs"
       className={cn(
-        'no-scrollbar flex gap-1 overflow-x-auto border-b border-line',
+        'no-scrollbar flex w-full min-w-0 max-w-full gap-1 overflow-x-auto border-b border-line',
         className,
       )}
     >

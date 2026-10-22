@@ -8,12 +8,14 @@ import Pagination from '../../components/ui/Pagination.jsx'
 import { RowSkeleton } from '../../components/ui/Skeleton.jsx'
 import { EmptyState, ErrorState } from '../../components/ui/State.jsx'
 import { cn } from '../../utils/cn.js'
+import { blockText, splitHeading, useContentBlocks } from '../../utils/content.js'
 import { formatDate } from '../../utils/format.js'
 import { Reveal } from '../../components/public/Reveal.jsx'
 import { BannerBackdrop, Section, SectionHeading } from '../../components/public/PublicUI.jsx'
 
 /**
- * News & Health positioning copy (developer-locked brand copy). These are
+ * News & Health positioning copy — the design defaults shown whenever the
+ * matching content block (Page Content → News Page) is empty. These are
  * intentional statements — not verified facts or medical claims. Everything
  * factual and variable (titles, excerpts, categories, covers, dates) is
  * loaded from the CMS through the existing public article endpoints.
@@ -26,15 +28,6 @@ const CLOSING = {
   heading: 'Have a Health Question?',
   text: 'Our team is happy to talk through anything you have read — or help you find the right service for you and your family.',
 }
-
-/**
- * Splits the locked hero heading at its first space so the trailing words
- * render as the gradient accent. The copy above stays the single source of
- * truth — this only decides where the line break falls.
- */
-const HEADING_SPACE = NEWS_HEADING.indexOf(' ')
-const HEADING_LEAD = HEADING_SPACE > 0 ? NEWS_HEADING.slice(0, HEADING_SPACE) : NEWS_HEADING
-const HEADING_ACCENT = HEADING_SPACE > 0 ? NEWS_HEADING.slice(HEADING_SPACE + 1).trim() : ''
 
 // How long each story stays on screen. Deliberately slower than a normal
 // carousel so visitors have time to read the headline and excerpt.
@@ -295,6 +288,17 @@ export default function HealthNewsPage() {
   const categories = data?.categories ?? []
   const filtered = Boolean(search) || Boolean(category)
 
+  // Admin-editable copy (Page Content → News Page).
+  const blocks = useContentBlocks()
+  const heading = splitHeading(blockText(blocks, 'news_heading', NEWS_HEADING))
+  const copy = {
+    eyebrow: blockText(blocks, 'news_eyebrow', NEWS_EYEBROW),
+    description: blockText(blocks, 'news_description', NEWS_DESCRIPTION),
+    latestHeading: blockText(blocks, 'news_latest_heading', LATEST_HEADING),
+    closingHeading: blockText(blocks, 'news_closing_heading', CLOSING.heading),
+    closingText: blockText(blocks, 'news_closing_text', CLOSING.text),
+  }
+
   const selectCategory = (next) => {
     setCategory(next === category ? '' : next)
     setPage(1)
@@ -319,16 +323,16 @@ export default function HealthNewsPage() {
                 />
                 <span className="relative inline-flex size-1.5 rounded-full bg-accent" />
               </span>
-              {NEWS_EYEBROW}
+              {copy.eyebrow}
             </span>
           </Reveal>
 
           <Reveal delay={90}>
             <h1 className="mx-auto mt-6 font-display text-[clamp(36px,5vw,62px)] font-extrabold leading-[1.06] tracking-[-0.02em]">
-              <span className="text-white">{HEADING_LEAD} </span>
-              {HEADING_ACCENT ? (
+              <span className="text-white">{heading.lead} </span>
+              {heading.accent ? (
                 <span className="bg-gradient-to-r from-[#4CAF50] to-[#66BB6A] bg-clip-text text-transparent">
-                  {HEADING_ACCENT}
+                  {heading.accent}
                 </span>
               ) : null}
             </h1>
@@ -336,7 +340,7 @@ export default function HealthNewsPage() {
 
           <Reveal delay={170}>
             <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-white/75 sm:text-lg">
-              {NEWS_DESCRIPTION}
+              {copy.description}
             </p>
           </Reveal>
 
@@ -432,7 +436,7 @@ export default function HealthNewsPage() {
           <Reveal className="flex flex-wrap items-end justify-between gap-4">
             <SectionHeading
               eyebrow="01 — Latest Stories"
-              title={filtered ? 'Filtered Results' : LATEST_HEADING}
+              title={filtered ? 'Filtered Results' : copy.latestHeading}
               description={
                 filtered
                   ? `Matching ${filterLabel}`
@@ -491,10 +495,10 @@ export default function HealthNewsPage() {
                 02 — Next Steps
               </p>
               <h2 className="mt-4 font-display text-3xl font-extrabold tracking-tight sm:text-4xl">
-                {CLOSING.heading}
+                {copy.closingHeading}
               </h2>
               <p className="mt-4 text-sm leading-relaxed text-white/75 sm:text-base">
-                {CLOSING.text}
+                {copy.closingText}
               </p>
               <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
                 <Link

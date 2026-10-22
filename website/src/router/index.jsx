@@ -1,4 +1,4 @@
-import { createBrowserRouter, Link, useParams } from 'react-router-dom'
+import { createBrowserRouter, Link, Navigate, useParams } from 'react-router-dom'
 import { lazy, Suspense } from 'react'
 import { Spinner } from '../components/ui/Skeleton.jsx'
 import { PageBanner, Section } from '../components/public/PublicUI.jsx'
@@ -13,6 +13,8 @@ const GalleryPage = lazy(() => import('../pages/public/GalleryPage.jsx'))
 const HealthNewsPage = lazy(() => import('../pages/public/HealthNewsPage.jsx'))
 const ArticleDetailPage = lazy(() => import('../pages/public/ArticleDetailPage.jsx'))
 const ContactPage = lazy(() => import('../pages/public/ContactPage.jsx'))
+const PrivacyPolicyPage = lazy(() => import('../pages/public/PrivacyPolicyPage.jsx'))
+const TermsOfUsePage = lazy(() => import('../pages/public/TermsOfUsePage.jsx'))
 
 function withSuspense(element) {
   return (
@@ -67,9 +69,15 @@ export const router = createBrowserRouter([
       { path: 'health-news/:slug', element: withSuspense(<ArticleDetailPage />) },
       { path: 'news/:slug', element: withSuspense(<ArticleDetailPage />) },
       { path: 'contact', element: withSuspense(<ContactPage />) },
-      { path: 'privacy-policy', element: withSuspense(<PageView slug="privacy-policy" />) },
-      { path: 'terms-of-use', element: withSuspense(<PageView slug="terms-of-use" />) },
-      { path: 'terms', element: withSuspense(<PageView slug="terms-of-use" />) },
+      { path: 'privacy-policy', element: withSuspense(<PrivacyPolicyPage />) },
+      { path: 'terms-of-use', element: withSuspense(<TermsOfUsePage />) },
+      { path: 'terms', element: withSuspense(<TermsOfUsePage />) },
+      // The CMS "about" record is also the data source for the canonical About
+      // page, so legacy /pages/about links redirect instead of rendering the
+      // basic page template a second time.
+      { path: 'pages/about', element: <Navigate to="/about" replace /> },
+      { path: 'pages/privacy-policy', element: withSuspense(<PrivacyPolicyPage />) },
+      { path: 'pages/terms-of-use', element: withSuspense(<TermsOfUsePage />) },
       { path: 'pages/:slug', element: withSuspense(<PageViewRoute />) },
       { path: '*', element: withSuspense(<NotFound />) },
     ],

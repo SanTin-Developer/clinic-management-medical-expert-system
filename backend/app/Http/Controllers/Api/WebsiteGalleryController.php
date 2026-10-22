@@ -66,12 +66,18 @@ class WebsiteGalleryController extends Controller
         $validated = $request->validate($this->rules());
 
         $galleryItem->fill(collect($validated)->except(['image', 'remove_image'])->all());
+        $previousMediaId = $galleryItem->image_media_id;
         $galleryItem->image_media_id = $this->resolveMediaId($request, $this->media, 'image', $galleryItem->image_media_id, 'remove_image');
         $galleryItem->save();
 
         return response()->json([
             'message' => 'Gallery item updated successfully.',
             'data' => $galleryItem->fresh('image'),
+            'media_cleanup' => $this->cleanupReplacedMedia(
+                $this->media,
+                $previousMediaId,
+                $galleryItem->image_media_id,
+            ),
         ]);
     }
 
@@ -79,9 +85,13 @@ class WebsiteGalleryController extends Controller
     {
         $this->authorize('website.gallery.manage');
 
+        $mediaId = $galleryItem->image_media_id;
         $galleryItem->delete();
 
-        return response()->json(['message' => 'Gallery item deleted successfully.']);
+        return response()->json([
+            'message' => 'Gallery item deleted successfully.',
+            'media_cleanup' => $this->media->cleanupIfUnused($mediaId),
+        ]);
     }
 
     /**

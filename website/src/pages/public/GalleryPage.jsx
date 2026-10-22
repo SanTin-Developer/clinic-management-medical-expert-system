@@ -6,13 +6,15 @@ import { Spinner } from '../../components/ui/Skeleton.jsx'
 import Modal from '../../components/ui/Modal.jsx'
 import { EmptyState, ErrorState } from '../../components/ui/State.jsx'
 import { cn } from '../../utils/cn.js'
+import { blockText, splitHeading, useContentBlocks } from '../../utils/content.js'
 import { Reveal } from '../../components/public/Reveal.jsx'
 import { BannerBackdrop, Section } from '../../components/public/PublicUI.jsx'
 
 /**
- * Facilities & Gallery positioning copy (developer-locked brand copy).
- * Photos, titles, captions and categories are all loaded from the CMS
- * through the existing public gallery endpoint.
+ * Facilities & Gallery positioning copy — the design defaults shown whenever
+ * the matching content block (Page Content → Gallery Page) is empty. Photos,
+ * titles, captions and categories are all loaded from the CMS through the
+ * existing public gallery endpoint.
  */
 const GALLERY_EYEBROW = 'Inside Our Clinic'
 const GALLERY_HEADING = 'Facilities & Gallery'
@@ -21,15 +23,6 @@ const GALLERY_DESCRIPTION =
 const GALLERY_SECTION_EYEBROW = '01 — The Gallery'
 const GALLERY_SECTION_TITLE = 'Inside the Clinic'
 const GALLERY_SECTION_HELP = 'Tap any photo to view it full size.'
-
-/**
- * Splits the locked hero heading at its first space so the trailing words
- * render as the gradient accent. The copy above stays the single source of
- * truth — this only decides where the line break falls.
- */
-const HEADING_SPACE = GALLERY_HEADING.indexOf(' ')
-const HEADING_LEAD = HEADING_SPACE > 0 ? GALLERY_HEADING.slice(0, HEADING_SPACE) : GALLERY_HEADING
-const HEADING_ACCENT = HEADING_SPACE > 0 ? GALLERY_HEADING.slice(HEADING_SPACE + 1).trim() : ''
 
 export default function GalleryPage() {
   const [category, setCategory] = useState('')
@@ -42,6 +35,17 @@ export default function GalleryPage() {
 
   const items = useMemo(() => data?.data ?? [], [data])
   const categories = data?.categories ?? []
+
+  // Admin-editable copy (Page Content → Gallery Page).
+  const blocks = useContentBlocks()
+  const heading = splitHeading(blockText(blocks, 'gallery_heading', GALLERY_HEADING))
+  const copy = {
+    eyebrow: blockText(blocks, 'gallery_eyebrow', GALLERY_EYEBROW),
+    description: blockText(blocks, 'gallery_description', GALLERY_DESCRIPTION),
+    sectionEyebrow: blockText(blocks, 'gallery_section_eyebrow', GALLERY_SECTION_EYEBROW),
+    sectionHeading: blockText(blocks, 'gallery_section_heading', GALLERY_SECTION_TITLE),
+    sectionHelp: blockText(blocks, 'gallery_section_help', GALLERY_SECTION_HELP),
+  }
 
   // Clamp the lightbox to the currently loaded list so a category switch
   // can never point at a stale index.
@@ -99,16 +103,16 @@ export default function GalleryPage() {
                 />
                 <span className="relative inline-flex size-1.5 rounded-full bg-accent" />
               </span>
-              {GALLERY_EYEBROW}
+              {copy.eyebrow}
             </span>
           </Reveal>
 
           <Reveal delay={90}>
             <h1 className="mx-auto mt-6 font-display text-[clamp(36px,5vw,62px)] font-extrabold leading-[1.06] tracking-[-0.02em]">
-              <span className="text-white">{HEADING_LEAD} </span>
-              {HEADING_ACCENT ? (
+              <span className="text-white">{heading.lead} </span>
+              {heading.accent ? (
                 <span className="bg-gradient-to-r from-[#4CAF50] to-[#66BB6A] bg-clip-text text-transparent">
-                  {HEADING_ACCENT}
+                  {heading.accent}
                 </span>
               ) : null}
             </h1>
@@ -116,7 +120,7 @@ export default function GalleryPage() {
 
           <Reveal delay={170}>
             <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-white/75 sm:text-lg">
-              {GALLERY_DESCRIPTION}
+              {copy.description}
             </p>
           </Reveal>
 
@@ -171,12 +175,12 @@ export default function GalleryPage() {
           <Reveal className="flex flex-wrap items-end justify-between gap-4">
             <div className="max-w-2xl">
               <p className="text-xs font-bold uppercase tracking-[0.2em] text-azure-600">
-                {GALLERY_SECTION_EYEBROW}
+                {copy.sectionEyebrow}
               </p>
               <h2 className="mt-2 text-2xl font-bold tracking-tight text-ink sm:text-3xl">
-                {GALLERY_SECTION_TITLE}
+                {copy.sectionHeading}
               </h2>
-              <p className="mt-3 text-sm text-ink-muted sm:text-base">{GALLERY_SECTION_HELP}</p>
+              <p className="mt-3 text-sm text-ink-muted sm:text-base">{copy.sectionHelp}</p>
             </div>
             {data && !isError ? (
               <span className="rounded-full border border-line bg-canvas px-4 py-2 text-xs font-bold text-azure-700 shadow-sm">

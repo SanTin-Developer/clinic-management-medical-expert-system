@@ -73,7 +73,7 @@ class WebsitePageController extends Controller
     {
         $this->authorize('website.pages.view');
 
-        return response()->json(['data' => $page->load('cover')]);
+        return response()->json(['data' => $page->load('cover')->makeVisible('internal_notes')]);
     }
 
     public function update(Request $request, PublicPage $page): JsonResponse
@@ -92,6 +92,7 @@ class WebsitePageController extends Controller
             );
         }
 
+        $previousMediaId = $page->cover_media_id;
         $page->cover_media_id = $this->resolveMediaId($request, $this->media, 'cover', $page->cover_media_id, 'remove_cover');
         $page->updated_by = $request->user()->id;
         $this->applyPublishedAt($page);
@@ -99,7 +100,12 @@ class WebsitePageController extends Controller
 
         return response()->json([
             'message' => 'Page updated successfully.',
-            'data' => $page->fresh('cover'),
+            'data' => $page->fresh('cover')->makeVisible('internal_notes'),
+            'media_cleanup' => $this->cleanupReplacedMedia(
+                $this->media,
+                $previousMediaId,
+                $page->cover_media_id,
+            ),
         ]);
     }
 
@@ -113,9 +119,13 @@ class WebsitePageController extends Controller
             ], 422);
         }
 
+        $mediaId = $page->cover_media_id;
         $page->delete();
 
-        return response()->json(['message' => 'Page deleted successfully.']);
+        return response()->json([
+            'message' => 'Page deleted successfully.',
+            'media_cleanup' => $this->media->cleanupIfUnused($mediaId),
+        ]);
     }
 
     public function publish(PublicPage $page): JsonResponse
@@ -166,6 +176,21 @@ class WebsitePageController extends Controller
             'slug' => ['nullable', 'string', 'max:255'],
             'excerpt' => ['nullable', 'string'],
             'body' => ['nullable', 'string'],
+            // Policy text is rendered as text (not HTML) by the public page.
+            'policy_content' => ['nullable', 'array'],
+            'policy_content.en' => ['nullable', 'array'],
+            'policy_content.en.title' => ['nullable', 'string', 'max:255'],
+            'policy_content.en.introduction' => ['nullable', 'string', 'max:5000'],
+            'policy_content.en.sections' => ['nullable', 'array', 'max:30'],
+            'policy_content.km' => ['nullable', 'array'],
+            'policy_content.km.title' => ['nullable', 'string', 'max:255'],
+            'policy_content.km.introduction' => ['nullable', 'string', 'max:5000'],
+            'policy_content.km.sections' => ['nullable', 'array', 'max:30'],
+            'policy_content.*.sections.*.heading' => ['required_with:policy_content.*.sections', 'string', 'max:255'],
+            'policy_content.*.sections.*.body' => ['required_with:policy_content.*.sections', 'string', 'max:20000'],
+            'policy_content.*.sections.*.order' => ['nullable', 'integer', 'min:1', 'max:999'],
+            'policy_content.*.sections.*.visible' => ['nullable', 'boolean'],
+            'internal_notes' => ['nullable', 'string', 'max:5000'],
             'cover' => $this->imageRules(),
             'remove_cover' => ['sometimes', 'boolean'],
             'status' => ['sometimes', Rule::in(PublicPage::STATUSES)],

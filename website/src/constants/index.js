@@ -25,21 +25,21 @@ export const FOOTER_LINKS = [...PRIMARY_NAV.slice(1), ...SECONDARY_NAV]
 /**
  * Developer-locked design imagery shipped with the app. These are layout
  * assets, not CMS content. An admin-supplied hero photo overrides
- * DEFAULT_HERO_IMAGE through the CMS `hero_image` field (settings.hero_media).
+ * DEFAULT_HERO_IMAGE through the CMS `home_hero_image` content block.
  */
 export const DEFAULT_HERO_IMAGE = '/media/hero-background.png'
 export const ABOUT_CLINIC_IMAGE = '/media/about-clinic.jpg'
 
-/** Default hero copy, used when the CMS provides no hero_title/hero_subtitle. */
+/** Default hero copy, used when the CMS provides no hero title/subtitle. */
 export const HERO_EYEBROW = 'Your Health, Our Priority'
 export const HERO_HEADING = ['Better Health', 'Brighter Tomorrow']
 export const HERO_DESCRIPTION =
   'At RoyalCare Clinic, we provide compassionate, high-quality healthcare with modern facilities and expert medical professionals.'
 
 /**
- * Green highlight line under the hero subtitle. Normally the CMS "About
- * summary" (settings.about_summary) is shown here; this constant is only the
- * fallback when that field is empty.
+ * Green highlight line under the hero subtitle. Normally the CMS hero
+ * highlight block is shown here; this constant is only the fallback when that
+ * block is empty.
  */
 export const HERO_HIGHLIGHT = 'Open 24 hours a day, 7 days a week — your health never waits.'
 
@@ -67,4 +67,29 @@ export const PARTNER_PLACEHOLDERS = [
   { key: 'p3', label: 'LifePlus', icon: 'heart' },
   { key: 'p4', label: 'HealthFirst', icon: 'leaf' },
   { key: 'p5', label: 'WellnessCo', icon: 'wave' },
+]
+
+/**
+ * Clinic blurb used by the homepage About section.
+ *
+ * The editable copy lives in the `home_about_text` content block (Page
+ * Content → Home Page); this constant is only the fallback used when the
+ * admin leaves that block empty. It is shared with the About page so the
+ * sentence exists once in the codebase.
+ */
+export const CLINIC_SUMMARY =
+  'RoyalCare Clinic brings together experienced clinicians, modern facilities and a patient-first approach to deliver care you and your family can trust.'
+
+/**
+ * Highlight points of the homepage About section.
+ *
+ * The editable list lives in the `home_about_pillars` content block (Page
+ * Content → Home Page); this constant is only the fallback used when the
+ * admin leaves that block empty.
+ */
+export const ABOUT_PILLARS = [
+  'Patient-first, respectful care',
+  'Experienced clinical team',
+  'Modern, comfortable facilities',
+  'Clear communication at every step',
 ]

@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowRight } from 'lucide-react'
 import { publicWebsiteApi } from '../../api/website.js'
+import { blockText, useContentBlocks } from '../../utils/content.js'
 import { Spinner } from '../../components/ui/Skeleton.jsx'
 import { ErrorState } from '../../components/ui/State.jsx'
 import { ArticleCard, Section, SectionHeading, ServiceCard } from '../../components/public/PublicUI.jsx'
@@ -13,6 +14,10 @@ export default function HomePage() {
     queryKey: ['website', 'home'],
     queryFn: publicWebsiteApi.home,
   })
+
+  // Hook must run unconditionally — the copy map below is built after the
+  // loading/error guards.
+  const blocks = useContentBlocks()
 
   if (isLoading) {
     return (
@@ -36,23 +41,50 @@ export default function HomePage() {
   const articles = data?.articles ?? []
   const gallery = data?.gallery ?? []
 
+  // Admin-editable section headings and links (Page Content → Home Page).
+  const sectionCopy = {
+    services: {
+      eyebrow: blockText(blocks, 'home_services_eyebrow', 'What we offer'),
+      heading: blockText(blocks, 'home_services_heading', 'Our Medical Services'),
+      link: blockText(blocks, 'home_services_link', 'View all services'),
+    },
+    team: {
+      eyebrow: blockText(blocks, 'home_team_eyebrow', 'Meet the experts'),
+      heading: blockText(blocks, 'home_team_heading', 'Our Team'),
+      link: blockText(blocks, 'home_team_link', 'View all team'),
+    },
+    news: {
+      eyebrow: blockText(blocks, 'home_news_eyebrow', 'Stay informed'),
+      heading: blockText(blocks, 'home_news_heading', 'News & Health Tips'),
+      link: blockText(blocks, 'home_news_link', 'Read all articles'),
+    },
+    gallery: {
+      eyebrow: blockText(blocks, 'home_gallery_eyebrow', 'Our facilities'),
+      heading: blockText(blocks, 'home_gallery_heading', 'A Glimpse Inside'),
+      link: blockText(blocks, 'home_gallery_link', 'View full gallery'),
+    },
+  }
+
   return (
     <>
       <HeroSection settings={settings} />
 
       <PartnersStrip />
 
-      <AboutSection settings={settings} />
+      <AboutSection />
 
       {services.length > 0 ? (
         <Section className="py-14">
           <div className="flex flex-wrap items-end justify-between gap-4">
-            <SectionHeading eyebrow="What we offer" title="Our Medical Services" />
+            <SectionHeading
+              eyebrow={sectionCopy.services.eyebrow}
+              title={sectionCopy.services.heading}
+            />
             <Link
               to="/services"
               className="inline-flex items-center gap-1.5 text-sm font-semibold text-azure-700 hover:text-azure-600"
             >
-              View all services
+              {sectionCopy.services.link}
               <ArrowRight className="size-4" aria-hidden />
             </Link>
           </div>
@@ -67,12 +99,15 @@ export default function HomePage() {
       {team.length > 0 ? (
         <Section className="py-14">
           <div className="flex flex-wrap items-end justify-between gap-4">
-            <SectionHeading eyebrow="Meet the experts" title="Our Team" />
+            <SectionHeading
+              eyebrow={sectionCopy.team.eyebrow}
+              title={sectionCopy.team.heading}
+            />
             <Link
               to="/team"
               className="inline-flex items-center gap-1.5 text-sm font-semibold text-azure-700 hover:text-azure-600"
             >
-              View all team
+              {sectionCopy.team.link}
               <ArrowRight className="size-4" aria-hidden />
             </Link>
           </div>
@@ -85,12 +120,15 @@ export default function HomePage() {
       {articles.length > 0 ? (
         <Section className="py-14">
           <div className="flex flex-wrap items-end justify-between gap-4">
-            <SectionHeading eyebrow="Stay informed" title="News & Health Tips" />
+            <SectionHeading
+              eyebrow={sectionCopy.news.eyebrow}
+              title={sectionCopy.news.heading}
+            />
             <Link
               to="/health-news"
               className="inline-flex items-center gap-1.5 text-sm font-semibold text-azure-700 hover:text-azure-600"
             >
-              Read all articles
+              {sectionCopy.news.link}
               <ArrowRight className="size-4" aria-hidden />
             </Link>
           </div>
@@ -104,7 +142,11 @@ export default function HomePage() {
 
       {gallery.length > 0 ? (
         <Section className="py-14">
-          <SectionHeading eyebrow="Our facilities" title="A Glimpse Inside" align="center" />
+          <SectionHeading
+            eyebrow={sectionCopy.gallery.eyebrow}
+            title={sectionCopy.gallery.heading}
+            align="center"
+          />
           <div className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-4">
             {gallery.map((item) =>
               item.image?.url ? (
@@ -123,7 +165,7 @@ export default function HomePage() {
               to="/gallery"
               className="inline-flex items-center gap-1.5 text-sm font-semibold text-azure-700 hover:text-azure-600"
             >
-              View full gallery
+              {sectionCopy.gallery.link}
               <ArrowRight className="size-4" aria-hidden />
             </Link>
           </div>

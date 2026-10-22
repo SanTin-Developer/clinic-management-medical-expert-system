@@ -45,6 +45,25 @@ trait InteractsWithWebsiteMedia
     }
 
     /**
+     * Clean up the previous image after a successful database save. Shared
+     * assets are left in the media library, and cleanup failures are reported
+     * in the response rather than hiding the successful CMS change.
+     *
+     * @return array{status: string, media_asset_id: int, references?: list<array{type: string, id: int, label: string}>, message?: string}|null
+     */
+    protected function cleanupReplacedMedia(
+        WebsiteMediaService $media,
+        ?int $previousMediaId,
+        ?int $currentMediaId,
+    ): ?array {
+        if ($previousMediaId === null || $previousMediaId === $currentMediaId) {
+            return null;
+        }
+
+        return $media->cleanupIfUnused($previousMediaId);
+    }
+
+    /**
      * Build a unique slug from an optional provided value or the given title.
      */
     protected function uniqueSlug(string $modelClass, string $base, ?int $ignoreId = null): string

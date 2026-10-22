@@ -21,34 +21,23 @@ import { Reveal } from '../../components/public/Reveal.jsx'
 import { BannerBackdrop, Section, SectionHeading } from '../../components/public/PublicUI.jsx'
 import TeamGrid from '../../components/public/TeamGrid.jsx'
 import { cn } from '../../utils/cn.js'
-import { ABOUT_CLINIC_IMAGE, APP_NAME } from '../../constants/index.js'
+import { ABOUT_CLINIC_IMAGE, APP_NAME, CLINIC_SUMMARY } from '../../constants/index.js'
 
 /**
  * About Us positioning copy (developer-locked brand copy). These are
  * intentional statements — not verified facts, statistics, credentials or
  * claims about medical capabilities. Everything factual and variable (page
- * excerpt/body/cover, settings.about_summary, gallery photos, staff profiles)
- * is loaded from the CMS through the existing public endpoints.
+ * excerpt/body/cover, the About content blocks, gallery photos, staff
+ * profiles) is loaded from the CMS through the existing public endpoints.
  *
- * CMS gap: `website_settings` has no about/mission/vision/values columns, so
- * this copy stays here until those fields (and their admin inputs) exist.
+ * The editable copy of this page lives in the `about` content blocks (Page
+ * Content → About Page); the constants below are only the fallbacks used when
+ * the admin has not written a value yet.
  */
 const ABOUT_HEADING = 'Caring for Your Health, Every Step of the Way'
 const ABOUT_INTRO =
   'We’re committed to patient-centered care, clear communication, and empowering individuals and families to make informed decisions about their health and well-being.'
 const WHO_HEADING = 'Respectful Care. Clear Communication. Trusted Expertise.'
-/** Mirrors the fallback already published in HomeSections' AboutSection. */
-const FALLBACK_SUMMARY =
-  'RoyalCare Clinic brings together experienced clinicians, modern facilities and a patient-first approach to deliver care you and your family can trust.'
-
-/**
- * Splits the locked hero heading at its first comma so the trailing clause can
- * be rendered as the gradient accent line. The copy above stays the single
- * source of truth — this only decides where the line break falls.
- */
-const HEADING_COMMA = ABOUT_HEADING.indexOf(',')
-const HEADING_MAIN = HEADING_COMMA > 0 ? ABOUT_HEADING.slice(0, HEADING_COMMA + 1) : ABOUT_HEADING
-const HEADING_ACCENT = HEADING_COMMA > 0 ? ABOUT_HEADING.slice(HEADING_COMMA + 1).trim() : ''
 
 /** In-page anchors surfaced as quick-jump chips in the hero (labels are CMS-editable). */
 const SECTION_LINKS = [
@@ -173,6 +162,26 @@ function indexBlocks(blocks) {
 }
 
 /**
+ * Removes repeated gallery entries before they reach the facilities marquee.
+ * The CMS can contain two records for the same photo/facility (for example
+ * after a re-seed or a manual re-upload); only the first one is rendered.
+ */
+function uniqueGalleryItems(items) {
+  const seen = new Set()
+  return items.filter((item) => {
+    if (!item.image?.url) return false
+
+    const caption = (item.title || item.caption || '').trim().toLowerCase()
+    const image = item.image.url.split('?')[0]
+    const key = caption ? `caption:${caption}` : `image:${image}`
+
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
+/**
  * Renders CMS rich-text bodies as readable plain text so no raw HTML from the
  * editor ever reaches the page. Paragraph tags become line breaks that the
  * `whitespace-pre-line` rendering preserves.
@@ -251,7 +260,7 @@ function FacilitiesMarquee({ items, reverse = false }) {
 
 /**
  * About Us page. Reuses the existing website CMS end to end: the `about` page
- * title/excerpt/body/cover/SEO, settings.about_summary + hero media, the
+ * title/excerpt/body/cover/SEO, the editable About content blocks, the
  * published gallery, and published team profiles — no duplicate endpoints.
  *
  * The layout is intentionally unlike the home page: a cinematic dark hero with
@@ -286,9 +295,17 @@ export default function AboutPage() {
   const settings = bootstrapQuery.data?.settings ?? {}
   const page = pageQuery.data?.data ?? {}
   const team = teamQuery.data?.data ?? []
-  const featuredGallery = (galleryQuery.data?.data ?? [])
-    .filter((item) => item.image?.url)
-    .slice(0, 6)
+  const featuredGallery = uniqueGalleryItems(galleryQuery.data?.data ?? []).slice(0, 6)
+  // Split the unique facilities across the two drifting rows so the same card
+  // is never shown twice at once. Each row still duplicates itself internally
+  // for the seamless marquee loop.
+  const facilityRows =
+    featuredGallery.length > 1
+      ? [
+          featuredGallery.filter((_, index) => index % 2 === 0),
+          featuredGallery.filter((_, index) => index % 2 === 1),
+        ]
+      : [featuredGallery]
 
   /**
    * Admin-editable copy. Each section prefers the saved CMS block, then falls
@@ -311,7 +328,8 @@ export default function AboutPage() {
   const storyHeading = body('about_story_heading', WHO_HEADING)
   const storySubheading = body('about_story_subheading', '')
   const storyNote = body('about_story_note', '')
-  const storyImageUrl = blocks.about_story_image?.image?.url || settings.hero_media?.url || ABOUT_CLINIC_IMAGE
+  const storyImageUrl =
+    blocks.about_story_image?.image?.url || blocks.home_hero_image?.image?.url || ABOUT_CLINIC_IMAGE
 
   const missionHeading = body('about_mission_heading', 'Mission and Vision')
   const mission = {
@@ -432,11 +450,12 @@ export default function AboutPage() {
     )
   }
 
-  const lead = settings.about_summary || plainText(page.excerpt) || FALLBACK_SUMMARY
+  // The lead paragraph belongs to the About page record; the shared clinic
+  // blurb is the fallback when the admin has not written an excerpt yet.
+  const lead = plainText(page.excerpt) || CLINIC_SUMMARY
   const bodyHtml = page.body ?? ''
   const bodyText = bodyHtml ? (/<[a-z][\s\S]*>/i.test(bodyHtml) ? '' : plainText(bodyHtml)) : plainText(page.excerpt)
   const heroImage = page.cover?.url || ABOUT_CLINIC_IMAGE
-  const aboutImage = settings.hero_media?.url || ABOUT_CLINIC_IMAGE
 
   return (
     <>
@@ -523,7 +542,7 @@ export default function AboutPage() {
         </Section>
       </section>
 
-      {/* Section 2 — Who We Are (CMS: settings.about_summary + page excerpt/body).
+      {/* Section 2 — Who We Are (CMS: About content blocks + page excerpt/body).
           Editorial split: photo left, numbered story right. */}
       <section id="story" className="scroll-mt-24 bg-white">
         <Section
@@ -759,8 +778,11 @@ export default function AboutPage() {
           </Section>
         ) : (
           <div className="mt-10 space-y-4">
-            <FacilitiesMarquee items={featuredGallery} />
-            <FacilitiesMarquee items={featuredGallery} reverse />
+            {facilityRows
+              .filter((row) => row.length > 0)
+              .map((row, index) => (
+                <FacilitiesMarquee key={index} items={row} reverse={index % 2 === 1} />
+              ))}
           </div>
         )}
       </section>
@@ -816,7 +838,7 @@ export default function AboutPage() {
           </div>
 
           <ol className="border-y border-line">
-            {COMMITMENTS.map((item, index) => {
+            {commitments.map((item, index) => {
               const Icon = item.icon
               return (
                 <Reveal key={item.title} delay={index * 70} as="li">

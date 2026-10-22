@@ -10,6 +10,7 @@ export default function ConfirmDialog({
   confirmLabel = 'Confirm',
   danger = true,
   loading = false,
+  confirmDisabled = false,
 }) {
   return (
     <Modal
@@ -26,6 +27,7 @@ export default function ConfirmDialog({
             variant={danger ? 'danger' : 'primary'}
             onClick={onConfirm}
             loading={loading}
+            disabled={confirmDisabled}
           >
             {confirmLabel}
           </Button>

@@ -71,12 +71,18 @@ class WebsiteTeamProfileController extends Controller
         $validated = $request->validate($this->rules());
 
         $teamProfile->fill(collect($validated)->except('photo')->all());
+        $previousMediaId = $teamProfile->photo_media_id;
         $teamProfile->photo_media_id = $this->resolveMediaId($request, $this->media, 'photo', $teamProfile->photo_media_id, 'remove_photo');
         $teamProfile->save();
 
         return response()->json([
             'message' => 'Team profile updated successfully.',
             'data' => $teamProfile->fresh('photo'),
+            'media_cleanup' => $this->cleanupReplacedMedia(
+                $this->media,
+                $previousMediaId,
+                $teamProfile->photo_media_id,
+            ),
         ]);
     }
 
@@ -84,9 +90,13 @@ class WebsiteTeamProfileController extends Controller
     {
         $this->authorize('website.team.manage');
 
+        $mediaId = $teamProfile->photo_media_id;
         $teamProfile->delete();
 
-        return response()->json(['message' => 'Team profile deleted successfully.']);
+        return response()->json([
+            'message' => 'Team profile deleted successfully.',
+            'media_cleanup' => $this->media->cleanupIfUnused($mediaId),
+        ]);
     }
 
     /**

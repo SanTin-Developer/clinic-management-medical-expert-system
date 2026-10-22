@@ -22,9 +22,6 @@ class WebsiteSettingFactory extends Factory
         return [
             'site_name' => 'RoyalCare',
             'tagline' => fake()->catchPhrase(),
-            'hero_title' => fake()->sentence(5),
-            'hero_subtitle' => fake()->sentence(12),
-            'about_summary' => fake()->paragraph(),
             'primary_phone' => fake()->phoneNumber(),
             'email' => fake()->companyEmail(),
             'address' => fake()->address(),

@@ -82,7 +82,7 @@ return [
         'cloud_name' => env('CLOUDINARY_CLOUD_NAME'),
         'api_key' => env('CLOUDINARY_API_KEY'),
         'api_secret' => env('CLOUDINARY_API_SECRET'),
-        'folder' => env('CLOUDINARY_FOLDER', 'clinic-documents'),
+        'folder' => env('CLOUDINARY_FOLDER', 'Clinic Management System and Medical Expert systems'),
         'secure' => (bool) env('CLOUDINARY_SECURE', true),
     ],
 

@@ -3,14 +3,17 @@
 namespace Tests\Feature;
 
 use App\Models\ContentBlock;
+use App\Models\MediaAsset;
 use App\Models\PublicPage;
 use App\Models\Service;
 use App\Models\WebsiteSetting;
 use App\Services\Website\WebsiteMediaStorage;
 use Database\Seeders\AboutContentBlockSeeder;
 use Database\Seeders\RolePermissionSeeder;
+use Database\Seeders\WebsitePageContentSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use Spatie\Permission\PermissionRegistrar;
@@ -36,6 +39,33 @@ class WebsiteManagementTest extends TestCase
         );
 
         return UploadedFile::fake()->createWithContent($name, $png);
+    }
+
+    private function useCloudinary(): void
+    {
+        config([
+            'documents.poster_disk' => 'cloudinary',
+            'services.cloudinary' => [
+                'cloud_name' => 'demo',
+                'api_key' => 'key',
+                'api_secret' => 'secret',
+                'folder' => 'Clinic Management System and Medical Expert systems',
+                'secure' => true,
+            ],
+        ]);
+
+        app()->forgetInstance(WebsiteMediaStorage::class);
+    }
+
+    private function cloudinaryAsset(string $name = 'shared'): MediaAsset
+    {
+        return MediaAsset::factory()->create([
+            'name' => $name.'.jpg',
+            'file_path' => 'https://res.cloudinary.com/demo/image/upload/v1/clinic/website/media/'.$name.'.jpg',
+            'public_id' => 'clinic/website/media/'.$name,
+            'resource_type' => 'image',
+            'disk' => 'cloudinary',
+        ]);
     }
 
     public function test_admin_can_view_website_dashboard(): void
@@ -151,6 +181,177 @@ class WebsiteManagementTest extends TestCase
         $this->assertDatabaseCount('media_assets', 0);
     }
 
+    public function test_media_library_lists_usage_and_blocks_deleting_a_shared_asset(): void
+    {
+        Sanctum::actingAs($this->userWithRole('Admin'));
+        Http::preventStrayRequests();
+        Http::fake([
+            'api.cloudinary.com/v1_1/demo/image/destroy' => Http::response(['result' => 'ok'], 200),
+        ]);
+
+        $asset = $this->cloudinaryAsset('shared');
+        $service = Service::factory()->create(['image_media_id' => $asset->id]);
+
+        $this->getJson('/api/v1/website/admin/media')
+            ->assertOk()
+            ->assertJsonPath('data.0.usage_count', 1)
+            ->assertJsonPath('data.0.usage_references.0.type', 'service')
+            ->assertJsonPath('data.0.usage_references.0.id', $service->id);
+
+        $this->deleteJson('/api/v1/website/admin/media/'.$asset->id)
+            ->assertStatus(409)
+            ->assertJsonPath('references.0.type', 'service');
+
+        $this->assertDatabaseHas('media_assets', ['id' => $asset->id]);
+        Http::assertNothingSent();
+    }
+
+    public function test_non_admin_cannot_permanently_delete_media(): void
+    {
+        Sanctum::actingAs($this->userWithRole('Nurse'));
+
+        $asset = MediaAsset::factory()->create();
+
+        $this->deleteJson('/api/v1/website/admin/media/'.$asset->id)->assertForbidden();
+
+        $this->assertDatabaseHas('media_assets', ['id' => $asset->id]);
+    }
+
+    public function test_unused_cloudinary_asset_is_permanently_deleted(): void
+    {
+        Sanctum::actingAs($this->userWithRole('Admin'));
+        $this->useCloudinary();
+        Http::preventStrayRequests();
+        Http::fake([
+            'api.cloudinary.com/v1_1/demo/image/destroy' => Http::response(['result' => 'ok'], 200),
+        ]);
+
+        $asset = $this->cloudinaryAsset('unused');
+
+        $this->deleteJson('/api/v1/website/admin/media/'.$asset->id)->assertOk();
+
+        $this->assertDatabaseMissing('media_assets', ['id' => $asset->id]);
+        Http::assertSent(fn ($request): bool => str_contains($request->url(), '/image/destroy')
+            && $request['public_id'] === 'clinic/website/media/unused');
+    }
+
+    public function test_cloudinary_failure_keeps_the_media_record_for_retry(): void
+    {
+        Sanctum::actingAs($this->userWithRole('Admin'));
+        $this->useCloudinary();
+        Http::preventStrayRequests();
+        Http::fake([
+            'api.cloudinary.com/v1_1/demo/image/destroy' => Http::response(['error' => ['message' => 'unavailable']], 503),
+        ]);
+
+        $asset = $this->cloudinaryAsset('retry');
+
+        $this->deleteJson('/api/v1/website/admin/media/'.$asset->id)
+            ->assertStatus(502)
+            ->assertJsonPath(
+                'message',
+                'Cloudinary could not delete this image. The media record was kept so you can retry safely.'
+            );
+
+        $this->assertDatabaseHas('media_assets', ['id' => $asset->id]);
+    }
+
+    public function test_removing_an_image_from_a_saved_form_cleans_up_the_unused_asset(): void
+    {
+        Sanctum::actingAs($this->userWithRole('Admin'));
+        $this->useCloudinary();
+        Http::preventStrayRequests();
+        Http::fake([
+            'api.cloudinary.com/v1_1/demo/image/destroy' => Http::response(['result' => 'ok'], 200),
+        ]);
+
+        $asset = $this->cloudinaryAsset('old-service');
+        $service = Service::factory()->create(['image_media_id' => $asset->id]);
+
+        $this->putJson('/api/v1/website/admin/services/'.$service->id, [
+            'remove_image' => true,
+        ])->assertOk()->assertJsonPath('media_cleanup.status', 'deleted');
+
+        $this->assertDatabaseMissing('media_assets', ['id' => $asset->id]);
+        Http::assertSent(fn ($request): bool => str_contains($request->url(), '/image/destroy')
+            && $request['public_id'] === 'clinic/website/media/old-service');
+    }
+
+    public function test_replacing_an_image_deletes_only_the_old_unused_asset(): void
+    {
+        Sanctum::actingAs($this->userWithRole('Admin'));
+        $this->useCloudinary();
+        Http::preventStrayRequests();
+        Http::fake(function ($request) {
+            if (str_contains($request->url(), '/image/upload')) {
+                return Http::response([
+                    'secure_url' => 'https://res.cloudinary.com/demo/image/upload/v1/clinic/website/media/new.jpg',
+                    'public_id' => 'clinic/website/media/new',
+                    'resource_type' => 'image',
+                ], 200);
+            }
+
+            return Http::response(['result' => 'ok'], 200);
+        });
+
+        $old = $this->cloudinaryAsset('old-replaced');
+        $service = Service::factory()->create(['image_media_id' => $old->id]);
+
+        $this->put('/api/v1/website/admin/services/'.$service->id, [
+            'image' => $this->fakePng('new.png'),
+        ], ['Accept' => 'application/json'])
+            ->assertOk()
+            ->assertJsonPath('data.image.public_id', 'clinic/website/media/new');
+
+        $this->assertDatabaseMissing('media_assets', ['id' => $old->id]);
+        $this->assertDatabaseHas('media_assets', [
+            'public_id' => 'clinic/website/media/new',
+            'resource_type' => 'image',
+        ]);
+        Http::assertSent(fn ($request): bool => str_contains($request->url(), '/image/destroy')
+            && $request['public_id'] === 'clinic/website/media/old-replaced');
+    }
+
+    public function test_deleting_a_record_cleans_up_its_unused_image(): void
+    {
+        Sanctum::actingAs($this->userWithRole('Admin'));
+        $this->useCloudinary();
+        Http::preventStrayRequests();
+        Http::fake([
+            'api.cloudinary.com/v1_1/demo/image/destroy' => Http::response(['result' => 'ok'], 200),
+        ]);
+
+        $asset = $this->cloudinaryAsset('record-delete');
+        $service = Service::factory()->create(['image_media_id' => $asset->id]);
+
+        $this->deleteJson('/api/v1/website/admin/services/'.$service->id)
+            ->assertOk()
+            ->assertJsonPath('media_cleanup.status', 'deleted');
+
+        $this->assertDatabaseMissing('media_assets', ['id' => $asset->id]);
+    }
+
+    public function test_deleting_a_record_does_not_delete_an_image_shared_by_another_record(): void
+    {
+        Sanctum::actingAs($this->userWithRole('Admin'));
+        $this->useCloudinary();
+        Http::preventStrayRequests();
+        Http::fake([
+            'api.cloudinary.com/v1_1/demo/image/destroy' => Http::response(['result' => 'ok'], 200),
+        ]);
+
+        $asset = $this->cloudinaryAsset('shared-record-delete');
+        $service = Service::factory()->create(['image_media_id' => $asset->id]);
+        Service::factory()->create(['image_media_id' => $asset->id]);
+
+        $this->deleteJson('/api/v1/website/admin/services/'.$service->id)
+            ->assertOk()
+            ->assertJsonPath('media_cleanup.status', 'in_use');
+
+        $this->assertDatabaseHas('media_assets', ['id' => $asset->id]);
+        Http::assertNothingSent();
+    }
+
     public function test_admin_can_update_settings(): void
     {
         Sanctum::actingAs($this->userWithRole('Admin'));
@@ -167,6 +368,114 @@ class WebsiteManagementTest extends TestCase
             ->assertJsonPath('data.facebook_url', 'https://facebook.com/royalcare');
 
         $this->assertSame('RoyalCare Medical Center', WebsiteSetting::current()->site_name);
+    }
+
+    public function test_website_settings_no_longer_own_the_homepage_copy(): void
+    {
+        Sanctum::actingAs($this->userWithRole('Admin'));
+
+        $this->seed(WebsitePageContentSeeder::class);
+
+        $this->putJson('/api/v1/website/admin/settings', [
+            'site_name' => 'RoyalCare Clinic',
+            'hero_title' => 'Written from the wrong place',
+            'hero_subtitle' => 'Written from the wrong place',
+            'about_summary' => 'Written from the wrong place',
+        ])->assertOk()
+            ->assertJsonPath('data.site_name', 'RoyalCare Clinic');
+
+        $settings = WebsiteSetting::current();
+        $this->assertNull($settings->hero_title);
+        $this->assertNull($settings->hero_subtitle);
+        $this->assertNull($settings->about_summary);
+
+        // The homepage copy keeps its home in the content blocks.
+        $this->assertDatabaseHas('content_blocks', ['group' => 'home', 'key' => 'home_hero_title']);
+        $this->assertDatabaseHas('content_blocks', ['group' => 'home', 'key' => 'home_about_text']);
+        $this->assertDatabaseHas('content_blocks', ['group' => 'footer', 'key' => 'footer_about_text']);
+    }
+
+    public function test_the_settings_endpoint_does_not_expose_the_retired_homepage_columns(): void
+    {
+        Sanctum::actingAs($this->userWithRole('Admin'));
+
+        // A database that still holds the legacy values must not publish them.
+        WebsiteSetting::current()->forceFill([
+            'hero_title' => 'Legacy headline',
+            'hero_subtitle' => 'Legacy subtitle',
+            'about_summary' => 'Legacy blurb',
+        ])->save();
+
+        $payload = $this->getJson('/api/v1/website/admin/settings')->assertOk()->json('data');
+
+        foreach (['hero_title', 'hero_subtitle', 'about_summary', 'hero_media_id'] as $retired) {
+            $this->assertArrayNotHasKey($retired, $payload);
+        }
+    }
+
+    public function test_saving_a_homepage_field_updates_the_public_homepage(): void
+    {
+        Sanctum::actingAs($this->userWithRole('Admin'));
+
+        $this->seed(WebsitePageContentSeeder::class);
+
+        $this->postJson('/api/v1/website/admin/content-blocks/bulk', [
+            'blocks' => [
+                ['key' => 'home_hero_title', 'group' => 'home', 'body' => 'Care that feels close to home.'],
+                ['key' => 'home_hero_subtitle', 'group' => 'home', 'body' => 'Round-the-clock care for every family.'],
+            ],
+        ])->assertOk();
+
+        $blocks = collect($this->getJson('/api/v1/website/bootstrap')->assertOk()->json('content_blocks'))
+            ->keyBy('key');
+
+        $this->assertSame('Care that feels close to home.', $blocks['home_hero_title']['body']);
+        $this->assertSame('Round-the-clock care for every family.', $blocks['home_hero_subtitle']['body']);
+    }
+
+    public function test_admin_can_edit_the_homepage_copy_as_content_blocks(): void
+    {
+        Sanctum::actingAs($this->userWithRole('Admin'));
+
+        $this->postJson('/api/v1/website/admin/content-blocks/bulk', [
+            'blocks' => [
+                ['key' => 'home_hero_title', 'group' => 'home', 'body' => 'World-class care, close to home.'],
+                ['key' => 'home_hero_subtitle', 'group' => 'home', 'body' => 'From everyday check-ups to specialist treatment.'],
+                ['key' => 'home_about_text', 'group' => 'home', 'body' => 'A team that listens.'],
+                ['key' => 'footer_about_text', 'group' => 'footer', 'body' => 'Footer blurb.'],
+            ],
+        ])->assertOk();
+
+        $this->assertSame(
+            'World-class care, close to home.',
+            ContentBlock::where('key', 'home_hero_title')->where('group', 'home')->value('body')
+        );
+        $this->assertSame(
+            'A team that listens.',
+            ContentBlock::where('key', 'home_about_text')->where('group', 'home')->value('body')
+        );
+        $this->assertSame(
+            'Footer blurb.',
+            ContentBlock::where('key', 'footer_about_text')->where('group', 'footer')->value('body')
+        );
+    }
+
+    public function test_bulk_update_keeps_the_text_of_image_blocks(): void
+    {
+        Sanctum::actingAs($this->userWithRole('Admin'));
+
+        $block = ContentBlock::create([
+            'group' => 'home',
+            'key' => 'home_hero_image',
+            'title' => 'Homepage hero image',
+            'body' => 'Kept copy',
+        ]);
+
+        $this->postJson('/api/v1/website/admin/content-blocks/bulk', [
+            'blocks' => [['key' => 'home_hero_image', 'group' => 'home', 'title' => 'Homepage hero image']],
+        ])->assertOk();
+
+        $this->assertSame('Kept copy', $block->fresh()->body);
     }
 
     public function test_admin_can_bulk_update_and_create_content_blocks(): void
@@ -205,5 +514,51 @@ class WebsiteManagementTest extends TestCase
         $this->postJson('/api/v1/website/admin/content-blocks/bulk', [
             'blocks' => [['key' => 'about_story_heading', 'body' => 'Nope']],
         ])->assertForbidden();
+    }
+
+    public function test_page_content_seeder_seeds_every_public_page_group_and_is_idempotent(): void
+    {
+        $this->seed(WebsitePageContentSeeder::class);
+
+        $expectedKeys = [
+            'header' => 'header_cta_label',
+            'footer' => 'footer_quick_links_heading',
+            'home' => 'home_cta_heading',
+            'services' => 'services_heading',
+            'team' => 'team_heading',
+            'gallery' => 'gallery_heading',
+            'news' => 'news_heading',
+            'contact' => 'contact_heading',
+        ];
+
+        foreach ($expectedKeys as $group => $key) {
+            $this->assertDatabaseHas('content_blocks', ['group' => $group, 'key' => $key]);
+        }
+
+        // The homepage copy that used to live in the website settings.
+        $this->assertDatabaseHas('content_blocks', ['group' => 'home', 'key' => 'home_hero_title']);
+        $this->assertDatabaseHas('content_blocks', ['group' => 'home', 'key' => 'home_hero_subtitle']);
+        $this->assertDatabaseHas('content_blocks', ['group' => 'home', 'key' => 'home_hero_highlight']);
+        $this->assertDatabaseHas('content_blocks', ['group' => 'home', 'key' => 'home_hero_image']);
+        $this->assertDatabaseHas('content_blocks', ['group' => 'home', 'key' => 'home_about_text']);
+        $this->assertDatabaseHas('content_blocks', ['group' => 'footer', 'key' => 'footer_about_text']);
+
+        // Structured (list) content lands in the JSON data column.
+        $this->assertSame(
+            '10,000+',
+            ContentBlock::where('key', 'home_stats')->where('group', 'home')->first()->data[0]['value']
+        );
+
+        // Re-seeding keeps admin edits and never duplicates rows.
+        ContentBlock::where('key', 'header_cta_label')->update(['body' => 'Reserve a Visit']);
+        $rowsBefore = ContentBlock::count();
+
+        $this->seed(WebsitePageContentSeeder::class);
+
+        $this->assertSame($rowsBefore, ContentBlock::count());
+        $this->assertSame(
+            'Reserve a Visit',
+            ContentBlock::where('key', 'header_cta_label')->value('body')
+        );
     }
 }

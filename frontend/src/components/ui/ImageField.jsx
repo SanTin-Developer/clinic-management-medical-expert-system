@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Crop } from 'lucide-react'
+import ConfirmDialog from './ConfirmDialog.jsx'
 import FileDropzone from './FileDropzone.jsx'
 import ImageCropModal from './ImageCropModal.jsx'
 
@@ -23,6 +24,7 @@ export default function ImageField({
 }) {
   const [preview, setPreview] = useState(null)
   const [cropping, setCropping] = useState(false)
+  const [confirmingRemove, setConfirmingRemove] = useState(false)
 
   useEffect(() => {
     if (!file) {
@@ -52,7 +54,7 @@ export default function ImageField({
             </button>
             <button
               type="button"
-              onClick={onRemove}
+              onClick={() => (existingUrl && !file ? setConfirmingRemove(true) : onRemove?.())}
               className="rounded-lg bg-black/60 px-2.5 py-1 text-xs font-semibold text-white transition-colors hover:bg-black/80"
             >
               Remove
@@ -73,6 +75,17 @@ export default function ImageField({
             }}
           />
         ) : null}
+        <ConfirmDialog
+          open={confirmingRemove}
+          onClose={() => setConfirmingRemove(false)}
+          onConfirm={() => {
+            setConfirmingRemove(false)
+            onRemove?.()
+          }}
+          title="Remove image from this record?"
+          message="Saving the form detaches the image. If no other record uses it, it is then permanently deleted from Cloudinary."
+          confirmLabel="Remove image"
+        />
       </>
     )
   }

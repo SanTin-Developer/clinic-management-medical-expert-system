@@ -150,7 +150,14 @@ export default function WebsitePagesPage() {
                         ) : null}
                         {can('website.pages.manage') ? (
                           <>
-                            <Button size="sm" variant="ghost" onClick={() => { setEditing(row); setFormOpen(true) }} aria-label="Edit">
+                            <Button size="sm" variant="ghost" onClick={() => {
+                              if (['privacy-policy', 'terms-of-use'].includes(row.slug)) {
+                                navigate(`/website/pages/${row.id}`)
+                                return
+                              }
+                              setEditing(row)
+                              setFormOpen(true)
+                            }} aria-label="Edit">
                               <Pencil className="size-4" aria-hidden />
                             </Button>
                             <Button size="sm" variant="ghost" onClick={() => setDeleting(row)} aria-label="Delete" disabled={row.is_system}>
@@ -177,7 +184,7 @@ export default function WebsitePagesPage() {
         onClose={() => setDeleting(null)}
         onConfirm={confirmDelete}
         title="Delete page"
-        message={`Delete “${deleting?.title}”? This cannot be undone.`}
+        message={`Delete “${deleting?.title}”? This cannot be undone. If no other record uses the cover image, it is also permanently deleted from Cloudinary.`}
         confirmLabel="Delete"
         loading={busy}
       />

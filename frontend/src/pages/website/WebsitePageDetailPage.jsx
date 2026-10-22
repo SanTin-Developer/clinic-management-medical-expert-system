@@ -11,6 +11,7 @@ import ConfirmDialog from '../../components/ui/ConfirmDialog.jsx'
 import { CardSkeleton } from '../../components/ui/Skeleton.jsx'
 import { ErrorState } from '../../components/ui/State.jsx'
 import PageFormModal from '../../components/website/PageFormModal.jsx'
+import LegalDocumentEditorModal from '../../components/website/LegalDocumentEditorModal.jsx'
 import DetailList from '../../components/website/DetailList.jsx'
 import { useAuth } from '../../hooks/useAuth.js'
 import { websiteAdminApi } from '../../api/websiteAdmin.js'
@@ -32,6 +33,8 @@ export default function WebsitePageDetailPage() {
 
   const page = query.data ?? null
   const published = page?.status === 'published'
+  const isPrivacyPolicy = page?.slug === 'privacy-policy'
+  const isLegalDocument = ['privacy-policy', 'terms-of-use'].includes(page?.slug)
 
   const togglePublish = async () => {
     try {
@@ -91,11 +94,11 @@ export default function WebsitePageDetailPage() {
                 )}
               </Button>
             ) : null}
-            {can('website.pages.manage') ? (
+              {can('website.pages.manage') ? (
               <>
                 <Button onClick={() => setFormOpen(true)}>
                   <Pencil className="size-4" aria-hidden />
-                  Edit
+                  {isLegalDocument ? 'Edit document' : 'Edit'}
                 </Button>
                 <Button
                   variant="ghost"
@@ -136,7 +139,7 @@ export default function WebsitePageDetailPage() {
           <div className="mt-6">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">Body</h3>
             <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-ink-muted">
-              {page.body || 'No content yet.'}
+              {isLegalDocument ? 'Use Edit document to manage bilingual sections and preview draft changes.' : (page.body || 'No content yet.')}
             </p>
           </div>
         </Card>
@@ -167,12 +170,11 @@ export default function WebsitePageDetailPage() {
         </div>
       </div>
 
-      <PageFormModal
-        open={formOpen}
-        onClose={() => setFormOpen(false)}
-        onSaved={() => query.refetch()}
-        page={page}
-      />
+      {isLegalDocument ? (
+        <LegalDocumentEditorModal open={formOpen} onClose={() => setFormOpen(false)} onSaved={() => query.refetch()} page={page} documentName={isPrivacyPolicy ? 'Privacy Policy' : 'Terms of Use'} />
+      ) : (
+        <PageFormModal open={formOpen} onClose={() => setFormOpen(false)} onSaved={() => query.refetch()} page={page} />
+      )}
 
       <ConfirmDialog
         open={deleting}
@@ -180,7 +182,7 @@ export default function WebsitePageDetailPage() {
         onConfirm={confirmDelete}
         loading={busy}
         title="Delete page"
-        message={`Delete "${page.title}"? This cannot be undone.`}
+        message={`Delete "${page.title}"? This cannot be undone. If no other record uses the cover image, it is also permanently deleted from Cloudinary.`}
         confirmLabel="Delete"
       />
     </>

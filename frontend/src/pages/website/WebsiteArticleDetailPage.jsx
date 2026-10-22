@@ -176,7 +176,7 @@ export default function WebsiteArticleDetailPage() {
         onConfirm={confirmDelete}
         loading={busy}
         title="Delete article"
-        message={`Delete "${article.title}"? This cannot be undone.`}
+        message={`Delete "${article.title}"? This cannot be undone. If no other record uses the cover image, it is also permanently deleted from Cloudinary.`}
         confirmLabel="Delete"
       />
     </>

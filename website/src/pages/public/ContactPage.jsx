@@ -8,12 +8,14 @@ import Input from '../../components/ui/Input.jsx'
 import { Reveal } from '../../components/public/Reveal.jsx'
 import { BannerBackdrop, Section, SectionHeading } from '../../components/public/PublicUI.jsx'
 import { cn } from '../../utils/cn.js'
+import { blockText, splitHeading, useContentBlocks } from '../../utils/content.js'
 
 /**
- * Contact positioning copy (developer-locked brand copy). These are
- * intentional statements — not verified facts. Every channel shown on this
- * page (phone, email, address, hours, map embed) is loaded from the CMS
- * website settings through the existing bootstrap endpoint.
+ * Contact positioning copy — the design defaults shown whenever the matching
+ * content block (Page Content → Contact Page) is empty. These are intentional
+ * statements — not verified facts. Every channel shown on this page (phone,
+ * email, address, hours, map embed) is loaded from the CMS website settings
+ * through the existing bootstrap endpoint.
  */
 const CONTACT_EYEBROW = 'Get in Touch'
 const CONTACT_HEADING = 'Contact Us'
@@ -25,8 +27,9 @@ const REACH_LEAD =
 const FIND_HEADING = 'Visit Our Clinic'
 
 /**
- * Contact form copy (developer-locked). The form posts to the existing
- * public contact endpoint; all validation lives there too.
+ * Contact form copy — defaults again, overridable from Page Content → Contact
+ * Page. The form posts to the existing public contact endpoint; all validation
+ * lives there too.
  */
 const SEND_HEADING = 'Send Us a Message'
 const SEND_LEAD =
@@ -34,15 +37,6 @@ const SEND_LEAD =
 const SEND_NOTE = "We'll get back to you as soon as we can."
 const SEND_ERROR_FALLBACK = 'Something went wrong. Please try again.'
 const SEND_SUCCESS_FALLBACK = 'Thanks! Your message has been sent.'
-
-/**
- * Splits the locked hero heading at its first space so the trailing word
- * renders as the gradient accent. The copy above stays the single source of
- * truth — this only decides where the line break falls.
- */
-const HEADING_SPACE = CONTACT_HEADING.indexOf(' ')
-const HEADING_LEAD = HEADING_SPACE > 0 ? CONTACT_HEADING.slice(0, HEADING_SPACE) : CONTACT_HEADING
-const HEADING_ACCENT = HEADING_SPACE > 0 ? CONTACT_HEADING.slice(HEADING_SPACE + 1).trim() : ''
 
 /**
  * Channel card for the "Ways to Reach Us" grid. Hover lifts the card, sweeps
@@ -96,6 +90,8 @@ function ContactForm() {
   const [successMessage, setSuccessMessage] = useState(null)
   const [error, setError] = useState(null)
   const mutation = useMutation({ mutationFn: publicWebsiteApi.submitContactMessage })
+  const blocks = useContentBlocks()
+  const note = blockText(blocks, 'contact_send_note', SEND_NOTE)
 
   const handleSubmit = (event) => {
     event.preventDefault()
@@ -226,7 +222,7 @@ function ContactForm() {
       </div>
 
       <div className="mt-6 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-xs text-ink-muted">{SEND_NOTE}</p>
+        <p className="text-xs text-ink-muted">{note}</p>
         <Button
           type="submit"
           loading={mutation.isPending}
@@ -242,6 +238,19 @@ function ContactForm() {
 
 export default function ContactPage() {
   const { settings } = useOutletContext() ?? {}
+
+  // Admin-editable copy (Page Content → Contact Page).
+  const blocks = useContentBlocks()
+  const heading = splitHeading(blockText(blocks, 'contact_heading', CONTACT_HEADING))
+  const copy = {
+    eyebrow: blockText(blocks, 'contact_eyebrow', CONTACT_EYEBROW),
+    description: blockText(blocks, 'contact_description', CONTACT_DESCRIPTION),
+    reachHeading: blockText(blocks, 'contact_reach_heading', REACH_HEADING),
+    reachText: blockText(blocks, 'contact_reach_text', REACH_LEAD),
+    findHeading: blockText(blocks, 'contact_find_heading', FIND_HEADING),
+    sendHeading: blockText(blocks, 'contact_send_heading', SEND_HEADING),
+    sendText: blockText(blocks, 'contact_send_text', SEND_LEAD),
+  }
 
   const phone = settings?.primary_phone ?? settings?.secondary_phone
   const email = settings?.email
@@ -278,16 +287,16 @@ export default function ContactPage() {
                 />
                 <span className="relative inline-flex size-1.5 rounded-full bg-accent" />
               </span>
-              {CONTACT_EYEBROW}
+              {copy.eyebrow}
             </span>
           </Reveal>
 
           <Reveal delay={90}>
             <h1 className="mx-auto mt-6 font-display text-[clamp(36px,5vw,62px)] font-extrabold leading-[1.06] tracking-[-0.02em]">
-              <span className="text-white">{HEADING_LEAD} </span>
-              {HEADING_ACCENT ? (
+              <span className="text-white">{heading.lead} </span>
+              {heading.accent ? (
                 <span className="bg-gradient-to-r from-[#4CAF50] to-[#66BB6A] bg-clip-text text-transparent">
-                  {HEADING_ACCENT}
+                  {heading.accent}
                 </span>
               ) : null}
             </h1>
@@ -295,7 +304,7 @@ export default function ContactPage() {
 
           <Reveal delay={170}>
             <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-white/75 sm:text-lg">
-              {CONTACT_DESCRIPTION}
+              {copy.description}
             </p>
           </Reveal>
 
@@ -334,11 +343,11 @@ export default function ContactPage() {
             <Reveal>
               <SectionHeading
                 eyebrow="01 — Reach Us"
-                title={REACH_HEADING}
-                description={REACH_LEAD}
+                title={copy.reachHeading}
+                description={copy.reachText}
               />
               <p className="mt-6 text-sm leading-relaxed text-ink-muted">
-                {CONTACT_DESCRIPTION}
+                {copy.description}
               </p>
             </Reveal>
           </div>
@@ -421,8 +430,8 @@ export default function ContactPage() {
             <SectionHeading
               align="center"
               eyebrow="03 — Send a Message"
-              title={SEND_HEADING}
-              description={SEND_LEAD}
+              title={copy.sendHeading}
+              description={copy.sendText}
             />
           </Reveal>
           <Reveal delay={110} className="mx-auto mt-10 max-w-3xl">
@@ -453,7 +462,7 @@ export default function ContactPage() {
                 03 — Find Us
               </p>
               <h2 className="mt-4 font-display text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
-                {FIND_HEADING}
+                {copy.findHeading}
               </h2>
 
               <div className="mt-6 space-y-3">

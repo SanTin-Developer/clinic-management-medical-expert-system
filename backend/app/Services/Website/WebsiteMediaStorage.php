@@ -2,7 +2,9 @@
 
 namespace App\Services\Website;
 
+use App\Services\Files\CloudinaryStorage;
 use App\Services\Files\DocumentStorage;
+use App\Services\Files\StoredFile;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -27,7 +29,7 @@ class WebsiteMediaStorage
         private readonly ?string $localDisk = null,
     ) {}
 
-    public function store(UploadedFile $file): string
+    public function store(UploadedFile $file): StoredFile
     {
         $extension = strtolower($file->extension() ?: 'jpg');
 
@@ -35,11 +37,14 @@ class WebsiteMediaStorage
             $extension = 'jpg';
         }
 
-        return $this->storage->store(
-            $file,
-            self::DIRECTORY,
-            Str::uuid()->toString().'.'.$extension,
-        );
+        $directory = self::DIRECTORY;
+        $filename = Str::uuid()->toString().'.'.$extension;
+
+        if ($this->storage instanceof CloudinaryStorage) {
+            return $this->storage->storeWithMetadata($file, $directory, $filename);
+        }
+
+        return new StoredFile($this->storage->store($file, $directory, $filename));
     }
 
     public function delete(?string $path): void
@@ -47,6 +52,19 @@ class WebsiteMediaStorage
         if ($path !== null && $path !== '') {
             $this->storage->delete($path);
         }
+    }
+
+    /**
+     * Permanently remove a Cloudinary asset using the identifiers stored on the
+     * media record rather than guessing them from the delivery URL.
+     */
+    public function deleteCloudinaryAsset(string $publicId, string $resourceType): bool
+    {
+        if (! $this->storage instanceof CloudinaryStorage) {
+            throw new \RuntimeException('Cloudinary storage is not configured.');
+        }
+
+        return $this->storage->deleteAsset($publicId, $resourceType);
     }
 
     public function isExternal(?string $path): bool

@@ -11,6 +11,12 @@ use Illuminate\Http\Request;
 
 /**
  * Admin management of the singleton website settings row.
+ *
+ * Only site-wide settings live here: branding, contact details, social links
+ * and the SEO defaults. Page-specific copy is owned by the content blocks
+ * (see WebsiteContentBlockController), so the legacy hero columns are kept in
+ * the table but are no longer written from this endpoint and are not part of
+ * the payload.
  */
 class WebsiteSettingController extends Controller
 {
@@ -23,7 +29,7 @@ class WebsiteSettingController extends Controller
         $this->authorize('website.settings.view');
 
         return response()->json([
-            'data' => WebsiteSetting::current()->load(['logo', 'favicon', 'heroMedia']),
+            'data' => WebsiteSetting::current()->load(['logo', 'favicon']),
         ]);
     }
 
@@ -32,7 +38,7 @@ class WebsiteSettingController extends Controller
         $this->authorize('website.settings.update');
 
         $request->merge(
-            collect($request->except(['logo', 'favicon', 'hero_image']))
+            collect($request->except(['logo', 'favicon']))
                 ->map(fn ($value) => $value === '' ? null : $value)
                 ->all()
         );
@@ -40,9 +46,6 @@ class WebsiteSettingController extends Controller
         $validated = $request->validate([
             'site_name' => ['sometimes', 'string', 'max:255'],
             'tagline' => ['nullable', 'string', 'max:255'],
-            'hero_title' => ['nullable', 'string', 'max:255'],
-            'hero_subtitle' => ['nullable', 'string', 'max:500'],
-            'about_summary' => ['nullable', 'string'],
             'primary_phone' => ['nullable', 'string', 'max:50'],
             'secondary_phone' => ['nullable', 'string', 'max:50'],
             'email' => ['nullable', 'email', 'max:255'],
@@ -59,17 +62,19 @@ class WebsiteSettingController extends Controller
             'seo_keywords' => ['nullable', 'string', 'max:500'],
             'logo' => $this->imageRules(),
             'favicon' => $this->imageRules(),
-            'hero_image' => $this->imageRules(),
         ]);
 
         $settings = WebsiteSetting::current();
+        $previousMediaIds = [
+            'logo' => $settings->logo_media_id,
+            'favicon' => $settings->favicon_media_id,
+        ];
 
         $settings->logo_media_id = $this->resolveMediaId($request, $this->media, 'logo', $settings->logo_media_id, 'remove_logo');
         $settings->favicon_media_id = $this->resolveMediaId($request, $this->media, 'favicon', $settings->favicon_media_id, 'remove_favicon');
-        $settings->hero_media_id = $this->resolveMediaId($request, $this->media, 'hero_image', $settings->hero_media_id, 'remove_hero_image');
 
         $settings->fill(collect($validated)->except([
-            'logo', 'favicon', 'hero_image',
+            'logo', 'favicon',
         ])->all());
 
         $settings->updated_by = $request->user()->id;
@@ -77,7 +82,11 @@ class WebsiteSettingController extends Controller
 
         return response()->json([
             'message' => 'Website settings updated successfully.',
-            'data' => $settings->fresh(['logo', 'favicon', 'heroMedia']),
+            'data' => $settings->fresh(['logo', 'favicon']),
+            'media_cleanup' => array_filter([
+                'logo' => $this->cleanupReplacedMedia($this->media, $previousMediaIds['logo'], $settings->logo_media_id),
+                'favicon' => $this->cleanupReplacedMedia($this->media, $previousMediaIds['favicon'], $settings->favicon_media_id),
+            ]),
         ]);
     }
 }

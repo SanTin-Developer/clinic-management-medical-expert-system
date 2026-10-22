@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { X } from 'lucide-react'
 import { cn } from '../../utils/cn.js'
+import { useOverlayFlag } from '../../hooks/useOverlay.js'
 
 const SIZES = {
   sm: 'sm:max-w-sm',
@@ -18,6 +19,8 @@ export default function Modal({
   footer,
   size = 'md',
 }) {
+  useOverlayFlag(open)
+
   useEffect(() => {
     if (!open) return
     const onKey = (e) => {

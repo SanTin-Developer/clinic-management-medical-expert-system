@@ -149,7 +149,7 @@ export default function WebsiteGalleryPage() {
         onClose={() => setDeleting(null)}
         onConfirm={confirmDelete}
         title="Delete gallery item"
-        message="This image will be removed from the gallery. Continue?"
+        message={`Delete “${deleting?.title || 'this item'}”? This cannot be undone. If no other record uses the image, it is also permanently deleted from Cloudinary.`}
         confirmLabel="Delete"
         loading={busy}
       />

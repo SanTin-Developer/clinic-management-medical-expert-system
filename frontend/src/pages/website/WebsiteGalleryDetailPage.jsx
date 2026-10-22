@@ -160,7 +160,7 @@ export default function WebsiteGalleryDetailPage() {
         onConfirm={confirmDelete}
         loading={busy}
         title="Delete gallery item"
-        message={`Delete "${item.title || 'this image'}"? This cannot be undone.`}
+        message={`Delete "${item.title || 'this image'}"? This cannot be undone. If no other record uses the image, it is also permanently deleted from Cloudinary.`}
         confirmLabel="Delete"
       />
     </>
