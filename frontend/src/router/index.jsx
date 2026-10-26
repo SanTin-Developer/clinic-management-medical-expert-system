@@ -23,6 +23,7 @@ const AppointmentDetailPage = lazy(() => import('../pages/AppointmentDetailPage.
 const MedicalRecordsPage = lazy(() => import('../pages/MedicalRecordsPage.jsx'))
 const WardListPage = lazy(() => import('../pages/WardListPage.jsx'))
 const AdmissionListPage = lazy(() => import('../pages/AdmissionListPage.jsx'))
+const AdmissionBillingPage = lazy(() => import('../pages/inpatient/AdmissionBillingPage.jsx'))
 const NursingTaskListPage = lazy(() => import('../pages/NursingTaskListPage.jsx'))
 const MarPage = lazy(() => import('../pages/MarPage.jsx'))
 const AssignmentListPage = lazy(() => import('../pages/AssignmentListPage.jsx'))
@@ -178,6 +179,14 @@ export const router = createBrowserRouter([
         element: withSuspense(
           <Guard permission="admissions.view">
             <AdmissionListPage />
+          </Guard>,
+        ),
+      },
+      {
+        path: 'admissions/:id/billing',
+        element: withSuspense(
+          <Guard permission="admissions.view">
+            <AdmissionBillingPage />
           </Guard>,
         ),
       },

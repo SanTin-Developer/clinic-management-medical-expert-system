@@ -94,7 +94,10 @@ class KnowledgeBaseTest extends TestCase
         $this->postJson('/api/v1/knowledge-base/expert-rules', [
             'code' => 'RULE-TEST',
             'name' => 'Test rule',
+            'name_km' => 'ច្បាប់សាកល្បង',
             'disease_id' => $disease->id,
+            'explanation' => 'English explanation.',
+            'explanation_km' => 'ការពន្យល់ជាភាសាខ្មែរ។',
             'priority' => 5,
             'confidence_score' => 0.7,
             'conditions' => [
@@ -102,6 +105,8 @@ class KnowledgeBaseTest extends TestCase
             ],
         ])->assertCreated()
             ->assertJsonPath('data.code', 'RULE-TEST')
+            ->assertJsonPath('data.name_km', 'ច្បាប់សាកល្បង')
+            ->assertJsonPath('data.explanation_km', 'ការពន្យល់ជាភាសាខ្មែរ។')
             ->assertJsonCount(1, 'data.conditions');
     }
 

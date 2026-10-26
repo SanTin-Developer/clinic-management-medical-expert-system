@@ -18,7 +18,9 @@ class Invoice extends Model
         'invoice_number',
         'patient_id',
         'consultation_id',
+        'admission_id',
         'status',
+        'invoice_type',
         'subtotal',
         'discount',
         'tax',
@@ -26,9 +28,12 @@ class Invoice extends Model
         'amount_paid',
         'balance',
         'issued_at',
+        'billing_period_start',
+        'billing_period_end',
         'due_date',
         'notes',
         'created_by',
+        'billing_run_id',
     ];
 
     protected function casts(): array
@@ -41,6 +46,8 @@ class Invoice extends Model
             'amount_paid' => 'decimal:2',
             'balance' => 'decimal:2',
             'issued_at' => 'date',
+            'billing_period_start' => 'date',
+            'billing_period_end' => 'date',
             'due_date' => 'date',
         ];
     }
@@ -53,6 +60,11 @@ class Invoice extends Model
     public function consultation(): BelongsTo
     {
         return $this->belongsTo(Consultation::class);
+    }
+
+    public function admission(): BelongsTo
+    {
+        return $this->belongsTo(Admission::class);
     }
 
     public function createdBy(): BelongsTo
@@ -78,5 +90,15 @@ class Invoice extends Model
     public function pharmacySale(): HasOne
     {
         return $this->hasOne(PharmacySale::class);
+    }
+
+    public function admissionCharges(): HasMany
+    {
+        return $this->hasMany(AdmissionCharge::class);
+    }
+
+    public function billingRun(): BelongsTo
+    {
+        return $this->belongsTo(AdmissionBillingRun::class, 'billing_run_id');
     }
 }

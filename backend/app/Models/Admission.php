@@ -89,6 +89,36 @@ class Admission extends Model
         return $this->hasMany(MedicationAdministration::class);
     }
 
+    public function transfers(): HasMany
+    {
+        return $this->hasMany(AdmissionTransfer::class);
+    }
+
+    public function charges(): HasMany
+    {
+        return $this->hasMany(AdmissionCharge::class);
+    }
+
+    public function unbilledCharges(): HasMany
+    {
+        return $this->hasMany(AdmissionCharge::class)->where('status', AdmissionCharge::STATUS_UNBILLED);
+    }
+
+    public function deposits(): HasMany
+    {
+        return $this->hasMany(AdmissionDeposit::class);
+    }
+
+    public function invoices(): HasMany
+    {
+        return $this->hasMany(Invoice::class);
+    }
+
+    public function billingRuns(): HasMany
+    {
+        return $this->hasMany(AdmissionBillingRun::class);
+    }
+
     public function isActive(): bool
     {
         return $this->status === self::STATUS_ADMITTED;

@@ -3,10 +3,13 @@
 namespace App\Services\Nursing;
 
 use App\Models\Admission;
+use App\Models\AdmissionTransfer;
 use App\Models\Bed;
 use App\Models\MedicationAdministration;
 use App\Models\NursingTask;
+use App\Models\PatientAssignment;
 use App\Models\User;
+use App\Services\Inpatient\RoomChargeService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -58,6 +61,13 @@ class AdmissionService
 
             $bed->update(['status' => Bed::STATUS_OCCUPIED]);
 
+            // Generate room charge for admission day
+            try {
+                app(RoomChargeService::class)->generateDailyCharges($admission->fresh(), $actor);
+            } catch (\Throwable $e) {
+                // Don't fail admission if room charge generation fails
+            }
+
             return $admission->load(['patient', 'ward', 'bed', 'attendingDoctor']);
         });
     }
@@ -83,9 +93,9 @@ class AdmissionService
             }
 
             $admission->assignments()
-                ->where('status', \App\Models\PatientAssignment::STATUS_ACTIVE)
+                ->where('status', PatientAssignment::STATUS_ACTIVE)
                 ->update([
-                    'status' => \App\Models\PatientAssignment::STATUS_ENDED,
+                    'status' => PatientAssignment::STATUS_ENDED,
                     'ends_at' => now(),
                     'ended_by' => $actor->id,
                     'ended_reason' => 'Patient discharged',
@@ -131,9 +141,9 @@ class AdmissionService
             }
 
             $admission->assignments()
-                ->where('status', \App\Models\PatientAssignment::STATUS_ACTIVE)
+                ->where('status', PatientAssignment::STATUS_ACTIVE)
                 ->update([
-                    'status' => \App\Models\PatientAssignment::STATUS_ENDED,
+                    'status' => PatientAssignment::STATUS_ENDED,
                     'ends_at' => now(),
                     'ended_by' => $actor->id,
                     'ended_reason' => 'Admission cancelled',
@@ -183,6 +193,9 @@ class AdmissionService
                 ]);
             }
 
+            $fromBedId = $admission->bed_id;
+            $fromWardId = $admission->ward_id;
+
             if ($admission->bed_id) {
                 Bed::query()
                     ->whereKey($admission->bed_id)
@@ -198,6 +211,29 @@ class AdmissionService
                 'ward_id' => $newBed->room?->ward_id,
                 'notes' => $this->appendNote($admission->notes, $reason),
             ]);
+
+            // Record transfer history
+            try {
+                AdmissionTransfer::create([
+                    'admission_id' => $admission->id,
+                    'from_bed_id' => $fromBedId,
+                    'to_bed_id' => $newBed->id,
+                    'from_ward_id' => $fromWardId,
+                    'to_ward_id' => $newBed->room?->ward_id,
+                    'transferred_by' => $actor->id,
+                    'reason' => $reason,
+                    'transferred_at' => now(),
+                ]);
+            } catch (\Throwable $e) {
+                // ignore
+            }
+
+            // Generate room charge for new bed/day if needed
+            try {
+                app(RoomChargeService::class)->generateDailyCharges($admission->fresh(), $actor);
+            } catch (\Throwable $e) {
+                // ignore
+            }
 
             return $admission->fresh()->load(['patient', 'ward', 'bed', 'attendingDoctor']);
         });

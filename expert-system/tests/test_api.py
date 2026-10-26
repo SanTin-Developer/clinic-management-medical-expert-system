@@ -122,11 +122,14 @@ def test_evaluate_valid_request(client: TestClient):
     assert set(first) >= {
         "rule_code",
         "rule_name",
+        "rule_name_km",
         "disease_code",
         "disease_name",
+        "disease_name_km",
         "priority",
         "confidence_score",
         "matched_condition_groups",
+        "explanation_km",
     }
 
 

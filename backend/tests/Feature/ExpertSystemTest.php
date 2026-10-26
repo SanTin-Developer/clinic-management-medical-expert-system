@@ -52,13 +52,16 @@ class ExpertSystemTest extends TestCase
             'matched_rules' => [[
                 'rule_code' => 'RULE-AND',
                 'rule_name' => 'AND rule',
+                'rule_name_km' => 'ច្បាប់ AND',
                 'disease_code' => 'DIS-A',
                 'disease_name' => 'Illness A',
+                'disease_name_km' => 'ជំងឺ អេ',
                 'priority' => 5,
                 'confidence_score' => 0.5,
                 'severity_level' => 'mild',
                 'matched_condition_groups' => [1],
                 'explanation' => null,
+                'explanation_km' => 'ការពន្យល់ជាភាសាខ្មែរ។',
             ]],
             'notice' => 'Not clinically validated.',
         ], $overrides);
@@ -79,7 +82,10 @@ class ExpertSystemTest extends TestCase
         $response->assertOk()
             ->assertJsonPath('message', 'Expert system evaluation completed.')
             ->assertJsonPath('data.matched_rule_count', 1)
-            ->assertJsonPath('data.is_clinically_validated', false);
+            ->assertJsonPath('data.is_clinically_validated', false)
+            ->assertJsonPath('data.matched_rules.0.rule_name_km', 'ច្បាប់ AND')
+            ->assertJsonPath('data.matched_rules.0.disease_name_km', 'ជំងឺ អេ')
+            ->assertJsonPath('data.matched_rules.0.explanation_km', 'ការពន្យល់ជាភាសាខ្មែរ។');
 
         Http::assertSent(function ($request) use ($fever, $cough) {
             return str_ends_with($request->url(), '/evaluate')

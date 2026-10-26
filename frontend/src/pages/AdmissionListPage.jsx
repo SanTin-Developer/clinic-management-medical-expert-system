@@ -1,6 +1,7 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
-import { BedDouble, CalendarPlus, ClipboardCheck, LogOut, UserCheck, XCircle } from 'lucide-react'
+import { BedDouble, CalendarPlus, ClipboardCheck, LogOut, UserCheck, XCircle, Receipt } from 'lucide-react'
 import StatCard from '../components/ui/StatCard.jsx'
 import PageHeader from '../components/ui/PageHeader.jsx'
 import Button from '../components/ui/Button.jsx'
@@ -14,6 +15,7 @@ import Pagination from '../components/ui/Pagination.jsx'
 import { RowSkeleton } from '../components/ui/Skeleton.jsx'
 import { EmptyState } from '../components/ui/State.jsx'
 import { admissionApi } from '../api/nursing.js'
+import { inpatientBillingApi } from '../api/inpatientBilling.js'
 import { usePaginated } from '../hooks/usePaginated.js'
 import { useAuth } from '../hooks/useAuth.js'
 import { statusBadgeFor, ADMISSION_STATUS } from '../utils/status.js'
@@ -22,6 +24,7 @@ import AdmissionFormModal from '../components/nursing/AdmissionFormModal.jsx'
 
 export default function AdmissionListPage() {
   const { can } = useAuth()
+  const navigate = useNavigate()
   const [page, setPage] = useState(1)
   const [status, setStatus] = useState('all')
   const [formOpen, setFormOpen] = useState(false)
@@ -39,9 +42,18 @@ export default function AdmissionListPage() {
   const runAction = async () => {
     if (!action) return
     try {
-      if (action.type === 'discharge') await admissionApi.discharge(action.record.id)
+      if (action.type === 'discharge') {
+        await admissionApi.discharge(action.record.id)
+        toast.success('Patient discharged.')
+        try {
+          await inpatientBillingApi.dischargeReconciliation(action.record.id)
+          toast.success('Discharge reconciliation completed.')
+        } catch (reconErr) {
+          toast.error(reconErr?.response?.data?.message || reconErr?.message || 'Reconciliation had issues')
+        }
+      }
       if (action.type === 'cancel') await admissionApi.cancel(action.record.id)
-      toast.success(action.type === 'discharge' ? 'Patient discharged.' : 'Admission cancelled.')
+      if (action.type === 'cancel') toast.success('Admission cancelled.')
       setAction(null)
       query.refetch()
     } catch (err) {
@@ -119,6 +131,9 @@ export default function AdmissionListPage() {
                       <Td><Badge tone={meta.tone}>{meta.label}</Badge></Td>
                       <Td onClick={(e) => e.stopPropagation()}>
                         <div className="flex justify-end gap-2">
+                          <Button size="sm" variant="ghost" onClick={() => navigate(`/admissions/${a.id}/billing`)}>
+                            <Receipt className="size-4" aria-hidden /> Billing
+                          </Button>
                           {a.status === 'admitted' && can('admissions.discharge') ? (
                             <Button size="sm" variant="outline" onClick={() => setAction({ type: 'discharge', record: a })}>
                               <LogOut className="size-4" aria-hidden /> Discharge

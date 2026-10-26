@@ -53,6 +53,11 @@ class Medicine extends Model
         return $this->hasMany(PrescriptionItem::class);
     }
 
+    public function invoiceItems(): HasMany
+    {
+        return $this->hasMany(InvoiceItem::class);
+    }
+
     public function totalStock(): int
     {
         return (int) $this->inventoryItems()->sum('quantity');

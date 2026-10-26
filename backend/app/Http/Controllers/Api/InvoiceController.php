@@ -4,12 +4,14 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Invoice;
+use App\Models\Medicine;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class InvoiceController extends Controller
 {
@@ -32,6 +34,7 @@ class InvoiceController extends Controller
 
         // One grouped query for every status bucket, replacing one count/sum per status.
         $byStatus = (clone $base)
+            ->reorder()
             ->selectRaw('status, count(*) as invoice_count, sum(total) as status_total, sum(balance) as status_balance')
             ->groupBy('status')
             ->get()
@@ -78,29 +81,89 @@ class InvoiceController extends Controller
             'patient_id' => ['required', 'integer', 'exists:patients,id'],
             'consultation_id' => ['nullable', 'integer', 'exists:consultations,id'],
             'discount' => ['nullable', 'numeric', 'min:0'],
-            'tax' => ['nullable', 'numeric', 'min:0'],
+            'tax' => ['nullable', 'numeric', 'min:0', 'max:0'],
             'due_date' => ['nullable', 'date'],
             'notes' => ['nullable', 'string'],
+            'subtotal' => ['prohibited'],
+            'total' => ['prohibited'],
+            'amount_paid' => ['prohibited'],
+            'balance' => ['prohibited'],
             'items' => ['required', 'array', 'min:1'],
-            'items.*.description' => ['required', 'string', 'max:255'],
+            'items.*.medicine_id' => ['required', 'integer', 'exists:medicines,id'],
             'items.*.quantity' => ['required', 'integer', 'min:1'],
-            'items.*.unit_price' => ['required', 'numeric', 'min:0'],
+            'items.*.unit_price' => ['prohibited'],
+            'items.*.amount' => ['prohibited'],
         ]);
 
         $invoice = DB::transaction(function () use ($validated, $request) {
-            $subtotal = collect($validated['items'])->sum(
-                fn ($item) => $item['quantity'] * $item['unit_price']
-            );
-            $discount = (float) ($validated['discount'] ?? 0);
-            $tax = (float) ($validated['tax'] ?? 0);
+            $medicineIds = collect($validated['items'])->pluck('medicine_id')->unique()->values();
+
+            $medicines = Medicine::whereIn('id', $medicineIds)->lockForUpdate()->get()->keyBy('id');
+
+            $lines = collect($validated['items'])->map(function (array $item) use ($medicines): array {
+                $medicine = $medicines->get($item['medicine_id']);
+
+                if (! $medicine) {
+                    throw ValidationException::withMessages([
+                        'items' => 'One or more selected medicines no longer exist.',
+                    ]);
+                }
+
+                if (! $medicine->is_active) {
+                    throw ValidationException::withMessages([
+                        'items' => "Medicine \"{$medicine->name}\" is inactive and cannot be billed.",
+                    ]);
+                }
+
+                if ($medicine->is_recalled) {
+                    throw ValidationException::withMessages([
+                        'items' => "Medicine \"{$medicine->name}\" has been recalled and cannot be billed.",
+                    ]);
+                }
+
+                $unitPrice = (float) $medicine->price;
+
+                if ($unitPrice <= 0) {
+                    throw ValidationException::withMessages([
+                        'items' => "Medicine \"{$medicine->name}\" does not have a valid billable price.",
+                    ]);
+                }
+
+                $quantity = (int) $item['quantity'];
+
+                return [
+                    'medicine_id' => $medicine->id,
+                    'description' => $medicine->name,
+                    'quantity' => $quantity,
+                    'unit_price' => $unitPrice,
+                    'amount' => round($quantity * $unitPrice, 2),
+                ];
+            });
+
+            $subtotal = round((float) $lines->sum('amount'), 2);
+            $discount = round((float) ($validated['discount'] ?? 0), 2);
+            $tax = 0.0;
+
+            if ($discount > $subtotal) {
+                throw ValidationException::withMessages([
+                    'discount' => 'Discount cannot exceed the invoice subtotal.',
+                ]);
+            }
+
             $total = round($subtotal - $discount + $tax, 2);
+
+            if ($total <= 0) {
+                throw ValidationException::withMessages([
+                    'total' => 'Invoice total must be greater than zero.',
+                ]);
+            }
 
             $invoice = Invoice::create([
                 'invoice_number' => $this->generateNumber(),
                 'patient_id' => $validated['patient_id'],
                 'consultation_id' => $validated['consultation_id'] ?? null,
-                'status' => $total <= 0 ? 'paid' : 'unpaid',
-                'subtotal' => round($subtotal, 2),
+                'status' => 'unpaid',
+                'subtotal' => $subtotal,
                 'discount' => $discount,
                 'tax' => $tax,
                 'total' => $total,
@@ -112,13 +175,8 @@ class InvoiceController extends Controller
                 'created_by' => $request->user()->id,
             ]);
 
-            foreach ($validated['items'] as $item) {
-                $invoice->items()->create([
-                    'description' => $item['description'],
-                    'quantity' => $item['quantity'],
-                    'unit_price' => $item['unit_price'],
-                    'amount' => round($item['quantity'] * $item['unit_price'], 2),
-                ]);
+            foreach ($lines as $line) {
+                $invoice->items()->create($line);
             }
 
             return $invoice;
@@ -126,7 +184,7 @@ class InvoiceController extends Controller
 
         return response()->json([
             'message' => 'Invoice created successfully.',
-            'data' => $invoice->load(['patient', 'items']),
+            'data' => $invoice->load(['patient', 'items.medicine']),
         ], 201);
     }
 
@@ -162,41 +220,84 @@ class InvoiceController extends Controller
     {
         $this->authorize('update', $invoice);
 
-        if ($invoice->status === 'cancelled') {
+        if ($request->exists('items')) {
             return response()->json([
-                'message' => 'A cancelled invoice cannot be modified.',
+                'message' => 'Invoice items are read-only and cannot be modified.',
             ], 422);
         }
 
         $validated = $request->validate([
             'discount' => ['sometimes', 'numeric', 'min:0'],
-            'tax' => ['sometimes', 'numeric', 'min:0'],
+            'tax' => ['sometimes', 'numeric', 'min:0', 'max:0'],
             'due_date' => ['sometimes', 'nullable', 'date'],
             'notes' => ['sometimes', 'nullable', 'string'],
+            'subtotal' => ['prohibited'],
+            'total' => ['prohibited'],
+            'amount_paid' => ['prohibited'],
+            'balance' => ['prohibited'],
         ]);
 
-        $discount = (float) ($validated['discount'] ?? $invoice->discount);
-        $tax = (float) ($validated['tax'] ?? $invoice->tax);
+        $invoice = DB::transaction(function () use ($request, $invoice, $validated) {
+            $lockedInvoice = Invoice::query()
+                ->whereKey($invoice->getKey())
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        $invoice->discount = $discount;
-        $invoice->tax = $tax;
-        $invoice->total = round($invoice->subtotal - $discount + $tax, 2);
-        $invoice->balance = round($invoice->total - $invoice->amount_paid, 2);
-        $invoice->status = $this->statusFor($invoice->total, (float) $invoice->amount_paid);
+            if ($lockedInvoice->status === 'cancelled') {
+                abort(422, 'A cancelled invoice cannot be modified.');
+            }
 
-        if (array_key_exists('due_date', $validated)) {
-            $invoice->due_date = $validated['due_date'];
-        }
+            if ($request->exists('items')) {
+                abort(422, 'Invoice items are read-only and cannot be modified.');
+            }
 
-        if (array_key_exists('notes', $validated)) {
-            $invoice->notes = $validated['notes'];
-        }
+            $subtotal = round((float) $lockedInvoice->items()->sum('amount'), 2);
+            $discount = round((float) ($validated['discount'] ?? $lockedInvoice->discount), 2);
+            $tax = (float) $lockedInvoice->tax;
 
-        $invoice->save();
+            if ($discount > $subtotal) {
+                throw ValidationException::withMessages([
+                    'discount' => 'Discount cannot exceed the invoice subtotal.',
+                ]);
+            }
+
+            $total = round($subtotal - $discount + $tax, 2);
+
+            if ($total <= 0) {
+                throw ValidationException::withMessages([
+                    'total' => 'Invoice total must be greater than zero.',
+                ]);
+            }
+
+            if ($total < (float) $lockedInvoice->amount_paid) {
+                throw ValidationException::withMessages([
+                    'total' => 'Invoice total cannot be less than the amount already paid.',
+                ]);
+            }
+
+            $lockedInvoice->subtotal = $subtotal;
+            $lockedInvoice->discount = $discount;
+            $lockedInvoice->tax = $tax;
+            $lockedInvoice->total = $total;
+            $lockedInvoice->balance = round($total - (float) $lockedInvoice->amount_paid, 2);
+            $lockedInvoice->status = $this->statusFor($total, (float) $lockedInvoice->amount_paid);
+
+            if (array_key_exists('due_date', $validated)) {
+                $lockedInvoice->due_date = $validated['due_date'];
+            }
+
+            if (array_key_exists('notes', $validated)) {
+                $lockedInvoice->notes = $validated['notes'];
+            }
+
+            $lockedInvoice->save();
+
+            return $lockedInvoice;
+        });
 
         return response()->json([
             'message' => 'Invoice updated successfully.',
-            'data' => $invoice->fresh()->load(['patient', 'items', 'payments']),
+            'data' => $invoice->fresh()->load(['patient', 'items.medicine', 'payments']),
         ]);
     }
 
@@ -204,71 +305,128 @@ class InvoiceController extends Controller
     {
         $this->authorize('update', $invoice);
 
-        if ($invoice->status === 'cancelled') {
-            return response()->json([
-                'message' => 'A cancelled invoice cannot receive payments.',
-            ], 422);
-        }
-
-        $validated = $request->validate([
+        $rules = [
             'amount' => ['required', 'numeric', 'min:0.01'],
             'method' => ['nullable', Rule::in(['cash', 'card', 'bank_transfer', 'insurance', 'other'])],
             'reference' => ['nullable', 'string', 'max:100'],
             'paid_at' => ['nullable', 'date'],
             'notes' => ['nullable', 'string'],
-        ]);
+        ];
 
-        if ((float) $validated['amount'] > (float) $invoice->balance) {
-            return response()->json([
-                'message' => 'The payment amount exceeds the outstanding balance.',
-            ], 422);
+        if (\Illuminate\Support\Facades\Schema::hasColumn('payments', 'idempotency_key')) {
+            $rules['idempotency_key'] = ['nullable', 'uuid'];
         }
 
-        $payment = DB::transaction(function () use ($validated, $invoice, $request) {
-            $payment = $invoice->payments()->create([
-                'amount' => $validated['amount'],
+        $validated = $request->validate($rules);
+
+        $amount = round((float) $validated['amount'], 2);
+        $idempotencyKey = $validated['idempotency_key'] ?? null;
+
+        [$payment, $duplicate] = DB::transaction(function () use ($validated, $invoice, $request, $amount, $idempotencyKey) {
+            $lockedInvoice = Invoice::query()
+                ->whereKey($invoice->getKey())
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($idempotencyKey !== null && \Illuminate\Support\Facades\Schema::hasColumn('payments', 'idempotency_key')) {
+                $existingPayment = $lockedInvoice->payments()
+                    ->where('idempotency_key', $idempotencyKey)
+                    ->first();
+
+                if ($existingPayment !== null) {
+                    if (round((float) $existingPayment->amount, 2) !== $amount) {
+                        abort(409, 'This idempotency key was already used for a different payment amount.');
+                    }
+
+                    return [$existingPayment, true];
+                }
+            }
+
+            if ($lockedInvoice->status === 'cancelled') {
+                abort(422, 'A cancelled invoice cannot receive payments.');
+            }
+
+            $total = round((float) $lockedInvoice->total, 2);
+            $currentAmountPaid = round((float) $lockedInvoice->amount_paid, 2);
+            $currentBalance = round((float) $lockedInvoice->balance, 2);
+
+            if ($total <= 0) {
+                abort(422, 'This invoice cannot receive payments.');
+            }
+
+            if ($currentBalance <= 0) {
+                abort(422, 'This invoice is already fully paid.');
+            }
+
+            if ($amount > $currentBalance) {
+                abort(422, 'The payment amount exceeds the outstanding balance.');
+            }
+
+            $paymentData = [
+                'amount' => $amount,
                 'method' => $validated['method'] ?? 'cash',
                 'reference' => $validated['reference'] ?? null,
                 'paid_at' => $validated['paid_at'] ?? now(),
                 'received_by' => $request->user()->id,
                 'notes' => $validated['notes'] ?? null,
+            ];
+
+            if ($idempotencyKey !== null && \Illuminate\Support\Facades\Schema::hasColumn('payments', 'idempotency_key')) {
+                $paymentData['idempotency_key'] = $idempotencyKey;
+            }
+
+            $payment = $lockedInvoice->payments()->create($paymentData);
+
+            $newAmountPaid = round($currentAmountPaid + $amount, 2);
+            $newBalance = round($total - $newAmountPaid, 2);
+
+            if ($newBalance < 0) {
+                $newBalance = 0.00;
+            }
+
+            $lockedInvoice->update([
+                'amount_paid' => $newAmountPaid,
+                'balance' => $newBalance,
+                'status' => $this->statusFor($total, $newAmountPaid),
             ]);
 
-            $amountPaid = round((float) $invoice->amount_paid + (float) $validated['amount'], 2);
-            $balance = round((float) $invoice->total - $amountPaid, 2);
-
-            $invoice->update([
-                'amount_paid' => $amountPaid,
-                'balance' => $balance,
-                'status' => $this->statusFor((float) $invoice->total, $amountPaid),
-            ]);
-
-            return $payment;
+            return [$payment, false];
         });
 
-        return response()->json([
-            'message' => 'Payment recorded successfully.',
+        $response = [
+            'message' => $duplicate ? 'Payment already recorded.' : 'Payment recorded successfully.',
             'data' => $payment->load('invoice'),
-        ], 201);
+        ];
+
+        if ($duplicate) {
+            $response['duplicate'] = true;
+        }
+
+        return response()->json($response, $duplicate ? 200 : 201);
     }
 
     public function cancel(Invoice $invoice): JsonResponse
     {
         $this->authorize('update', $invoice);
 
-        if ($invoice->status === 'cancelled') {
-            return response()->json([
-                'message' => 'Invoice is already cancelled.',
-            ], 422);
-        }
+        $invoice = DB::transaction(function () use ($invoice) {
+            $lockedInvoice = Invoice::query()
+                ->whereKey($invoice->getKey())
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        if ((float) $invoice->amount_paid > 0) {
-            return response()->json([
-                'message' => 'An invoice with recorded payments cannot be cancelled.',
-            ], 422);
-        }
+            if ($lockedInvoice->status === 'cancelled') {
+                abort(422, 'Invoice is already cancelled.');
+            }
 
-        $invoice->update(['status' => 'cancelled']);
+            if ((float) $lockedInvoice->amount_paid > 0) {
+                abort(422, 'An invoice with recorded payments cannot be cancelled.');
+            }
+
+            $lockedInvoice->update(['status' => 'cancelled']);
+
+            return $lockedInvoice;
+        });
 
         return response()->json([
             'message' => 'Invoice cancelled successfully.',
@@ -288,11 +446,52 @@ class InvoiceController extends Controller
     }
 
     /**
+     * List billable medicines for invoice line selection.
+     */
+    public function medicines(Request $request): JsonResponse
+    {
+        $this->authorize('create', Invoice::class);
+
+        $query = Medicine::query()
+            ->where('is_active', true)
+            ->where('is_recalled', false)
+            ->where('price', '>', 0);
+
+        if ($search = $request->query('search')) {
+            $term = '%'.strtolower($search).'%';
+
+            $query->where(function ($searchQuery) use ($term) {
+                foreach (['name', 'code', 'generic_name', 'strength', 'form'] as $column) {
+                    $searchQuery->orWhereRaw("lower({$column}) like ?", [$term]);
+                }
+            });
+        }
+
+        $perPage = min(max($request->integer('per_page', 50), 1), 100);
+
+        $medicines = $query
+            ->orderBy('name')
+            ->paginate($perPage)
+            ->through(fn (Medicine $medicine) => [
+                'id' => $medicine->id,
+                'code' => $medicine->code,
+                'name' => $medicine->name,
+                'generic_name' => $medicine->generic_name,
+                'form' => $medicine->form,
+                'strength' => $medicine->strength,
+                'unit' => $medicine->unit,
+                'price' => $medicine->price,
+            ]);
+
+        return response()->json($medicines);
+    }
+
+    /**
      * Derive the invoice status from its total and amount paid.
      */
     private function statusFor(float $total, float $amountPaid): string
     {
-        if ($amountPaid <= 0 && $total > 0) {
+        if ($total <= 0 || $amountPaid <= 0) {
             return 'unpaid';
         }
 

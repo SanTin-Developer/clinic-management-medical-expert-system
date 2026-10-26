@@ -15,7 +15,7 @@ class SymptomController extends Controller
     {
         $this->authorize('viewAny', Symptom::class);
 
-        $query = Symptom::with('diseases:id,code,name')->withCount('diseases');
+        $query = Symptom::with('diseases:id,code,name,name_km')->withCount('diseases');
         $base = clone $query;
 
         if ($search = $request->query('search')) {
@@ -63,7 +63,7 @@ class SymptomController extends Controller
 
         return response()->json([
             'message' => 'Symptom created successfully.',
-            'data' => $symptom->load('diseases:id,code,name'),
+            'data' => $symptom->load('diseases:id,code,name,name_km'),
         ], 201);
     }
 
@@ -72,7 +72,7 @@ class SymptomController extends Controller
         $this->authorize('view', $symptom);
 
         return response()->json([
-            'data' => $symptom->load('diseases:id,code,name'),
+            'data' => $symptom->load('diseases:id,code,name,name_km'),
         ]);
     }
 
@@ -99,7 +99,7 @@ class SymptomController extends Controller
 
         return response()->json([
             'message' => 'Symptom updated successfully.',
-            'data' => $symptom->fresh()->load('diseases:id,code,name'),
+            'data' => $symptom->fresh()->load('diseases:id,code,name,name_km'),
         ]);
     }
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import Modal from '../ui/Modal.jsx'
 import Button from '../ui/Button.jsx'
@@ -18,8 +18,14 @@ export default function PaymentFormModal({ open, onClose, invoice, onSaved }) {
   })
   const [errors, setErrors] = useState({})
   const [saving, setSaving] = useState(false)
+  const idempotencyKeyRef = useRef(null)
 
   const balance = Number(invoice?.balance ?? 0)
+
+  useEffect(() => {
+    if (!open) return
+    idempotencyKeyRef.current = crypto.randomUUID()
+  }, [open])
 
   useEffect(() => {
     if (!open) return
@@ -27,7 +33,10 @@ export default function PaymentFormModal({ open, onClose, invoice, onSaved }) {
     setErrors({})
   }, [open, balance])
 
-  const set = (key) => (value) => setForm((f) => ({ ...f, [key]: value }))
+  const set = (key) => (value) => {
+    setForm((f) => ({ ...f, [key]: value }))
+    idempotencyKeyRef.current = null
+  }
 
   const handleSubmit = async (event) => {
     event.preventDefault()
@@ -38,6 +47,9 @@ export default function PaymentFormModal({ open, onClose, invoice, onSaved }) {
     setErrors(next)
     if (Object.keys(next).length) return
 
+    const paymentKey = idempotencyKeyRef.current ?? crypto.randomUUID()
+    if (!idempotencyKeyRef.current) idempotencyKeyRef.current = paymentKey
+
     setSaving(true)
     try {
       await invoiceApi.recordPayment(invoice.id, {
@@ -46,6 +58,7 @@ export default function PaymentFormModal({ open, onClose, invoice, onSaved }) {
         reference: form.reference || null,
         paid_at: form.paid_at || null,
         notes: form.notes || null,
+        idempotency_key: paymentKey,
       })
       toast.success('Payment recorded.')
       onSaved?.()

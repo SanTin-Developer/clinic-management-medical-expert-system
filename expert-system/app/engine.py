@@ -56,11 +56,14 @@ _RULE_QUERY = text(
         er.id                AS rule_id,
         er.code              AS rule_code,
         er.name              AS rule_name,
+        er.name_km           AS rule_name_km,
         er.explanation       AS explanation,
+        er.explanation_km    AS explanation_km,
         er.priority          AS priority,
         er.confidence_score  AS confidence_score,
         d.code               AS disease_code,
         d.name               AS disease_name,
+        d.name_km            AS disease_name_km,
         d.severity_level     AS severity_level,
         erc.id               AS condition_id,
         erc.symptom_id       AS symptom_id,
@@ -114,12 +117,15 @@ class Rule:
     rule_id: int
     rule_code: str
     rule_name: str
-    explanation: str | None
     priority: int
     confidence_score: float
     disease_code: str
     disease_name: str
     severity_level: str | None
+    rule_name_km: str | None = None
+    explanation: str | None = None
+    explanation_km: str | None = None
+    disease_name_km: str | None = None
     conditions: List[RuleCondition] = field(default_factory=list)
     is_eligible: bool = True
     ineligibility_reason: str | None = None
@@ -156,11 +162,14 @@ def _build_rules(rows: Iterable[dict]) -> List[Rule]:
                 rule_id=rule_id,
                 rule_code=row["rule_code"],
                 rule_name=row["rule_name"],
+                rule_name_km=row["rule_name_km"],
                 explanation=row["explanation"],
+                explanation_km=row["explanation_km"],
                 priority=int(row["priority"] or 0),
                 confidence_score=float(row["confidence_score"] or 0),
                 disease_code=row["disease_code"],
                 disease_name=row["disease_name"],
+                disease_name_km=row["disease_name_km"],
                 severity_level=row["severity_level"],
             )
             rules[rule_id] = rule
@@ -292,13 +301,16 @@ def match_rules(
             MatchedRule(
                 rule_code=rule.rule_code,
                 rule_name=rule.rule_name,
+                rule_name_km=rule.rule_name_km,
                 disease_code=rule.disease_code,
                 disease_name=rule.disease_name,
+                disease_name_km=rule.disease_name_km,
                 priority=rule.priority,
                 confidence_score=rule.confidence_score,
                 severity_level=rule.severity_level,
                 matched_condition_groups=matched_groups,
                 explanation=rule.explanation,
+                explanation_km=rule.explanation_km,
             )
         )
 

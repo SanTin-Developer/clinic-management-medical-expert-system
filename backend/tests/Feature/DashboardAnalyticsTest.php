@@ -70,12 +70,12 @@ class DashboardAnalyticsTest extends TestCase
             'status' => 'scheduled',
         ]);
 
-        $medicine = Medicine::factory()->create(['reorder_level' => 10]);
+        $medicine = Medicine::factory()->create(['price' => 80, 'reorder_level' => 10]);
         InventoryItem::create(['medicine_id' => $medicine->id, 'quantity' => 3]);
 
         $invoiceId = $this->postJson('/api/v1/invoices', [
             'patient_id' => $patient->id,
-            'items' => [['description' => 'Consultation', 'quantity' => 1, 'unit_price' => 80]],
+            'items' => [['medicine_id' => $medicine->id, 'quantity' => 1]],
         ])->assertCreated()->json('data.id');
 
         $this->postJson("/api/v1/invoices/{$invoiceId}/payments", [

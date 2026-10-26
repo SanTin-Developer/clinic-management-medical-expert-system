@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Appointment;
+use App\Models\Medicine;
 use App\Models\Patient;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -89,10 +90,11 @@ class SoftDeleteTest extends TestCase
     {
         $this->actingAsRole('Admin');
         $patient = Patient::factory()->create();
+        $medicine = Medicine::factory()->create(['price' => 50]);
 
         $invoiceId = $this->postJson('/api/v1/invoices', [
             'patient_id' => $patient->id,
-            'items' => [['description' => 'Service', 'quantity' => 1, 'unit_price' => 50]],
+            'items' => [['medicine_id' => $medicine->id, 'quantity' => 1]],
         ])->assertCreated()->json('data.id');
 
         $this->deleteJson("/api/v1/invoices/{$invoiceId}")->assertOk();

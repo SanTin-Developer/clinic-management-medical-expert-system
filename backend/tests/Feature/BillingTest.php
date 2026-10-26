@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Invoice;
+use App\Models\Medicine;
 use App\Models\Patient;
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
@@ -33,10 +34,16 @@ class BillingTest extends TestCase
 
     private function createInvoice(Patient $patient): int
     {
+        $medicine = Medicine::factory()->create([
+            'price' => 50,
+            'is_active' => true,
+            'is_recalled' => false,
+        ]);
+
         $response = $this->postJson('/api/v1/invoices', [
             'patient_id' => $patient->id,
             'items' => [
-                ['description' => 'Consultation', 'quantity' => 2, 'unit_price' => 50],
+                ['medicine_id' => $medicine->id, 'quantity' => 2],
             ],
         ])->assertCreated();
 

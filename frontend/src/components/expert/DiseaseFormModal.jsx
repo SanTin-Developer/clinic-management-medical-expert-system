@@ -97,7 +97,7 @@ export default function DiseaseFormModal({ open, onClose, initial, onSaved }) {
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Name (Khmer)" htmlFor="d-name-km">
-            <Input id="d-name-km" value={form.name_km} onChange={(e) => set('name_km')(e.target.value)} />
+            <Input id="d-name-km" lang="km" value={form.name_km} onChange={(e) => set('name_km')(e.target.value)} />
           </Field>
           <Field label="Category" htmlFor="d-category">
             <Input id="d-category" value={form.category} onChange={(e) => set('category')(e.target.value)} placeholder="e.g. Respiratory" />

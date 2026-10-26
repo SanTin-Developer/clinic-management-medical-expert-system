@@ -1,0 +1,44 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        if (! Schema::hasColumn('expert_rules', 'name_km')) {
+            Schema::table('expert_rules', function (Blueprint $table) {
+                $table->string('name_km')->nullable()->after('name');
+            });
+        }
+
+        if (! Schema::hasColumn('expert_rules', 'explanation_km')) {
+            Schema::table('expert_rules', function (Blueprint $table) {
+                $table->text('explanation_km')->nullable()->after('explanation');
+            });
+        }
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        if (Schema::hasColumn('expert_rules', 'explanation_km')) {
+            Schema::table('expert_rules', function (Blueprint $table) {
+                $table->dropColumn('explanation_km');
+            });
+        }
+
+        if (Schema::hasColumn('expert_rules', 'name_km')) {
+            Schema::table('expert_rules', function (Blueprint $table) {
+                $table->dropColumn('name_km');
+            });
+        }
+    }
+};

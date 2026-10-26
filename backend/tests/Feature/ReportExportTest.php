@@ -50,10 +50,11 @@ class ReportExportTest extends TestCase
     {
         $this->actingAsRole('Admin');
         $patient = Patient::factory()->create();
+        $medicine = Medicine::factory()->create(['price' => 80]);
 
         $invoiceId = $this->postJson('/api/v1/invoices', [
             'patient_id' => $patient->id,
-            'items' => [['description' => 'Service', 'quantity' => 1, 'unit_price' => 80]],
+            'items' => [['medicine_id' => $medicine->id, 'quantity' => 1]],
         ])->assertCreated()->json('data.id');
 
         $this->postJson("/api/v1/invoices/{$invoiceId}/payments", [
@@ -114,10 +115,11 @@ class ReportExportTest extends TestCase
     {
         $this->actingAsRole('Admin');
         $patient = Patient::factory()->create();
+        $medicine = Medicine::factory()->create(['price' => 80]);
 
         $invoiceId = $this->postJson('/api/v1/invoices', [
             'patient_id' => $patient->id,
-            'items' => [['description' => 'Service', 'quantity' => 1, 'unit_price' => 80]],
+            'items' => [['medicine_id' => $medicine->id, 'quantity' => 1]],
         ])->assertCreated()->json('data.id');
 
         $this->postJson("/api/v1/invoices/{$invoiceId}/payments", [

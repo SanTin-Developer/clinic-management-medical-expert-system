@@ -45,6 +45,7 @@ class KhmerDemoDataSeeder extends Seeder
             $this->call(RolePermissionSeeder::class);
             $this->call(KnowledgeBaseSeeder::class);
             $this->seedKnowledgeBaseKhmer();
+            $this->call(ExpertRuleKhmerSeeder::class);
 
             $users = $this->seedUsers();
             $medicines = $this->seedMedicines();

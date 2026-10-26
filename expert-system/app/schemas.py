@@ -48,8 +48,10 @@ class MatchedRule(BaseModel):
 
     rule_code: str
     rule_name: str
+    rule_name_km: Optional[str] = None
     disease_code: str
     disease_name: str
+    disease_name_km: Optional[str] = None
     priority: int = Field(
         description="Configuration ordering only. Higher values are returned "
         "first. This is not a severity or probability score."
@@ -60,6 +62,7 @@ class MatchedRule(BaseModel):
         description="Identifiers of the condition groups (OR clauses) that matched."
     )
     explanation: Optional[str] = None
+    explanation_km: Optional[str] = None
 
 
 class EvaluateResult(BaseModel):

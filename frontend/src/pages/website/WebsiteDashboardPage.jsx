@@ -68,11 +68,12 @@ export default function WebsiteDashboardPage() {
         <ErrorState onRetry={refetch} />
       ) : (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
             <StatCard label="Pages" value={stats.pages ?? 0} sub={`${stats.pages_published ?? 0} published`} icon={FileText} tone="brand" loading={isLoading} />
             <StatCard label="Services" value={stats.services ?? 0} sub={`${stats.services_published ?? 0} published`} icon={Stethoscope} tone="green" loading={isLoading} />
             <StatCard label="Team" value={stats.team ?? 0} sub={`${stats.team_published ?? 0} published`} icon={Users} tone="blue" loading={isLoading} />
             <StatCard label="Articles" value={stats.articles ?? 0} sub={`${stats.articles_published ?? 0} published`} icon={Newspaper} tone="amber" loading={isLoading} />
+            <StatCard label="Contact Messages" value={stats.contact_messages ?? 0} sub={`${stats.contact_messages_unread ?? 0} unread`} icon={Inbox} tone="red" loading={isLoading} />
           </div>
 
           <div className="mt-6 grid gap-6 lg:grid-cols-3">

@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
-import { CalendarPlus, Calendar, CalendarClock, CheckCircle2, Clock, Pencil, Trash2 } from 'lucide-react'
+import { CalendarPlus, Calendar, CalendarClock, CheckCircle2, Clock, Pencil, Trash2, X } from 'lucide-react'
 import StatCard from '../components/ui/StatCard.jsx'
 import { appointmentApi } from '../api/appointments.js'
 import { usePaginated } from '../hooks/usePaginated.js'
@@ -17,21 +17,38 @@ import Pagination from '../components/ui/Pagination.jsx'
 import { RowSkeleton } from '../components/ui/Skeleton.jsx'
 import { EmptyState } from '../components/ui/State.jsx'
 import AppointmentFormModal from '../components/appointments/AppointmentFormModal.jsx'
+import Field from '../components/ui/Field.jsx'
+import Input from '../components/ui/Input.jsx'
 import { formatDate, formatTime, patientFullName } from '../utils/format.js'
 import { statusBadgeFor, APPOINTMENT_STATUS } from '../utils/status.js'
 
 export default function AppointmentListPage() {
   const { can } = useAuth()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [page, setPage] = useState(1)
   const [status, setStatus] = useState('all')
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState(null)
   const [deleting, setDeleting] = useState(null)
 
+  const date = searchParams.get('date') ?? ''
+
   const query = usePaginated(['appointments'], (params) => appointmentApi.list(params), {
     page,
+    params: { date: date || undefined },
   })
+
+  const updateDate = (value) => {
+    const next = new URLSearchParams(searchParams)
+    if (value) {
+      next.set('date', value)
+    } else {
+      next.delete('date')
+    }
+    setSearchParams(next, { replace: true })
+    setPage(1)
+  }
 
   const all = query.data?.data ?? []
   const stats = query.data?.stats ?? {}
@@ -116,13 +133,33 @@ export default function AppointmentListPage() {
 
       <Card className="px-0 pb-0">
         <div className="px-5 pt-4">
+          <div className="flex flex-wrap items-end gap-3">
+            <Field label="Date" htmlFor="appointment-date" className="space-y-1">
+              <Input
+                id="appointment-date"
+                type="date"
+                value={date}
+                onChange={(event) => updateDate(event.target.value)}
+                className="w-44"
+              />
+            </Field>
+            {date ? (
+              <button
+                type="button"
+                onClick={() => updateDate('')}
+                className="mb-0.5 inline-flex h-10 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-ink-muted transition-colors hover:bg-canvas hover:text-ink"
+              >
+                <X className="size-4" aria-hidden /> Clear date
+              </button>
+            ) : null}
+          </div>
           <Tabs
             value={status}
             onChange={(v) => {
               setStatus(v)
               setPage(1)
             }}
-            className="border-b-0"
+            className="mt-3 border-b-0"
             tabs={[
               { value: 'all', label: 'All', count: counts.all },
               { value: 'scheduled', label: 'Scheduled', count: counts.scheduled },
@@ -141,10 +178,18 @@ export default function AppointmentListPage() {
           <p className="py-6 text-center text-sm text-red-600">{query.error.message}</p>
         ) : all.length === 0 ? (
           <EmptyState
-            title="No appointments yet"
-            message="Create an appointment to get started."
+            title={date ? 'No appointments on this date' : 'No appointments yet'}
+            message={
+              date
+                ? `Nothing is scheduled for ${formatDate(date)}.`
+                : 'Create an appointment to get started.'
+            }
             action={
-              can('appointments.create') ? (
+              date ? (
+                <Button size="sm" variant="outline" onClick={() => updateDate('')}>
+                  Show all appointments
+                </Button>
+              ) : can('appointments.create') ? (
                 <Button
                   size="sm"
                   onClick={() => {

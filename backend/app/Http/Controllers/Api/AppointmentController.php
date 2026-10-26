@@ -27,20 +27,27 @@ class AppointmentController extends Controller
         // Frontline nurses only ever see appointments for assigned patients.
         $access->scopeByPatientColumn($query, $request->user());
 
-        $appointments = (clone $query)->paginate(15);
+        $statsQuery = clone $query;
+
+        if ($date = $request->query('date')) {
+            $query->whereDate('appointment_date', $date);
+        }
+
+        $appointments = $query->paginate(15);
 
         $today = now()->toDateString();
 
         // One grouped query for every status bucket instead of one count per status.
-        $byStatus = (clone $query)
+        $byStatus = (clone $statsQuery)
+            ->reorder()
             ->selectRaw('status, count(*) as total')
             ->groupBy('status')
             ->pluck('total', 'status');
 
         $stats = [
-            'total' => $appointments->total(),
-            'today' => (clone $query)->whereDate('appointment_date', $today)->count(),
-            'this_month' => (clone $query)->whereMonth('appointment_date', now()->month)
+            'total' => (clone $statsQuery)->count(),
+            'today' => (clone $statsQuery)->whereDate('appointment_date', $today)->count(),
+            'this_month' => (clone $statsQuery)->whereMonth('appointment_date', now()->month)
                 ->whereYear('appointment_date', now()->year)
                 ->count(),
             'scheduled' => (int) ($byStatus['scheduled'] ?? 0),

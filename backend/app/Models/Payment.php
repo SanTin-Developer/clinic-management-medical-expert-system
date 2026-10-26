@@ -12,12 +12,19 @@ class Payment extends Model
 
     protected $fillable = [
         'invoice_id',
+        'admission_id',
+        'admission_deposit_id',
         'amount',
         'method',
         'reference',
+        'idempotency_key',
         'paid_at',
         'received_by',
         'notes',
+    ];
+
+    protected $hidden = [
+        'idempotency_key',
     ];
 
     protected function casts(): array
@@ -31,6 +38,16 @@ class Payment extends Model
     public function invoice(): BelongsTo
     {
         return $this->belongsTo(Invoice::class);
+    }
+
+    public function admission(): BelongsTo
+    {
+        return $this->belongsTo(Admission::class);
+    }
+
+    public function admissionDeposit(): BelongsTo
+    {
+        return $this->belongsTo(AdmissionDeposit::class);
     }
 
     public function receivedBy(): BelongsTo

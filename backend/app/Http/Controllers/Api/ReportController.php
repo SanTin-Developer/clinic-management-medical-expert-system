@@ -43,6 +43,7 @@ class ReportController extends Controller
         $monthStart = now()->startOfMonth();
 
         $appointmentsByStatus = Appointment::query()
+            ->reorder()
             ->selectRaw('status, count(*) as total')
             ->groupBy('status')
             ->pluck('total', 'status');
@@ -115,11 +116,13 @@ class ReportController extends Controller
         }
 
         $byStatus = (clone $query)
+            ->reorder()
             ->selectRaw('status, count(*) as total')
             ->groupBy('status')
             ->pluck('total', 'status');
 
         $byDoctor = (clone $query)
+            ->reorder()
             ->selectRaw('doctor_id, count(*) as total')
             ->groupBy('doctor_id')
             ->pluck('total', 'doctor_id');
@@ -307,6 +310,7 @@ class ReportController extends Controller
         $rows = [['Total', 'All appointments', (clone $query)->count()]];
 
         $byStatus = (clone $query)
+            ->reorder()
             ->selectRaw('status, count(*) as total')
             ->groupBy('status')
             ->pluck('total', 'status');
@@ -316,6 +320,7 @@ class ReportController extends Controller
         }
 
         $byDoctor = (clone $query)
+            ->reorder()
             ->selectRaw('doctor_id, count(*) as total')
             ->groupBy('doctor_id')
             ->pluck('total', 'doctor_id');

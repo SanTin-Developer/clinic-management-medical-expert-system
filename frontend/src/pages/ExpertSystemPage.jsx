@@ -82,10 +82,10 @@ function AnalyzeTab({ canUse, canViewRules }) {
       .filter((s) => (onlyRuleLinked && canViewRules ? ruleSymptomIds.has(s.id) : true))
       .filter((s) =>
         needle
-          ? `${s.name ?? ''} ${s.code ?? ''}`.toLowerCase().includes(needle)
+          ? `${s.name ?? ''} ${s.name_km ?? ''} ${s.code ?? ''}`.toLowerCase().includes(needle)
           : true,
       )
-      .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''))
+      .sort((a, b) => (a.name_km || a.name || '').localeCompare(b.name_km || b.name || ''))
   }, [symptoms.data, search, onlyRuleLinked, ruleSymptomIds, canViewRules])
 
   const selectedSymptoms = useMemo(
@@ -146,11 +146,11 @@ function AnalyzeTab({ canUse, canViewRules }) {
                     key={s.id}
                     className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-brand-soft py-1 pl-2.5 pr-1 text-xs font-medium text-brand-dark"
                   >
-                    <span className="max-w-[180px] truncate">{s.name}</span>
+                    <span className="max-w-[180px] truncate">{s.name_km || s.name}</span>
                     <button
                       type="button"
                       onClick={() => toggle(s.id)}
-                      aria-label={`Remove ${s.name}`}
+                      aria-label={`Remove ${s.name_km || s.name}`}
                       className="grid size-4 shrink-0 place-items-center rounded-full text-brand transition-colors hover:bg-brand hover:text-white"
                     >
                       <X className="size-3" aria-hidden />
@@ -209,8 +209,10 @@ function AnalyzeTab({ canUse, canViewRules }) {
                         onChange={() => toggle(s.id)}
                       />
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate font-medium text-ink">{s.name}</span>
-                        {s.code ? <span className="block font-mono text-xs text-ink-muted">{s.code}</span> : null}
+                        <span className="block truncate font-medium text-ink">{s.name_km || s.name}</span>
+                        <span className="block truncate text-xs text-ink-muted">
+                          {[s.name_km ? s.name : null, s.code].filter(Boolean).join(' · ')}
+                        </span>
                       </span>
                       {inRule ? (
                         <span className="shrink-0 rounded-full bg-brand-soft px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand">
@@ -256,7 +258,7 @@ function AnalyzeTab({ canUse, canViewRules }) {
               <p className="rounded-xl bg-canvas px-4 py-3 text-sm text-ink-muted">
                 Not part of any rule:{' '}
                 <span className="font-medium text-ink">
-                  {unusedSelected.map((s) => s.name).join(', ')}
+                  {unusedSelected.map((s) => s.name_km || s.name).join(', ')}
                 </span>
                 . Selecting only these can never match.
               </p>
@@ -278,7 +280,10 @@ function AnalyzeTab({ canUse, canViewRules }) {
                 <li key={rule.rule_code} className="rounded-2xl border border-line p-4">
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div>
-                      <p className="text-base font-semibold text-ink">{rule.rule_name}</p>
+                      <p className="text-base font-semibold text-ink">{rule.rule_name_km || rule.rule_name}</p>
+                      {rule.rule_name_km ? (
+                        <p className="text-xs text-ink-muted">{rule.rule_name}</p>
+                      ) : null}
                       <p className="font-mono text-xs text-ink-muted">{rule.rule_code}</p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -291,7 +296,12 @@ function AnalyzeTab({ canUse, canViewRules }) {
                   <p className="mt-2 text-lg font-semibold text-brand">{(Number(rule.confidence_score) * 100).toFixed(0)}% confidence</p>
                   <div className="mt-1 flex flex-wrap gap-1.5">
                     {[
-                      ['Disease', rule.disease_name ?? rule.disease_code],
+                      [
+                        'Disease',
+                        rule.disease_name_km && rule.disease_name
+                          ? `${rule.disease_name_km} (${rule.disease_name})`
+                          : rule.disease_name_km || rule.disease_name || rule.disease_code,
+                      ],
                       ['Matched groups', rule.matched_condition_groups?.join(', ') ?? '—'],
                     ].map(([label, value]) => (
                       <span key={label} className="inline-flex items-center gap-1.5 rounded-full bg-canvas px-3 py-1 text-xs text-ink-muted">
@@ -299,8 +309,13 @@ function AnalyzeTab({ canUse, canViewRules }) {
                       </span>
                     ))}
                   </div>
-                  {rule.explanation ? (
-                    <p className="mt-3 text-sm leading-relaxed text-ink-muted">{rule.explanation}</p>
+                  {rule.explanation_km || rule.explanation ? (
+                    <div className="mt-3 space-y-1">
+                      <p className="text-sm leading-relaxed text-ink-muted">{rule.explanation_km || rule.explanation}</p>
+                      {rule.explanation_km && rule.explanation ? (
+                        <p className="text-xs leading-relaxed text-ink-muted">{rule.explanation}</p>
+                      ) : null}
+                    </div>
                   ) : null}
                 </li>
               ))}
@@ -338,7 +353,7 @@ function KnowledgeBaseTab({ canView, canManage }) {
   const all = query.data?.data ?? []
   const items = search
     ? all.filter((it) =>
-        [it.name, it.code, it.name_km, it.disease?.name].filter(Boolean).some((v) => String(v).toLowerCase().includes(search.toLowerCase())),
+        [it.name, it.code, it.name_km, it.explanation_km, it.disease?.name, it.disease?.name_km].filter(Boolean).some((v) => String(v).toLowerCase().includes(search.toLowerCase())),
       )
     : all
 
@@ -418,6 +433,7 @@ function KnowledgeBaseTab({ canView, canManage }) {
                   <>
                     <th className="px-4 py-3 font-semibold">Code</th>
                     <th className="px-4 py-3 font-semibold">Name</th>
+                    <th className="px-4 py-3 font-semibold">Khmer name</th>
                     <th className="px-4 py-3 font-semibold">Disease</th>
                     <th className="px-4 py-3 font-semibold">Priority</th>
                     <th className="px-4 py-3 font-semibold">Confidence</th>
@@ -428,7 +444,8 @@ function KnowledgeBaseTab({ canView, canManage }) {
                   <>
                     <th className="px-4 py-3 font-semibold">Code</th>
                     <th className="px-4 py-3 font-semibold">Name</th>
-                    <th className="px-4 py-3 font-semibold">{kind === 'diseases' ? 'Category' : 'Khmer name'}</th>
+                    <th className="px-4 py-3 font-semibold">Khmer name</th>
+                    {kind === 'diseases' ? <th className="px-4 py-3 font-semibold">Category</th> : null}
                     <th className="px-4 py-3 font-semibold">Severity</th>
                     <th className="px-4 py-3 font-semibold">Status</th>
                     <th className="px-4 py-3 font-semibold">Linked</th>
@@ -444,13 +461,21 @@ function KnowledgeBaseTab({ canView, canManage }) {
                   <td className="px-4 py-3 font-medium text-ink">{it.name}</td>
                   {kind === 'rules' ? (
                     <>
-                      <td className="px-4 py-3 text-ink-muted">{it.disease?.name ?? `#${it.disease_id}`}</td>
+                      <td className="px-4 py-3 text-ink-muted">{it.name_km || '—'}</td>
+                      <td className="px-4 py-3 text-ink-muted">
+                        {it.disease?.name_km && it.disease?.name
+                          ? `${it.disease.name_km} (${it.disease.name})`
+                          : it.disease?.name_km || it.disease?.name || `#${it.disease_id}`}
+                      </td>
                       <td className="px-4 py-3 text-ink-muted">{it.priority}</td>
                       <td className="px-4 py-3 text-ink-muted">{Number(it.confidence_score) * 100}%</td>
                     </>
                   ) : (
                     <>
-                      <td className="px-4 py-3 text-ink-muted">{kind === 'diseases' ? (it.category || '—') : (it.name_km || '—')}</td>
+                      <td className="px-4 py-3 text-ink-muted">{it.name_km || '—'}</td>
+                      {kind === 'diseases' ? (
+                        <td className="px-4 py-3 text-ink-muted">{it.category || '—'}</td>
+                      ) : null}
                       <td className="px-4 py-3">
                         <Badge tone={DISEASE_SEVERITY[it.severity_level]?.tone ?? 'gray'}>
                           {(DISEASE_SEVERITY[it.severity_level]?.label ?? it.severity_level) ?? 'Not set'}

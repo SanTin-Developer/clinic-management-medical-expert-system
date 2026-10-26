@@ -67,6 +67,38 @@ class AppointmentTest extends TestCase
             ->assertStatus(422);
     }
 
+    public function test_appointments_can_be_filtered_by_date(): void
+    {
+        $this->actingAsRole('Receptionist');
+        $doctor = $this->userWithRole('Doctor');
+        $patient = Patient::factory()->create();
+
+        $matching = Appointment::create([
+            'appointment_number' => 'APT-000002',
+            'patient_id' => $patient->id,
+            'doctor_id' => $doctor->id,
+            'appointment_date' => '2030-03-01',
+            'appointment_time' => '09:00',
+            'status' => 'scheduled',
+        ]);
+
+        Appointment::create([
+            'appointment_number' => 'APT-000003',
+            'patient_id' => $patient->id,
+            'doctor_id' => $doctor->id,
+            'appointment_date' => '2030-03-02',
+            'appointment_time' => '09:00',
+            'status' => 'scheduled',
+        ]);
+
+        $this->getJson('/api/v1/appointments?date=2030-03-01')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $matching->id)
+            ->assertJsonPath('total', 1)
+            ->assertJsonPath('stats.total', 2);
+    }
+
     public function test_receptionist_can_cancel_an_appointment(): void
     {
         $this->actingAsRole('Receptionist');

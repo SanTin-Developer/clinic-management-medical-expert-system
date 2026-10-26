@@ -163,6 +163,15 @@ def load_by_code(db_session: Session) -> dict:
     return {rule.rule_code: rule for rule in load_active_rules(db_session)}
 
 
+def test_load_includes_khmer_fields(db_session: Session):
+    rules = load_by_code(db_session)
+    rule = rules["RULE-AND"]
+
+    assert rule.rule_name_km == "ច្បាប់ AND"
+    assert rule.explanation_km == "ការពន្យល់សម្រាប់ច្បាប់ AND"
+    assert rule.disease_name_km == "ជំងឺ អេ"
+
+
 def test_load_excludes_inactive_rule(db_session: Session):
     rules = load_by_code(db_session)
     assert "RULE-INACTIVE" not in rules

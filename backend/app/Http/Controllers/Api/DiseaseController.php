@@ -15,7 +15,7 @@ class DiseaseController extends Controller
     {
         $this->authorize('viewAny', Disease::class);
 
-        $query = Disease::with('symptoms:id,code,name')->withCount('symptoms');
+        $query = Disease::with('symptoms:id,code,name,name_km')->withCount('symptoms');
         $statsBase = Disease::query();
 
         if ($search = $request->query('search')) {
@@ -68,7 +68,7 @@ class DiseaseController extends Controller
 
         return response()->json([
             'message' => 'Disease created successfully.',
-            'data' => $disease->load('symptoms:id,code,name'),
+            'data' => $disease->load('symptoms:id,code,name,name_km'),
         ], 201);
     }
 
@@ -78,8 +78,8 @@ class DiseaseController extends Controller
 
         return response()->json([
             'data' => $disease->load([
-                'symptoms:id,code,name',
-                'expertRules:id,code,name,disease_id',
+                'symptoms:id,code,name,name_km',
+                'expertRules:id,code,name,name_km,disease_id',
             ]),
         ]);
     }
@@ -107,7 +107,7 @@ class DiseaseController extends Controller
 
         return response()->json([
             'message' => 'Disease updated successfully.',
-            'data' => $disease->fresh()->load('symptoms:id,code,name'),
+            'data' => $disease->fresh()->load('symptoms:id,code,name,name_km'),
         ]);
     }
 

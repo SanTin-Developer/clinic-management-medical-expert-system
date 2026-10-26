@@ -215,12 +215,76 @@ class AuthController extends Controller
         return response()->json(['message' => 'All trusted devices have been revoked.']);
     }
 
+    // list active sessions (personal access tokens)
+    public function sessions(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $currentTokenId = $user->currentAccessToken()?->id;
+
+        $tokens = $user->tokens()
+            ->orderByDesc('last_used_at')
+            ->orderByDesc('created_at')
+            ->get();
+
+        return response()->json([
+            'data' => $tokens->map(function ($token) use ($currentTokenId) {
+                return [
+                    'id' => $token->id,
+                    'name' => $token->name,
+                    'last_used_at' => $token->last_used_at,
+                    'created_at' => $token->created_at,
+                    'expires_at' => $token->expires_at,
+                    'is_current' => $currentTokenId !== null && $currentTokenId === $token->id,
+                ];
+            }),
+        ]);
+    }
+
+    // revoke a single session/token
+    public function revokeSession(Request $request, int|string $tokenId): JsonResponse
+    {
+        $user = $request->user();
+        $token = $user->tokens()->where('id', $tokenId)->first();
+
+        if (! $token) {
+            abort(404);
+        }
+
+        if ($user->currentAccessToken() && $user->currentAccessToken()->id === $token->id) {
+            return response()->json(['message' => 'Cannot revoke the current session.'], 422);
+        }
+
+        $token->delete();
+
+        $this->events->record(SecurityEventService::LOGOUT, $user, 'info', ['action' => 'session_revoked'], $request);
+
+        return response()->json(['message' => 'Session revoked.']);
+    }
+
+    // revoke all other sessions
+    public function revokeOtherSessions(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $currentTokenId = $user->currentAccessToken()?->id;
+
+        $query = $user->tokens();
+        if ($currentTokenId) {
+            $query->where('id', '!=', $currentTokenId);
+        }
+
+        $query->delete();
+
+        $this->events->record(SecurityEventService::LOGOUT, $user, 'info', ['action' => 'other_sessions_revoked'], $request);
+
+        return response()->json(['message' => 'Other sessions revoked.']);
+    }
+
     // logout current user (revoke the token and clear the device cookie)
     public function logout(Request $request): JsonResponse
     {
         $user = $request->user();
 
-        $user->currentAccessToken()->delete();
+        $user->currentAccessToken()?->delete();
 
         $this->events->record(SecurityEventService::LOGOUT, $user, 'info', [], $request);
         $this->activity->record(ActivityLog::EVENT_LOGOUT, 'Signed out', null, [], $user, $request);
@@ -351,12 +415,16 @@ class AuthController extends Controller
             'name' => $user->name,
             'username' => $user->username,
             'email' => $user->email,
+            'phone' => $user->phone,
             'email_verified' => $user->hasVerifiedEmail(),
             'account_status' => $user->account_status,
             'two_factor_enabled' => $user->hasTwoFactorEnabled(),
             'must_change_password' => (bool) $user->must_change_password,
             'roles' => $user->getRoleNames(),
             'permissions' => $user->getAllPermissions()->pluck('name'),
+            'avatar_url' => $user->avatar_path ? asset('storage/'.$user->avatar_path) : null,
+            'timezone' => $user->timezone,
+            'locale' => $user->locale,
         ];
     }
 

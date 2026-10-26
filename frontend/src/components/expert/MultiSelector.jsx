@@ -65,8 +65,10 @@ export default function SymptomMultiSelect({ value, onChange, excludeIds = [], d
                   }}
                 />
                 <span className="min-w-0">
-                  <span className="block truncate font-medium text-ink">{s.name}</span>
-                  {s.code ? <span className="block font-mono text-xs text-ink-muted">{s.code}</span> : null}
+                  <span className="block truncate font-medium text-ink">{s.name_km || s.name}</span>
+                  <span className="block truncate text-xs text-ink-muted">
+                    {[s.name_km ? s.name : null, s.code].filter(Boolean).join(' · ')}
+                  </span>
                 </span>
               </span>
               {disabledOption ? <span className="text-xs text-ink-muted">linked</span> : null}
@@ -105,8 +107,10 @@ export function MultiSelectOptions({ value, onChange, excludeIds = [], disabled,
                   }}
                 />
                 <span className="min-w-0">
-                  <span className="block truncate font-medium text-ink">{item.name}</span>
-                  {item.code ? <span className="block font-mono text-xs text-ink-muted">{item.code}</span> : null}
+                  <span className="block truncate font-medium text-ink">{item.name_km || item.name}</span>
+                  <span className="block truncate text-xs text-ink-muted">
+                    {[item.name_km ? item.name : null, item.code].filter(Boolean).join(' · ')}
+                  </span>
                 </span>
               </span>
               {disabledOption ? <span className="text-xs text-ink-muted">linked</span> : null}

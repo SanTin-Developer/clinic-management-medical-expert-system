@@ -32,6 +32,7 @@ DDL_STATEMENTS = [
         id INTEGER PRIMARY KEY,
         code TEXT UNIQUE NOT NULL,
         name TEXT NOT NULL,
+        name_km TEXT,
         description TEXT,
         is_active BOOLEAN NOT NULL DEFAULT 1,
         created_at TIMESTAMP,
@@ -43,6 +44,7 @@ DDL_STATEMENTS = [
         id INTEGER PRIMARY KEY,
         code TEXT UNIQUE NOT NULL,
         name TEXT NOT NULL,
+        name_km TEXT,
         description TEXT,
         severity_level TEXT,
         is_active BOOLEAN NOT NULL DEFAULT 1,
@@ -55,8 +57,10 @@ DDL_STATEMENTS = [
         id INTEGER PRIMARY KEY,
         code TEXT UNIQUE NOT NULL,
         name TEXT NOT NULL,
+        name_km TEXT,
         disease_id INTEGER NOT NULL REFERENCES diseases(id),
         explanation TEXT,
+        explanation_km TEXT,
         priority INTEGER NOT NULL DEFAULT 1,
         confidence_score DECIMAL(5, 2) NOT NULL DEFAULT 0,
         is_active BOOLEAN NOT NULL DEFAULT 1,
@@ -103,9 +107,9 @@ SYMPTOMS = [
 
 # Diseases 1-2 active, 3 inactive.
 DISEASES = [
-    (1, "DIS-A", "Illness A", "mild", 1),
-    (2, "DIS-B", "Illness B", "moderate", 1),
-    (3, "DIS-RETIRED", "Retired disease", "severe", 0),
+    (1, "DIS-A", "Illness A", "ជំងឺ អេ", "mild", 1),
+    (2, "DIS-B", "Illness B", None, "moderate", 1),
+    (3, "DIS-RETIRED", "Retired disease", None, "severe", 0),
 ]
 
 # Rules: (id, code, name, disease_id, priority, confidence, is_active)
@@ -122,6 +126,10 @@ RULES = [
     (10, "RULE-TIE-A", "Tie rule A", 1, 8, "0.10", 1),
     (11, "RULE-TIE-B", "Tie rule B", 1, 8, "0.20", 1),
 ]
+
+RULE_TRANSLATIONS = {
+    "RULE-AND": ("ច្បាប់ AND", "ការពន្យល់សម្រាប់ច្បាប់ AND"),
+}
 
 # Conditions: (id, rule_id, symptom_id, operator, expected_value, group)
 CONDITIONS = [
@@ -160,33 +168,37 @@ def _seed(db: Session) -> None:
             {"id": symptom_id, "code": code, "name": name, "is_active": is_active},
         )
 
-    for disease_id, code, name, severity, is_active in DISEASES:
+    for disease_id, code, name, name_km, severity, is_active in DISEASES:
         db.execute(
             text(
-                "INSERT INTO diseases (id, code, name, severity_level, is_active) "
-                "VALUES (:id, :code, :name, :severity, :is_active)"
+                "INSERT INTO diseases (id, code, name, name_km, severity_level, is_active) "
+                "VALUES (:id, :code, :name, :name_km, :severity, :is_active)"
             ),
             {
                 "id": disease_id,
                 "code": code,
                 "name": name,
+                "name_km": name_km,
                 "severity": severity,
                 "is_active": is_active,
             },
         )
 
     for rule_id, code, name, disease_id, priority, confidence, is_active in RULES:
+        name_km, explanation_km = RULE_TRANSLATIONS.get(code, (None, None))
         db.execute(
             text(
                 "INSERT INTO expert_rules "
-                "(id, code, name, disease_id, priority, confidence_score, is_active) "
-                "VALUES (:id, :code, :name, :disease_id, :priority, :confidence, :is_active)"
+                "(id, code, name, name_km, disease_id, explanation_km, priority, confidence_score, is_active) "
+                "VALUES (:id, :code, :name, :name_km, :disease_id, :explanation_km, :priority, :confidence, :is_active)"
             ),
             {
                 "id": rule_id,
                 "code": code,
                 "name": name,
+                "name_km": name_km,
                 "disease_id": disease_id,
+                "explanation_km": explanation_km,
                 "priority": priority,
                 "confidence": confidence,
                 "is_active": is_active,

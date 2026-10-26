@@ -17,12 +17,14 @@ export default function ExpertRuleFormModal({ open, onClose, initial, onSaved })
   const editing = Boolean(initial?.id)
   const [form, setForm] = useState(() => {
     if (!initial) {
-      return { name: '', disease_id: '', explanation: '', priority: '', confidence_score: '', is_active: true, conditions: [{ ...defaultCondition }] }
+      return { name: '', name_km: '', disease_id: '', explanation: '', explanation_km: '', priority: '', confidence_score: '', is_active: true, conditions: [{ ...defaultCondition }] }
     }
     return {
       name: initial.name ?? '',
+      name_km: initial.name_km ?? '',
       disease_id: initial.disease_id ?? '',
       explanation: initial.explanation ?? '',
+      explanation_km: initial.explanation_km ?? '',
       priority: initial.priority ?? '',
       confidence_score: initial.confidence_score ?? '',
       is_active: Boolean(initial.is_active),
@@ -72,8 +74,10 @@ export default function ExpertRuleFormModal({ open, onClose, initial, onSaved })
     try {
       const payload = {
         name: form.name.trim(),
+        name_km: form.name_km.trim() || null,
         disease_id: Number(form.disease_id),
         explanation: form.explanation.trim() || null,
+        explanation_km: form.explanation_km.trim() || null,
         priority: form.priority === '' ? 0 : Number(form.priority),
         confidence_score: form.confidence_score === '' ? 0.5 : Number(form.confidence_score),
         is_active: form.is_active,
@@ -128,6 +132,9 @@ export default function ExpertRuleFormModal({ open, onClose, initial, onSaved })
           <Field label="Name" htmlFor="r-name" required error={errors.name}>
             <Input id="r-name" value={form.name} onChange={(e) => set('name')(e.target.value)} invalid={Boolean(errors.name)} />
           </Field>
+          <Field label="Name (Khmer)" htmlFor="r-name-km">
+            <Input id="r-name-km" lang="km" value={form.name_km} onChange={(e) => set('name_km')(e.target.value)} />
+          </Field>
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <Field label="Disease" htmlFor="r-disease" required error={errors.disease_id} className="sm:col-span-2">
@@ -135,7 +142,7 @@ export default function ExpertRuleFormModal({ open, onClose, initial, onSaved })
               <option value="">Select…</option>
               {diseaseOptions.map((d) => (
                 <option key={d.id} value={d.id}>
-                  {d.code} — {d.name}
+                  {d.code} — {d.name_km ? `${d.name_km} (${d.name})` : d.name}
                 </option>
               ))}
             </Select>
@@ -154,6 +161,9 @@ export default function ExpertRuleFormModal({ open, onClose, initial, onSaved })
         </div>
         <Field label="Explanation" htmlFor="r-explanation">
           <Textarea id="r-explanation" rows={2} value={form.explanation} onChange={(e) => set('explanation')(e.target.value)} />
+        </Field>
+        <Field label="Explanation (Khmer)" htmlFor="r-explanation-km">
+          <Textarea id="r-explanation-km" lang="km" rows={2} value={form.explanation_km} onChange={(e) => set('explanation_km')(e.target.value)} />
         </Field>
 
         <div>
@@ -186,7 +196,7 @@ export default function ExpertRuleFormModal({ open, onClose, initial, onSaved })
                     <option value="">Select…</option>
                     {symptomOptions.map((s) => (
                       <option key={s.id} value={s.id}>
-                        {s.name}
+                        {s.name_km || s.name}
                       </option>
                     ))}
                   </Select>

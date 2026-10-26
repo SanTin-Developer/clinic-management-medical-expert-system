@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AccountSecurityController;
 use App\Http\Controllers\Api\ActivityLogController;
+use App\Http\Controllers\Api\AdmissionBillingController;
 use App\Http\Controllers\Api\AdmissionController;
 use App\Http\Controllers\Api\AnnouncementController;
 use App\Http\Controllers\Api\AppointmentController;
@@ -11,6 +12,7 @@ use App\Http\Controllers\Api\AttendanceSessionController;
 use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BedController;
+use App\Http\Controllers\Api\BillableServiceController;
 use App\Http\Controllers\Api\ConsultationController;
 use App\Http\Controllers\Api\ConversationController;
 use App\Http\Controllers\Api\DashboardController;
@@ -59,6 +61,7 @@ use App\Http\Controllers\Api\SymptomController;
 use App\Http\Controllers\Api\TelegramController;
 use App\Http\Controllers\Api\TwoFactorController;
 use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\UserSettingsController;
 use App\Http\Controllers\Api\VitalSignController;
 use App\Http\Controllers\Api\WardController;
 use App\Http\Controllers\Api\WebsiteArticleController;
@@ -171,6 +174,15 @@ Route::prefix('v1')->group(function () {
         Route::get('/auth/devices', [AuthController::class, 'devices']);
         Route::delete('/auth/devices/{device}', [AuthController::class, 'revokeDevice']);
         Route::delete('/auth/devices', [AuthController::class, 'revokeAllDevices']);
+        Route::get('/auth/sessions', [AuthController::class, 'sessions']);
+        Route::delete('/auth/sessions/others', [AuthController::class, 'revokeOtherSessions']);
+        Route::delete('/auth/sessions/{tokenId}', [AuthController::class, 'revokeSession']);
+        Route::get('/user/preferences', [UserSettingsController::class, 'show']);
+        Route::put('/user/preferences', [UserSettingsController::class, 'update']);
+        Route::post('/user/avatar', [UserSettingsController::class, 'updateAvatar']);
+        Route::delete('/user/avatar', [UserSettingsController::class, 'removeAvatar']);
+        Route::post('/user/data-export', [UserSettingsController::class, 'exportData']);
+        Route::delete('/user/account', [UserSettingsController::class, 'deleteAccount']);
 
         // Email verification resend
         Route::post('/auth/email/verification-notification', [EmailVerificationController::class, 'resend']);
@@ -280,6 +292,7 @@ Route::prefix('v1')->group(function () {
         // Billing
         Route::get('/invoices', [InvoiceController::class, 'index']);
         Route::post('/invoices', [InvoiceController::class, 'store']);
+        Route::get('/invoices/medicines', [InvoiceController::class, 'medicines']);
         Route::get('/invoices/{invoice}/pdf', [InvoiceController::class, 'pdf']);
         Route::get('/invoices/{invoice}', [InvoiceController::class, 'show']);
         Route::put('/invoices/{invoice}', [InvoiceController::class, 'update']);
@@ -456,6 +469,18 @@ Route::prefix('v1')->group(function () {
         Route::post('/admissions/{admission}/discharge', [AdmissionController::class, 'discharge']);
         Route::post('/admissions/{admission}/transfer', [AdmissionController::class, 'transfer']);
         Route::post('/admissions/{admission}/cancel', [AdmissionController::class, 'cancel']);
+
+        // Inpatient billing
+        Route::get('/admissions/{admission}/billing', [AdmissionBillingController::class, 'ledger']);
+        Route::post('/admissions/{admission}/billing/room-charges', [AdmissionBillingController::class, 'generateRoomCharges']);
+        Route::post('/admissions/{admission}/billing/charges', [AdmissionBillingController::class, 'addCharge']);
+        Route::post('/admissions/{admission}/billing/daily-invoice', [AdmissionBillingController::class, 'generateDailyInvoice']);
+        Route::post('/admissions/{admission}/billing/payments', [AdmissionBillingController::class, 'recordPayment']);
+        Route::post('/admissions/{admission}/billing/discharge-reconciliation', [AdmissionBillingController::class, 'dischargeReconciliation']);
+        Route::post('/admission-charges/{charge}/void', [AdmissionBillingController::class, 'voidCharge']);
+
+        // Billable services catalog
+        Route::apiResource('billable-services', BillableServiceController::class);
 
         // Nurse-patient assignments
         Route::get('/assignments', [PatientAssignmentController::class, 'index']);

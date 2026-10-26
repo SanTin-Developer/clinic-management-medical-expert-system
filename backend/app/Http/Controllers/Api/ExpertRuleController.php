@@ -17,13 +17,21 @@ class ExpertRuleController extends Controller
         $this->authorize('viewAny', ExpertRule::class);
 
         $query = ExpertRule::with([
-            'disease:id,code,name',
-            'conditions.symptom:id,code,name',
+            'disease:id,code,name,name_km',
+            'conditions.symptom:id,code,name,name_km',
         ]);
         $base = clone $query;
 
         if ($diseaseId = $request->query('disease_id')) {
             $query->where('disease_id', $diseaseId);
+        }
+
+        if ($search = $request->query('search')) {
+            $query->where(function ($builder) use ($search) {
+                $builder->where('name', 'like', "%{$search}%")
+                    ->orWhere('code', 'like', "%{$search}%")
+                    ->orWhere('name_km', 'like', "%{$search}%");
+            });
         }
 
         if ($request->has('is_active')) {
@@ -67,7 +75,7 @@ class ExpertRuleController extends Controller
 
         return response()->json([
             'message' => 'Expert rule created successfully.',
-            'data' => $rule->load(['disease:id,code,name', 'conditions.symptom:id,code,name']),
+            'data' => $rule->load(['disease:id,code,name,name_km', 'conditions.symptom:id,code,name,name_km']),
         ], 201);
     }
 
@@ -77,8 +85,8 @@ class ExpertRuleController extends Controller
 
         return response()->json([
             'data' => $expertRule->load([
-                'disease:id,code,name',
-                'conditions.symptom:id,code,name',
+                'disease:id,code,name,name_km',
+                'conditions.symptom:id,code,name,name_km',
             ]),
         ]);
     }
@@ -115,8 +123,8 @@ class ExpertRuleController extends Controller
         return response()->json([
             'message' => 'Expert rule updated successfully.',
             'data' => $expertRule->fresh()->load([
-                'disease:id,code,name',
-                'conditions.symptom:id,code,name',
+                'disease:id,code,name,name_km',
+                'conditions.symptom:id,code,name,name_km',
             ]),
         ]);
     }
@@ -170,8 +178,10 @@ class ExpertRuleController extends Controller
                 Rule::unique('expert_rules', 'code')->ignore($rule?->id),
             ],
             'name' => [$required, 'string', 'max:255'],
+            'name_km' => ['nullable', 'string', 'max:255'],
             'disease_id' => [$required, 'integer', 'exists:diseases,id'],
             'explanation' => ['nullable', 'string'],
+            'explanation_km' => ['nullable', 'string'],
             'priority' => ['sometimes', 'integer', 'min:0'],
             'confidence_score' => ['sometimes', 'numeric', 'between:0,1'],
             'is_active' => ['sometimes', 'boolean'],

@@ -235,7 +235,13 @@ export default function InvoiceDetailPage() {
         </div>
       )}
 
-      <InvoiceFormModal open={editOpen} onClose={() => setEditOpen(false)} initial={inv} onSaved={() => query.refetch()} />
+      <InvoiceFormModal
+        key={`${inv?.id ?? 'loading'}-${inv?.updated_at ?? ''}`}
+        open={editOpen}
+        onClose={() => setEditOpen(false)}
+        initial={inv}
+        onSaved={() => query.refetch()}
+      />
       <PaymentFormModal open={paymentOpen} onClose={() => setPaymentOpen(false)} invoice={inv} onSaved={() => query.refetch()} />
 
       <ConfirmDialog

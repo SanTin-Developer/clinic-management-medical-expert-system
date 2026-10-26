@@ -95,7 +95,7 @@ export default function SymptomFormModal({ open, onClose, initial, onSaved }) {
           </Field>
         </div>
         <Field label="Name (Khmer)" htmlFor="s-name-km">
-          <Input id="s-name-km" value={form.name_km} onChange={(e) => set('name_km')(e.target.value)} />
+          <Input id="s-name-km" lang="km" value={form.name_km} onChange={(e) => set('name_km')(e.target.value)} />
         </Field>
         <Field label="Description" htmlFor="s-description">
           <Textarea id="s-description" rows={3} value={form.description} onChange={(e) => set('description')(e.target.value)} />

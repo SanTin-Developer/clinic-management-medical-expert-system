@@ -14,8 +14,10 @@ class ExpertRule extends Model
     protected $fillable = [
         'code',
         'name',
+        'name_km',
         'disease_id',
         'explanation',
+        'explanation_km',
         'priority',
         'confidence_score',
         'is_active',
