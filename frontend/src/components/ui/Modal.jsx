@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { X } from 'lucide-react'
 import { cn } from '../../utils/cn.js'
 import { useOverlayFlag } from '../../hooks/useOverlay.js'
+import { useLanguage } from '../../hooks/useLanguage.js'
 
 const SIZES = {
   sm: 'sm:max-w-sm',
@@ -19,6 +20,7 @@ export default function Modal({
   footer,
   size = 'md',
 }) {
+  const { t } = useLanguage()
   useOverlayFlag(open)
 
   useEffect(() => {
@@ -46,7 +48,7 @@ export default function Modal({
       <div
         role="dialog"
         aria-modal="true"
-        aria-label={title ?? 'Dialog'}
+        aria-label={title ?? t('Dialog')}
         className={cn(
           'animate-fade-in relative z-10 max-h-[92vh] w-full overflow-y-auto rounded-t-2xl bg-surface shadow-[var(--shadow-dialog)] sm:rounded-2xl',
           SIZES[size],
@@ -63,7 +65,7 @@ export default function Modal({
             <button
               type="button"
               onClick={onClose}
-              aria-label="Close dialog"
+              aria-label={t('Close dialog')}
               className="no-print rounded-lg p-1.5 text-ink-muted transition-colors hover:bg-canvas hover:text-ink"
             >
               <X className="size-5" aria-hidden />

@@ -1,6 +1,7 @@
 import { Fragment } from 'react'
 import { APP_NAME } from '../../constants/index.js'
 import { cn } from '../../utils/cn.js'
+import { useLanguage } from '../../hooks/useLanguage.js'
 
 export const DEFAULT_SHOWCASE_IMAGE =
   'https://res.cloudinary.com/drercy9vt/image/upload/v1791811187/doctorImage_nzmi1x.avif'
@@ -23,6 +24,8 @@ export default function SplitLayout({
   credit = DEFAULT_CREDIT,
   className,
 }) {
+  const { t } = useLanguage()
+
   return (
     <div className={cn('flex min-h-screen flex-col bg-canvas md:flex-row', className)}>
       <aside className="relative hidden overflow-hidden bg-brand-darker md:flex md:w-1/2" aria-hidden>
@@ -48,7 +51,7 @@ export default function SplitLayout({
         <div className="relative z-10 mt-auto flex w-full flex-col gap-6 p-10 lg:p-14">
           <span
             role="img"
-            aria-label={`${brand} logo`}
+            aria-label={t('{brand} logo', { brand })}
             onContextMenu={(event) => event.preventDefault()}
             onCopy={(event) => event.preventDefault()}
             onCut={(event) => event.preventDefault()}
@@ -71,7 +74,7 @@ export default function SplitLayout({
           >
             {brand}
             <span className="mt-2 block text-lg font-medium text-cyan-100/90 lg:text-xl">
-              A calmer way to run your clinic.
+              {t('A calmer way to run your clinic.')}
             </span>
           </h2>
 
@@ -81,7 +84,7 @@ export default function SplitLayout({
                 <span className="grid size-5 shrink-0 place-items-center rounded-full bg-white/15 ring-1 ring-white/25">
                   <span className="size-1.5 rounded-full bg-cyan-200" aria-hidden />
                 </span>
-                {line}
+                {t(line)}
               </li>
             ))}
           </ul>
@@ -91,7 +94,7 @@ export default function SplitLayout({
               className="animate-fade-in-up mt-2 border-t border-white/15 pt-5 text-xs leading-relaxed text-white/70"
               style={{ animationDelay: '180ms' }}
             >
-              {credit.split('SanTin Dev').map((part, index, parts) => (
+              {t(credit).split('SanTin Dev').map((part, index, parts) => (
                 <Fragment key={index}>
                   {part}
                   {index < parts.length - 1 ? (

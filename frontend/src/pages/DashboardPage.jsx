@@ -17,6 +17,7 @@ import { appointmentApi } from '../api/appointments.js'
 import { prescriptionApi } from '../api/prescriptions.js'
 import { usePaginated } from '../hooks/usePaginated.js'
 import { useAuth } from '../hooks/useAuth.js'
+import { useLanguage } from '../hooks/useLanguage.js'
 import { useDashboardRealtime } from '../hooks/useDashboardRealtime.js'
 import { isRealtimeConfigured } from '../lib/echo.js'
 import StatCard from '../components/ui/StatCard.jsx'
@@ -31,7 +32,10 @@ import DonutChart from '../components/charts/DonutChart.jsx'
 import {
   formatCurrency,
   formatDate,
+  formatLongDate,
+  formatMonth,
   formatNumber,
+  formatShortDate,
   formatTime,
   patientFullName,
 } from '../utils/format.js'
@@ -47,6 +51,8 @@ const STATUS_COLORS = {
 }
 
 const FALLBACK_COLORS = ['#2563eb', '#0d9488', '#f59e0b', '#8b5cf6', '#ef4444', '#0ea5e9']
+
+const TODAY = new Date()
 
 const COMPACT_CURRENCY = new Intl.NumberFormat('en-US', {
   notation: 'compact',
@@ -70,9 +76,11 @@ function ChartSkeleton({ height = 200 }) {
 }
 
 function ChartError({ message }) {
+  const { t } = useLanguage()
+
   return (
     <p className="py-10 text-center text-sm text-red-600">
-      {message || 'Unable to load chart data.'}
+      {message || t('Unable to load chart data.')}
     </p>
   )
 }
@@ -87,6 +95,7 @@ function greeting() {
 
 export default function DashboardPage() {
   const { user, can } = useAuth()
+  const { t } = useLanguage()
   const navigate = useNavigate()
 
   const summary = useQuery({
@@ -120,17 +129,27 @@ export default function DashboardPage() {
   useDashboardRealtime(can('reports.view'))
 
   const statusData = (analytics.data?.appointments?.by_status ?? []).map((item, index) => ({
-    label: item.status,
+    label: t(statusBadgeFor(APPOINTMENT_STATUS, item.status).label),
     value: Number(item.total ?? 0),
     color: STATUS_COLORS[item.status] ?? FALLBACK_COLORS[index % FALLBACK_COLORS.length],
   }))
 
-  const today = new Intl.DateTimeFormat('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  }).format(new Date())
+  const appointmentTrend = (analytics.data?.appointments?.trend ?? []).map((point) => ({
+    ...point,
+    label: formatShortDate(point.date),
+  }))
+
+  const patientTrend = (analytics.data?.patients?.trend ?? []).map((point) => ({
+    ...point,
+    label: formatShortDate(point.date),
+  }))
+
+  const revenueTrend = (analytics.data?.revenue?.trend ?? []).map((point) => ({
+    ...point,
+    label: formatMonth(point.month),
+  }))
+
+  const today = formatLongDate(TODAY)
 
   return (
     <div className="space-y-6">
@@ -157,10 +176,10 @@ export default function DashboardPage() {
               {today}
             </p>
             <h1 className="mt-3 text-2xl font-bold tracking-tight text-white sm:text-3xl">
-              {greeting()}, {user?.name?.split(' ')[0] ?? 'there'}
+              {t(greeting())}, {user?.name?.split(' ')[0] ?? t('there')}
             </h1>
             <p className="mt-1.5 max-w-xl text-sm text-blue-50/90">
-              Here's what's happening across the clinic today.
+              {t("Here's what's happening across the clinic today.")}
             </p>
           </div>
 
@@ -190,58 +209,72 @@ export default function DashboardPage() {
       {can('reports.view') ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <StatCard
-            label="Patients"
+            label={t('Patients')}
             value={
-              summary.isSuccess ? (summary.data.patients.total ?? 0).toLocaleString() : '—'
+              summary.isSuccess ? formatNumber(summary.data.patients.total ?? 0) : '—'
             }
             sub={
               summary.isSuccess
-                ? `${summary.data.patients.new_this_month} new this month`
-                : 'Loading…'
+                ? t('{count} new this month', { count: summary.data.patients.new_this_month })
+                : t('Loading…')
             }
             icon={Users}
             tone="brand"
             loading={summary.isLoading}
+            to={can('patients.view') ? '/patients' : undefined}
+            linkLabel={t('View all patients')}
           />
           <StatCard
-            label="Appointments"
+            label={t('Appointments')}
             value={
-              summary.isSuccess ? (summary.data.appointments.total ?? 0).toLocaleString() : '—'
+              summary.isSuccess ? formatNumber(summary.data.appointments.total ?? 0) : '—'
             }
             sub={
               summary.isSuccess
-                ? `${summary.data.appointments.by_status?.scheduled ?? 0} scheduled`
-                : 'Loading…'
+                ? t('{count} scheduled', {
+                    count: summary.data.appointments.by_status?.scheduled ?? 0,
+                  })
+                : t('Loading…')
             }
             icon={CalendarDays}
             tone="blue"
             loading={summary.isLoading}
+            to={can('appointments.view') ? '/appointments' : undefined}
+            linkLabel={t('View all appointments')}
           />
           <StatCard
-            label="Revenue this month"
+            label={t('Revenue this month')}
             value={summary.isSuccess ? formatCurrency(summary.data.billing.revenue_this_month) : '—'}
             sub={
               summary.isSuccess
-                ? `${formatCurrency(summary.data.billing.outstanding_balance)} outstanding`
-                : 'Loading…'
+                ? t('{amount} outstanding', {
+                    amount: formatCurrency(summary.data.billing.outstanding_balance),
+                  })
+                : t('Loading…')
             }
             icon={CircleDollarSign}
             tone="green"
             loading={summary.isLoading}
+            to={can('billing.view') ? '/billing' : undefined}
+            linkLabel={t('View billing and payments')}
           />
           <StatCard
-            label="Low-stock medicines"
+            label={t('Low-stock medicines')}
             value={
-              summary.isSuccess ? (summary.data.inventory.low_stock ?? 0).toLocaleString() : '—'
+              summary.isSuccess ? formatNumber(summary.data.inventory.low_stock ?? 0) : '—'
             }
             sub={
               summary.isSuccess
-                ? `${summary.data.inventory.expiring_within_30_days} expiring in 30 days`
-                : 'Loading…'
+                ? t('{count} expiring in 30 days', {
+                    count: summary.data.inventory.expiring_within_30_days,
+                  })
+                : t('Loading…')
             }
             icon={PackageSearch}
             tone="amber"
             loading={summary.isLoading}
+            to={can('inventory.view') ? '/inventory' : undefined}
+            linkLabel={t('View low-stock inventory')}
           />
         </div>
       ) : (
@@ -251,10 +284,9 @@ export default function DashboardPage() {
               <HeartPulse className="size-6" aria-hidden />
             </span>
             <div className="min-w-0 flex-1">
-              <h2 className="text-base font-semibold text-ink">Welcome to the clinic dashboard</h2>
+              <h2 className="text-base font-semibold text-ink">{t('Welcome to the clinic dashboard')}</h2>
               <p className="mt-0.5 text-sm text-ink-muted">
-                Use the navigation to work with the areas you have access to. Summary statistics are
-                available to users with report permissions.
+                {t('Use the navigation to work with the areas you have access to. Summary statistics are available to users with report permissions.')}
               </p>
             </div>
           </div>
@@ -266,15 +298,15 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
             <Card
               className="xl:col-span-2"
-              title="Appointment volume"
-              subtitle="Daily appointments over the last 14 days"
+              title={t('Appointment volume')}
+              subtitle={t('Daily appointments over the last 14 days')}
               actions={
                 <Badge tone={live ? 'green' : 'gray'}>
                   <span
                     className={`size-1.5 rounded-full ${live ? 'bg-emerald-500' : 'bg-slate-400'}`}
                     aria-hidden
                   />
-                  {live ? 'Live' : 'Auto-refresh'}
+                  {live ? t('Live') : t('Auto-refresh')}
                 </Badge>
               }
             >
@@ -284,14 +316,14 @@ export default function DashboardPage() {
                 <ChartError message={analytics.error.message} />
               ) : (
                 <TrendAreaChart
-                  data={analytics.data.appointments.trend}
+                  data={appointmentTrend}
                   color="#2563eb"
                   formatValue={formatNumber}
                 />
               )}
             </Card>
 
-            <Card title="Appointment status" subtitle="All recorded appointments">
+            <Card title={t('Appointment status')} subtitle={t('All recorded appointments')}>
               {analytics.isLoading ? (
                 <ChartSkeleton height={176} />
               ) : analytics.isError ? (
@@ -299,7 +331,7 @@ export default function DashboardPage() {
               ) : (
                 <DonutChart
                   data={statusData}
-                  centerLabel="Appointments"
+                  centerLabel={t('Appointments')}
                   formatValue={formatNumber}
                 />
               )}
@@ -309,8 +341,8 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
             <Card
               className="xl:col-span-2"
-              title="Revenue"
-              subtitle="Collected payments over the last 6 months"
+              title={t('Revenue')}
+              subtitle={t('Collected payments over the last 6 months')}
             >
               {analytics.isLoading ? (
                 <ChartSkeleton height={220} />
@@ -318,7 +350,7 @@ export default function DashboardPage() {
                 <ChartError message={analytics.error.message} />
               ) : (
                 <BarChart
-                  data={analytics.data.revenue.trend}
+                  data={revenueTrend}
                   color="#0d9488"
                   formatValue={formatCurrency}
                   formatAxis={compactCurrency}
@@ -326,14 +358,14 @@ export default function DashboardPage() {
               )}
             </Card>
 
-            <Card title="Patient registrations" subtitle="New patients over the last 14 days">
+            <Card title={t('Patient registrations')} subtitle={t('New patients over the last 14 days')}>
               {analytics.isLoading ? (
                 <ChartSkeleton height={180} />
               ) : analytics.isError ? (
                 <ChartError message={analytics.error.message} />
               ) : (
                 <TrendAreaChart
-                  data={analytics.data.patients.trend}
+                  data={patientTrend}
                   color="#7c3aed"
                   height={180}
                   formatValue={formatNumber}
@@ -348,10 +380,10 @@ export default function DashboardPage() {
         <div className="xl:col-span-2">
           {can('appointments.view') ? (
             <Card
-              title="Recent appointments"
+              title={t('Recent appointments')}
               actions={
                 <Button variant="outline" size="sm" onClick={() => navigate('/appointments')}>
-                  View all
+                  {t('View all')}
                 </Button>
               }
             >
@@ -363,10 +395,10 @@ export default function DashboardPage() {
                 <Table>
                   <THead>
                     <Tr>
-                      <Th>Patient</Th>
-                      <Th>Doctor</Th>
-                      <Th>When</Th>
-                      <Th>Status</Th>
+                      <Th>{t('Patient')}</Th>
+                      <Th>{t('Doctor')}</Th>
+                      <Th>{t('When')}</Th>
+                      <Th>{t('Status')}</Th>
                     </Tr>
                   </THead>
                   <TBody>
@@ -385,7 +417,7 @@ export default function DashboardPage() {
                             {formatDate(apt.appointment_date)} · {formatTime(apt.appointment_time)}
                           </Td>
                           <Td>
-                            <Badge tone={status.tone}>{status.label}</Badge>
+                            <Badge tone={status.tone}>{t(status.label)}</Badge>
                           </Td>
                         </Tr>
                       )
@@ -394,12 +426,12 @@ export default function DashboardPage() {
                 </Table>
               ) : (
                 <p className="py-8 text-center text-sm text-ink-muted">
-                  No appointments yet.
+                  {t('No appointments yet.')}
                 </p>
               )}
             </Card>
           ) : (
-            <Card title="Quick actions">
+            <Card title={t('Quick actions')}>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {[
                   { label: 'Scan attendance', to: '/attendance/scan', icon: QrCode, p: 'attendance.clock' },
@@ -417,7 +449,7 @@ export default function DashboardPage() {
                       className="flex items-center gap-3 rounded-xl border border-line bg-canvas px-4 py-3 text-left transition-colors hover:border-brand/40 hover:bg-brand-soft/40"
                     >
                       <item.icon className="size-5 text-brand" aria-hidden />
-                      <span className="text-sm font-semibold text-ink">{item.label}</span>
+                      <span className="text-sm font-semibold text-ink">{t(item.label)}</span>
                     </button>
                   ))}
               </div>
@@ -427,7 +459,7 @@ export default function DashboardPage() {
 
         <div className="space-y-6">
           {can('prescriptions.view') ? (
-            <Card title="Pending prescriptions">
+            <Card title={t('Pending prescriptions')}>
               {prescriptions.isLoading ? (
                 <CardSkeleton rows={3} />
               ) : prescriptions.isError ? (
@@ -457,7 +489,7 @@ export default function DashboardPage() {
                           <Badge
                             tone={statusBadgeFor(PRESCRIPTION_STATUS, rx.status).tone}
                           >
-                            {statusBadgeFor(PRESCRIPTION_STATUS, rx.status).label}
+                            {t(statusBadgeFor(PRESCRIPTION_STATUS, rx.status).label)}
                           </Badge>
                         </button>
                       </li>
@@ -465,29 +497,29 @@ export default function DashboardPage() {
                 </ul>
               ) : (
                 <p className="py-6 text-center text-sm text-ink-muted">
-                  No pending prescriptions.
+                  {t('No pending prescriptions.')}
                 </p>
               )}
             </Card>
           ) : null}
 
           {can('billing.view') && summary.isSuccess ? (
-            <Card title="Billing snapshot">
+            <Card title={t('Billing snapshot')}>
               <dl className="space-y-3 text-sm">
                 <div className="flex items-center justify-between">
-                  <dt className="text-ink-muted">Unpaid invoices</dt>
+                  <dt className="text-ink-muted">{t('Unpaid invoices')}</dt>
                   <dd className="font-semibold text-ink">
                     {summary.data.billing.unpaid ?? 0}
                   </dd>
                 </div>
                 <div className="flex items-center justify-between">
-                  <dt className="text-ink-muted">Outstanding balance</dt>
+                  <dt className="text-ink-muted">{t('Outstanding balance')}</dt>
                   <dd className="font-semibold text-red-600">
                     {formatCurrency(summary.data.billing.outstanding_balance)}
                   </dd>
                 </div>
                 <div className="flex items-center justify-between">
-                  <dt className="text-ink-muted">Revenue (all time)</dt>
+                  <dt className="text-ink-muted">{t('Revenue (all time)')}</dt>
                   <dd className="font-semibold text-emerald-600">
                     {formatCurrency(summary.data.billing.revenue_total)}
                   </dd>
@@ -497,15 +529,15 @@ export default function DashboardPage() {
           ) : null}
 
           {can('expert-system.use') ? (
-            <Card title="Expert system">
+            <Card title={t('Expert system')}>
               <div className="flex items-start gap-3">
                 <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand">
                   <Activity className="size-5" aria-hidden />
                 </span>
                 <div className="min-w-0">
-                  <p className="text-sm text-ink">Run a symptom-based differential analysis.</p>
+                  <p className="text-sm text-ink">{t('Run a symptom-based differential analysis.')}</p>
                   <Button variant="outline" size="sm" className="mt-3" onClick={() => navigate('/expert-system')}>
-                    Open expert system
+                    {t('Open expert system')}
                   </Button>
                 </div>
               </div>

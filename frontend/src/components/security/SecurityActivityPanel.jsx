@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Activity, ShieldCheck } from 'lucide-react'
 import Card from '../ui/Card.jsx'
@@ -7,6 +8,7 @@ import { CardSkeleton } from '../ui/Skeleton.jsx'
 import { EmptyState } from '../ui/State.jsx'
 import { securityEvents } from '../../api/auth.js'
 import { formatDateTime } from '../../utils/format.js'
+import { useLanguage } from '../../hooks/useLanguage.js'
 
 const EVENT_LABELS = {
   'login.succeeded': 'Signed in',
@@ -52,18 +54,22 @@ function eventLabel(event) {
 }
 
 export default function SecurityActivityPanel() {
+  const { t } = useLanguage()
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['securityEvents'],
     queryFn: securityEvents,
   })
 
+  const [expanded, setExpanded] = useState(false)
+  const showDetails = expanded || !data || data.length <= 5
+
   return (
     <Card
-      title="Recent security activity"
-      subtitle="The latest authentication and account events on your account."
+      title={t('Recent security activity')}
+      subtitle={t('The latest authentication and account events on your account.')}
       actions={
         <Button variant="outline" size="sm" onClick={() => refetch()}>
-          Refresh
+          {t('Refresh')}
         </Button>
       }
     >
@@ -74,32 +80,103 @@ export default function SecurityActivityPanel() {
       ) : !data || data.length === 0 ? (
         <EmptyState
           icon={ShieldCheck}
-          title="No security activity yet"
-          message="Sign-ins and account changes will appear here."
+          title={t('No security activity yet')}
+          message={t('Sign-ins and account changes will appear here.')}
         />
       ) : (
-        <ul className="divide-y divide-line">
-          {data.map((event) => (
-            <li key={event.id} className="flex items-start gap-3 py-3">
-              <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-canvas text-ink-muted">
-                <Activity className="size-4" aria-hidden />
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="flex flex-wrap items-center gap-2 text-sm font-medium text-ink">
-                  {eventLabel(event.event)}
-                  <Badge tone={SEVERITY_TONES[event.severity] ?? 'gray'}>{event.severity}</Badge>
-                  {typeof event.risk_score === 'number' && event.risk_score >= RISK_ATTENTION_THRESHOLD ? (
-                    <Badge tone="amber">risk {event.risk_score}</Badge>
-                  ) : null}
-                </p>
-                <p className="text-xs text-ink-muted">
-                  {formatDateTime(event.created_at)}
-                  {event.ip_address ? ` · ${event.ip_address}` : ''}
-                </p>
+        <div className="space-y-4">
+          {/* Summary view */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-ink">
+                  {t(
+                    data.length === 1
+                      ? '{count} recent activity event'
+                      : '{count} recent activity events',
+                    { count: data.length },
+                  )}
+                </span>
+                {data.length > 5 && (
+                  <span className="text-xs text-ink-muted">
+                    {t('(showing recent {range})', {
+                      range: showDetails ? t('all') : '5',
+                    })}
+                  </span>
+                )}
               </div>
-            </li>
-          ))}
-        </ul>
+              {data.length > 5 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setExpanded(!expanded)}
+                >
+                  {expanded ? t('Show less') : t('Show all')}
+                </Button>
+              )}
+            </div>
+            {showDetails ? (
+              <ul className="divide-y divide-line">
+                {data.map((event) => (
+                  <li key={event.id} className="flex items-start gap-3 py-3">
+                    <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-canvas text-ink-muted">
+                      <Activity className="size-4" aria-hidden />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="flex flex-wrap items-center gap-2 text-sm font-medium text-ink">
+                        {t(eventLabel(event.event))}
+                        <Badge tone={SEVERITY_TONES[event.severity] ?? 'gray'}>{t(event.severity)}</Badge>
+                        {typeof event.risk_score === 'number' && event.risk_score >= RISK_ATTENTION_THRESHOLD ? (
+                          <Badge tone="amber">{t('risk {score}', { score: event.risk_score })}</Badge>
+                        ) : null}
+                      </p>
+                      <p className="text-xs text-ink-muted">
+                        {formatDateTime(event.created_at)}
+                        {event.ip_address ? ` · ${event.ip_address}` : ''}
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="space-y-2">
+                {data.slice(0, 5).map((event) => (
+                  <div key={event.id} className="flex items-start gap-3 rounded-lg border border-line p-3">
+                    <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-canvas text-ink-muted">
+                      <Activity className="size-4" aria-hidden />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="flex flex-wrap items-center gap-2 text-sm font-medium text-ink">
+                        {t(eventLabel(event.event))}
+                        <Badge tone={SEVERITY_TONES[event.severity] ?? 'gray'}>{t(event.severity)}</Badge>
+                        {typeof event.risk_score === 'number' && event.risk_score >= RISK_ATTENTION_THRESHOLD ? (
+                          <Badge tone="amber">{t('risk {score}', { score: event.risk_score })}</Badge>
+                        ) : null}
+                      </p>
+                      <p className="text-xs text-ink-muted">
+                        {formatDateTime(event.created_at)}
+                        {event.ip_address ? ` · ${event.ip_address}` : ''}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+                {data.length > 5 && (
+                  <div className="text-center">
+                    <p className="text-sm text-ink-muted">
+                      +{' '}
+                      {t(
+                        data.length - 5 === 1
+                          ? '{count} more event'
+                          : '{count} more events',
+                        { count: data.length - 5 },
+                      )}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </Card>
   )

@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import '@fontsource-variable/geist'
 import '@fontsource-variable/kantumruy-pro'
 import { AuthProvider } from './context/AuthProvider.jsx'
+import { LanguageProvider } from './context/LanguageProvider.jsx'
 import { ThemeProvider } from './context/ThemeProvider.jsx'
 import ThemedToaster from './components/ui/ThemedToaster.jsx'
 import { router } from './router/index.jsx'
@@ -25,8 +26,10 @@ createRoot(document.getElementById('root')).render(
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <AuthProvider>
-          <RouterProvider router={router} />
-          <ThemedToaster />
+          <LanguageProvider>
+            <RouterProvider router={router} />
+            <ThemedToaster />
+          </LanguageProvider>
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>

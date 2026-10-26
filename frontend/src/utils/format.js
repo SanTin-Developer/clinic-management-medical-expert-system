@@ -1,51 +1,165 @@
-const CURRENCY_FORMAT = new Intl.NumberFormat('en-US', {
-  style: 'currency',
-  currency: 'USD',
-  minimumFractionDigits: 2,
-})
+let currentLanguage = 'en'
 
-const DATE_FORMAT = new Intl.DateTimeFormat('en-US', {
-  year: 'numeric',
-  month: 'short',
-  day: 'numeric',
-})
+/**
+ * Keep date, time and number formatting in sync with the active interface
+ * language. The language provider calls this before rendering a new language.
+ */
+export function setFormatLocale(language) {
+  currentLanguage = language === 'km' ? 'km' : 'en'
+}
 
-const DATE_TIME_FORMAT = new Intl.DateTimeFormat('en-US', {
-  year: 'numeric',
-  month: 'short',
-  day: 'numeric',
-  hour: 'numeric',
-  minute: '2-digit',
-})
+export function getFormatLocale() {
+  return currentLanguage === 'km' ? 'km-KH' : 'en-US'
+}
 
-const TIME_FORMAT = new Intl.DateTimeFormat('en-US', {
-  hour: 'numeric',
-  minute: '2-digit',
-})
+const KHMER_MONTHS = [
+  'មករា',
+  'កុម្ភៈ',
+  'មីនា',
+  'មេសា',
+  'ឧសភា',
+  'មិថុនា',
+  'កក្កដា',
+  'សីហា',
+  'កញ្ញា',
+  'តុលា',
+  'វិច្ឆិកា',
+  'ធ្នូ',
+]
+
+const KHMER_WEEKDAYS = ['អាទិត្យ', 'ច័ន្ទ', 'អង្គារ', 'ពុធ', 'ព្រហស្បតិ៍', 'សុក្រ', 'សៅរ៍']
+
+const KHMER_RELATIVE_UNITS = [
+  { milliseconds: 60_000, label: 'វិនាទី' },
+  { milliseconds: 3_600_000, label: 'នាទី' },
+  { milliseconds: 86_400_000, label: 'ម៉ោង' },
+  { milliseconds: 604_800_000, label: 'ថ្ងៃ' },
+  { milliseconds: 2_592_000_000, label: 'សប្តាហ៍' },
+  { milliseconds: 31_536_000_000, label: 'ខែ' },
+  { milliseconds: Number.POSITIVE_INFINITY, label: 'ឆ្នាំ' },
+]
+
+function formatKhmerDate(date) {
+  return `${date.getDate()} ${KHMER_MONTHS[date.getMonth()]} ${date.getFullYear()}`
+}
+
+function formatKhmerClock(date) {
+  const hours = date.getHours()
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  const period = hours >= 12 ? 'ល្ងាច' : 'ព្រឹក'
+  return `${hours % 12 || 12}:${minutes} ${period}`
+}
+
+const FORMATTERS = {
+  en: {
+    currency: new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+    }),
+    date: new Intl.DateTimeFormat('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    }),
+    dateTime: new Intl.DateTimeFormat('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    }),
+    time: new Intl.DateTimeFormat('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+    }),
+    relative: new Intl.RelativeTimeFormat('en', { numeric: 'auto' }),
+  },
+  km: {
+    currency: new Intl.NumberFormat('km-KH', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+    }),
+    date: new Intl.DateTimeFormat('km-KH', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    }),
+    dateTime: new Intl.DateTimeFormat('km-KH', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    }),
+    time: new Intl.DateTimeFormat('km-KH', {
+      hour: 'numeric',
+      minute: '2-digit',
+    }),
+    relative: new Intl.RelativeTimeFormat('km', { numeric: 'auto' }),
+  },
+}
+
+function activeFormatters() {
+  return FORMATTERS[currentLanguage] ?? FORMATTERS.en
+}
 
 export function formatCurrency(value) {
   const n = Number(value ?? 0)
-  return Number.isFinite(n) ? CURRENCY_FORMAT.format(n) : '—'
+  return Number.isFinite(n) ? activeFormatters().currency.format(n) : '—'
 }
 
 export function formatNumber(value) {
   const n = Number(value ?? 0)
-  return Number.isFinite(n) ? n.toLocaleString('en-US') : '—'
+  return Number.isFinite(n) ? n.toLocaleString(getFormatLocale()) : '—'
 }
 
 export function formatDate(value) {
   const d = toDate(value)
   if (!d) return '—'
-  return DATE_FORMAT.format(d)
+  if (currentLanguage === 'km') return formatKhmerDate(d)
+  return activeFormatters().date.format(d)
+}
+
+export function formatLongDate(value) {
+  const d = toDate(value)
+  if (!d) return '—'
+  if (currentLanguage === 'km') {
+    return `${KHMER_WEEKDAYS[d.getDay()]} ${formatKhmerDate(d)}`
+  }
+  return new Intl.DateTimeFormat('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  }).format(d)
+}
+
+export function formatShortDate(value) {
+  const d = toDate(value)
+  if (!d) return '—'
+  if (currentLanguage === 'km') {
+    return `${d.getDate()} ${KHMER_MONTHS[d.getMonth()]}`
+  }
+  return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(d)
+}
+
+export function formatMonth(value) {
+  const d = toDate(value)
+  if (!d) return '—'
+  if (currentLanguage === 'km') return KHMER_MONTHS[d.getMonth()]
+  return new Intl.DateTimeFormat('en-US', { month: 'short' }).format(d)
 }
 
 export function formatDateTime(value) {
   const d = toDate(value)
   if (!d) return '—'
-  return DATE_TIME_FORMAT.format(d)
+  if (currentLanguage === 'km') {
+    return `${formatKhmerDate(d)}, ${formatKhmerClock(d)}`
+  }
+  return activeFormatters().dateTime.format(d)
 }
-
-const RELATIVE_FORMAT = new Intl.RelativeTimeFormat('en', { numeric: 'auto' })
 
 const RELATIVE_DIVISIONS = [
   { amount: 60, unit: 'second' },
@@ -60,10 +174,20 @@ const RELATIVE_DIVISIONS = [
 export function formatRelativeTime(value) {
   const d = toDate(value)
   if (!d) return '—'
-  let duration = (d.getTime() - Date.now()) / 1000
+  const difference = d.getTime() - Date.now()
+
+  if (currentLanguage === 'km') {
+    const absolute = Math.abs(difference)
+    if (absolute < 60_000) return 'ឥឡូវនេះ'
+    const unit = KHMER_RELATIVE_UNITS.find((item) => absolute < item.milliseconds)
+    const amount = Math.round(absolute / (unit?.milliseconds ?? 1))
+    return `${amount} ${unit?.label ?? 'ឆ្នាំ'}${difference < 0 ? 'មុន' : 'ក្រោយ'}`
+  }
+
+  let duration = difference / 1000
   for (const division of RELATIVE_DIVISIONS) {
     if (Math.abs(duration) < division.amount) {
-      return RELATIVE_FORMAT.format(Math.round(duration), division.unit)
+      return activeFormatters().relative.format(Math.round(duration), division.unit)
     }
     duration /= division.amount
   }
@@ -76,7 +200,8 @@ export function formatTime(value) {
   if (parts.length < 2 || Number.isNaN(parts[0])) return String(value)
   const d = new Date()
   d.setHours(parts[0], parts[1] ?? 0, 0, 0)
-  return TIME_FORMAT.format(d)
+  if (currentLanguage === 'km') return formatKhmerClock(d)
+  return activeFormatters().time.format(d)
 }
 
 function toDate(value) {

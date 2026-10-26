@@ -1,27 +1,31 @@
 import Modal from './Modal.jsx'
 import Button from './Button.jsx'
+import { useLanguage } from '../../hooks/useLanguage.js'
 
 export default function ConfirmDialog({
   open,
   onClose,
   onConfirm,
-  title = 'Are you sure?',
+  title,
   message,
-  confirmLabel = 'Confirm',
+  children,
+  confirmLabel,
   danger = true,
   loading = false,
   confirmDisabled = false,
 }) {
+  const { t } = useLanguage()
+
   return (
     <Modal
       open={open}
       onClose={onClose}
-      title={title}
+      title={title ?? t('Are you sure?')}
       size="sm"
       footer={
         <>
           <Button variant="outline" onClick={onClose} disabled={loading}>
-            Cancel
+            {t('Cancel')}
           </Button>
           <Button
             variant={danger ? 'danger' : 'primary'}
@@ -29,12 +33,13 @@ export default function ConfirmDialog({
             loading={loading}
             disabled={confirmDisabled}
           >
-            {confirmLabel}
+            {confirmLabel ?? t('Confirm')}
           </Button>
         </>
       }
     >
-      <p className="text-sm text-ink-muted">{message}</p>
+      {message ? <p className="text-sm text-ink-muted">{message}</p> : null}
+      {children}
     </Modal>
   )
 }

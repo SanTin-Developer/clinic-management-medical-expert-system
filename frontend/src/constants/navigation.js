@@ -61,18 +61,24 @@ export const NAV_SECTIONS = [
         icon: ListOrdered,
         permissions: ["queue.view"],
       },
-      {
-        to: "/news",
-        label: "News & Updates",
-        icon: Newspaper,
-        permissions: ["announcements.view"],
-      },
     ],
   },
   {
     id: "clinical",
     label: "Clinical",
     items: [
+      {
+        to: "/admissions",
+        label: "Admissions",
+        icon: UserCheck,
+        permissions: ["admissions.view"],
+      },
+      {
+        to: "/wards",
+        label: "Wards & Beds",
+        icon: LayoutDashboard,
+        permissions: ["wards.view", "beds.view"],
+      },
       {
         to: "/medical-records",
         label: "Medical Records",
@@ -84,18 +90,6 @@ export const NAV_SECTIONS = [
         label: "Prescriptions",
         icon: Pill,
         permissions: ["prescriptions.view"],
-      },
-      {
-        to: "/wards",
-        label: "Wards & Beds",
-        icon: LayoutDashboard,
-        permissions: ["wards.view", "beds.view"],
-      },
-      {
-        to: "/admissions",
-        label: "Admissions",
-        icon: UserCheck,
-        permissions: ["admissions.view"],
       },
       {
         to: "/nursing-tasks",
@@ -128,10 +122,11 @@ export const NAV_SECTIONS = [
     label: "Operations",
     items: [
       {
-        to: "/chat",
-        label: "Team Chat",
-        icon: MessageSquare,
-        permissions: ["chat.view"],
+        to: "/pharmacy/dashboard",
+        label: "Pharmacy Dashboard",
+        icon: BarChart3,
+        end: true,
+        permissions: ["medicines.view", "inventory.view"],
       },
       {
         to: "/pharmacy",
@@ -139,13 +134,6 @@ export const NAV_SECTIONS = [
         icon: PackageSearch,
         end: true,
         permissions: ["medicines.view"],
-      },
-      {
-        to: "/pharmacy/dashboard",
-        label: "Pharmacy Dashboard",
-        icon: BarChart3,
-        end: true,
-        permissions: ["medicines.view", "inventory.view"],
       },
       {
         to: "/pharmacy/pos",
@@ -184,17 +172,17 @@ export const NAV_SECTIONS = [
         permissions: ["staff.view"],
       },
       {
-        to: "/attendance/scan",
-        label: "Scan QR",
-        icon: QrCode,
-        permissions: ["attendance.clock"],
-      },
-      {
         to: "/attendance",
         label: "Staff Attendance",
         icon: CalendarCheck,
         end: true,
         permissions: ["attendance.view"],
+      },
+      {
+        to: "/attendance/scan",
+        label: "Scan QR",
+        icon: QrCode,
+        permissions: ["attendance.clock"],
       },
       {
         to: "/scheduling",
@@ -208,11 +196,33 @@ export const NAV_SECTIONS = [
         icon: CalendarOff,
         permissions: ["leave.view"],
       },
+    ],
+  },
+  {
+    id: "communication",
+    label: "Communication",
+    items: [
+      {
+        to: "/chat",
+        label: "Team Chat",
+        icon: MessageSquare,
+        permissions: ["chat.view"],
+      },
+      {
+        to: "/news",
+        label: "News & Updates",
+        icon: Newspaper,
+        permissions: ["announcements.view"],
+      },
       {
         to: "/announcements",
         label: "Announcements",
         icon: Megaphone,
-        permissions: ["announcements.create", "announcements.update", "announcements.publish"],
+        permissions: [
+          "announcements.create",
+          "announcements.update",
+          "announcements.publish",
+        ],
       },
     ],
   },
@@ -259,22 +269,22 @@ export const NAV_SECTIONS = [
         permissions: ["website.view"],
       },
       {
-        to: "/website/settings",
-        label: "Website Settings",
-        icon: Settings,
-        permissions: ["website.settings.view"],
-      },
-      {
-        to: "/website/content-blocks",
-        label: "Page Content",
-        icon: FileText,
-        permissions: ["website.settings.view"],
+        to: "/website/preview",
+        label: "Site Preview",
+        icon: Eye,
+        permissions: ["website.view"],
       },
       {
         to: "/website/pages",
         label: "Pages",
         icon: FileText,
         permissions: ["website.pages.view"],
+      },
+      {
+        to: "/website/content-blocks",
+        label: "Page Content",
+        icon: FileText,
+        permissions: ["website.settings.view"],
       },
       {
         to: "/website/services",
@@ -313,10 +323,10 @@ export const NAV_SECTIONS = [
         permissions: ["website.media.manage"],
       },
       {
-        to: "/website/preview",
-        label: "Site Preview",
-        icon: Eye,
-        permissions: ["website.view"],
+        to: "/website/settings",
+        label: "Website Settings",
+        icon: Settings,
+        permissions: ["website.settings.view"],
       },
     ],
   },
@@ -325,3 +335,18 @@ export const NAV_SECTIONS = [
 export const NAV_ITEMS = NAV_SECTIONS.flatMap((section) => section.items);
 
 export const COMING_SOON_ITEMS = NAV_ITEMS.filter((item) => item.comingSoon);
+
+export function filterNavigationSections(permissions = []) {
+  const permissionSet = new Set(permissions);
+
+  return NAV_SECTIONS.map((section) => ({
+    ...section,
+    items: section.items.filter((item) => {
+      const required = item.permissions ?? [];
+      return (
+        required.length === 0 ||
+        required.some((permission) => permissionSet.has(permission))
+      );
+    }),
+  })).filter((section) => section.items.length > 0);
+}

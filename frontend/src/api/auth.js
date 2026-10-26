@@ -103,3 +103,15 @@ export function revokeDevice(id) {
 export function revokeAllDevices() {
   return api.delete('/auth/devices')
 }
+
+export function listSessions() {
+  return api.get('/auth/sessions').then((res) => res.data ?? [])
+}
+
+export function revokeSession(id) {
+  return api.delete(`/auth/sessions/${id}`)
+}
+
+export function revokeOtherSessions() {
+  return api.delete('/auth/sessions/others')
+}

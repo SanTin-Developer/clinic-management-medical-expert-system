@@ -3,9 +3,10 @@ import { Link, NavLink } from "react-router-dom";
 import { Settings } from "lucide-react";
 import { cn } from "../../utils/cn.js";
 import { APP_NAME } from "../../constants/index.js";
-import { NAV_SECTIONS } from "../../constants/navigation.js";
+import { filterNavigationSections } from "../../constants/navigation.js";
 import { useAuth } from "../../hooks/useAuth.js";
 import { useChatUnread } from "../../hooks/useChatUnread.js";
+import { useLanguage } from "../../hooks/useLanguage.js";
 
 function initials(name = "") {
   return name
@@ -18,20 +19,22 @@ function initials(name = "") {
 
 export default function Sidebar({ open, onClose, collapsed = false }) {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const chatUnread = useChatUnread();
   const isCollapsed = collapsed;
 
-  const sections = useMemo(() => {
-    const perms = user?.permissions ?? [];
-    const canSee = (item) =>
-      item.permissions.length === 0 ||
-      item.permissions.some((p) => perms.includes(p));
-
-    return NAV_SECTIONS.map((section) => ({
-      ...section,
-      items: section.items.filter(canSee),
-    })).filter((section) => section.items.length > 0);
-  }, [user]);
+  const sections = useMemo(
+    () =>
+      filterNavigationSections(user?.permissions ?? []).map((section) => ({
+        ...section,
+        label: t(section.label),
+        items: section.items.map((item) => ({
+          ...item,
+          label: t(item.label),
+        })),
+      })),
+    [user, t],
+  );
 
   const role = user?.roles?.[0] ?? "";
   const showLabels = !(isCollapsed && !open);
@@ -51,7 +54,7 @@ export default function Sidebar({ open, onClose, collapsed = false }) {
           open ? "translate-x-0" : "-translate-x-full md:static",
           isCollapsed ? "md:w-[80px]" : "md:w-64",
         )}
-        aria-label="Primary navigation"
+        aria-label={t("Primary navigation")}
       >
         <div
           className={cn(
@@ -80,7 +83,7 @@ export default function Sidebar({ open, onClose, collapsed = false }) {
               {APP_NAME}
             </p>
             <p className="truncate text-[10px] font-semibold uppercase tracking-wider text-blue-200/90">
-              Medical &amp; Expert System
+              {t("Medical & Expert System")}
             </p>
           </div>
         </div>
@@ -114,7 +117,7 @@ export default function Sidebar({ open, onClose, collapsed = false }) {
                     onClick={onClose}
                     title={
                       item.comingSoon
-                        ? `${item.label} (coming soon)`
+                        ? t("{label} (coming soon)", { label: item.label })
                         : item.label
                     }
                     className={({ isActive }) =>
@@ -152,7 +155,7 @@ export default function Sidebar({ open, onClose, collapsed = false }) {
                           !showLabels && "md:hidden",
                         )}
                       >
-                        Soon
+                        {t("Soon")}
                       </span>
                     ) : null}
                   </NavLink>
@@ -166,7 +169,7 @@ export default function Sidebar({ open, onClose, collapsed = false }) {
           <Link
             to="/settings"
             onClick={onClose}
-            title={user?.name ?? "Account settings"}
+            title={user?.name ?? t("Account settings")}
             className={cn(
               "flex items-center gap-3 rounded-xl bg-white/5 px-3 py-2.5 transition-colors hover:bg-white/10",
               isCollapsed && !open && "md:justify-center md:px-0",
@@ -177,10 +180,10 @@ export default function Sidebar({ open, onClose, collapsed = false }) {
             </span>
             <span className={cn("min-w-0 flex-1", !showLabels && "md:hidden")}>
               <span className="block truncate text-sm font-semibold text-white">
-                {user?.name ?? "Account"}
+                {user?.name ?? t("Account")}
               </span>
               <span className="block truncate text-[11px] text-blue-200/80">
-                {role || "View settings"}
+                {role ? t(role) : t("View settings")}
               </span>
             </span>
             <Settings

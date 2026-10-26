@@ -10,10 +10,12 @@ import PasswordChecklist from '../ui/PasswordChecklist.jsx'
 import { changePassword } from '../../api/auth.js'
 import { passwordError } from '../../utils/password.js'
 import { useAuth } from '../../hooks/useAuth.js'
+import { useLanguage } from '../../hooks/useLanguage.js'
 
 export default function PasswordChangePanel() {
   const navigate = useNavigate()
   const { user, endSession } = useAuth()
+  const { t } = useLanguage()
   const mustChange = Boolean(user?.must_change_password)
 
   const [form, setForm] = useState({ current: '', password: '', confirm: '' })
@@ -25,24 +27,24 @@ export default function PasswordChangePanel() {
   const handleSubmit = async (event) => {
     event.preventDefault()
     const next = {}
-    if (!form.current) next.current = 'Enter your current password.'
+    if (!form.current) next.current = t('Enter your current password.')
     const pwdError = passwordError(form.password)
-    if (pwdError) next.password = pwdError
+    if (pwdError) next.password = t(pwdError)
     if (form.password && form.password === form.current) {
-      next.password = 'Choose a password different from your current one.'
+      next.password = t('Choose a password different from your current one.')
     }
-    if (form.password !== form.confirm) next.confirm = 'Passwords do not match.'
+    if (form.password !== form.confirm) next.confirm = t('Passwords do not match.')
     setErrors(next)
     if (Object.keys(next).length) return
 
     setSaving(true)
     try {
-      const result = await changePassword({
+      await changePassword({
         current_password: form.current,
         password: form.password,
         password_confirmation: form.confirm,
       })
-      toast.success(result?.message ?? 'Your password has been changed.')
+      toast.success(t('Your password has been changed.'))
       endSession()
       navigate('/login', { replace: true })
     } catch (err) {
@@ -54,13 +56,13 @@ export default function PasswordChangePanel() {
 
   return (
     <Card
-      title="Password"
-      subtitle="Changing your password signs you out of every device, including this one."
+      title={t('Password')}
+      subtitle={t('Changing your password signs you out of every device, including this one.')}
     >
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
         {mustChange ? (
           <div role="alert" className="rounded-lg bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800 dark:bg-amber-500/10 dark:text-amber-200">
-            You must set a new password before you can continue using the application.
+            {t('You must set a new password before you can continue using the application.')}
           </div>
         ) : null}
         {errors.form ? (
@@ -68,7 +70,7 @@ export default function PasswordChangePanel() {
             {errors.form}
           </div>
         ) : null}
-        <Field label="Current password" htmlFor="pw-current" required error={errors.current}>
+        <Field label={t('Current password')} htmlFor="pw-current" required error={errors.current}>
           <Input
             id="pw-current"
             type="password"
@@ -78,7 +80,7 @@ export default function PasswordChangePanel() {
             invalid={Boolean(errors.current)}
           />
         </Field>
-        <Field label="New password" htmlFor="pw-new" required error={errors.password}>
+        <Field label={t('New password')} htmlFor="pw-new" required error={errors.password}>
           <Input
             id="pw-new"
             type="password"
@@ -90,7 +92,7 @@ export default function PasswordChangePanel() {
           />
         </Field>
         <PasswordChecklist id="pw-new-requirements" value={form.password} />
-        <Field label="Confirm new password" htmlFor="pw-confirm" required error={errors.confirm}>
+        <Field label={t('Confirm new password')} htmlFor="pw-confirm" required error={errors.confirm}>
           <Input
             id="pw-confirm"
             type="password"
@@ -101,7 +103,7 @@ export default function PasswordChangePanel() {
           />
         </Field>
         <Button type="submit" loading={saving}>
-          <KeyRound className="size-4" aria-hidden /> Update password
+          <KeyRound className="size-4" aria-hidden /> {t('Update password')}
         </Button>
       </form>
     </Card>

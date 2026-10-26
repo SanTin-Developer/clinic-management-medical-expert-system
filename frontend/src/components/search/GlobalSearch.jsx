@@ -4,23 +4,26 @@ import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft, Loader2, Search, X } from 'lucide-react'
 import { cn } from '../../utils/cn.js'
 import { searchApi } from '../../api/search.js'
+import { useLanguage } from '../../hooks/useLanguage.js'
 
 function ResultList({ groups, activeIndex, onSelect, onHoverIndex, isLoading, isError, term }) {
+  const { t } = useLanguage()
+
   if (term.length < 2) {
-    return <p className="px-4 py-6 text-center text-sm text-ink-muted">Type at least 2 characters to search.</p>
+    return <p className="px-4 py-6 text-center text-sm text-ink-muted">{t('Type at least 2 characters to search.')}</p>
   }
   if (isLoading) {
     return (
       <p className="flex items-center justify-center gap-2 px-4 py-6 text-center text-sm text-ink-muted">
-        <Loader2 className="size-4 animate-spin" aria-hidden /> Searching…
+        <Loader2 className="size-4 animate-spin" aria-hidden /> {t('Searching…')}
       </p>
     )
   }
   if (isError) {
-    return <p className="px-4 py-6 text-center text-sm text-ink-muted">Search is unavailable right now.</p>
+    return <p className="px-4 py-6 text-center text-sm text-ink-muted">{t('Search is unavailable right now.')}</p>
   }
   if (groups.length === 0) {
-    return <p className="px-4 py-6 text-center text-sm text-ink-muted">No results found.</p>
+    return <p className="px-4 py-6 text-center text-sm text-ink-muted">{t('No results found.')}</p>
   }
 
   const offsets = groups.reduce((acc, group, groupIndex) => {
@@ -33,7 +36,7 @@ function ResultList({ groups, activeIndex, onSelect, onHoverIndex, isLoading, is
       {groups.map((group, groupIndex) => (
         <div key={group.type}>
           <p className="px-3 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
-            {group.label}
+            {t(group.label)}
           </p>
           {group.items.map((item, itemIndex) => {
             const flatIndex = offsets[groupIndex] + itemIndex
@@ -63,7 +66,60 @@ function ResultList({ groups, activeIndex, onSelect, onHoverIndex, isLoading, is
   )
 }
 
+function SearchField({
+  inputRef,
+  term,
+  onChange,
+  onFocus,
+  onKeyDown,
+  onClear,
+  autoFocus = false,
+  showShortcut = false,
+}) {
+  const { t } = useLanguage()
+
+  return (
+    <div className="relative">
+      <Search
+        className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-muted"
+        aria-hidden
+      />
+      <input
+        ref={inputRef}
+        autoFocus={autoFocus}
+        type="text"
+        role="searchbox"
+        inputMode="search"
+        autoComplete="off"
+        spellCheck={false}
+        value={term}
+        onChange={onChange}
+        onFocus={onFocus}
+        onKeyDown={onKeyDown}
+        placeholder={t('Search patients, appointments, records…')}
+        aria-label={t('Global search')}
+        className="h-10 w-full rounded-xl border border-line bg-surface pl-9 pr-10 text-sm text-ink outline-none transition placeholder:text-ink-muted/70 focus:border-brand focus:ring-2 focus:ring-brand/25"
+      />
+      {term ? (
+        <button
+          type="button"
+          onClick={onClear}
+          aria-label={t('Clear search')}
+          className="absolute right-2 top-1/2 grid size-6 -translate-y-1/2 place-items-center rounded-md text-ink-muted transition-colors hover:bg-canvas hover:text-ink"
+        >
+          <X className="size-4" aria-hidden />
+        </button>
+      ) : showShortcut ? (
+        <kbd className="pointer-events-none absolute right-2.5 top-1/2 hidden -translate-y-1/2 rounded border border-line bg-canvas/60 px-1.5 py-0.5 text-[10px] font-medium text-ink-muted lg:block">
+          Ctrl K
+        </kbd>
+      ) : null}
+    </div>
+  )
+}
+
 export default function GlobalSearch() {
+  const { t } = useLanguage()
   const navigate = useNavigate()
   const [term, setTerm] = useState('')
   const [debounced, setDebounced] = useState('')
@@ -71,7 +127,8 @@ export default function GlobalSearch() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [activeIndex, setActiveIndex] = useState(0)
   const containerRef = useRef(null)
-  const inputRef = useRef(null)
+  const desktopInputRef = useRef(null)
+  const overlayInputRef = useRef(null)
 
   useEffect(() => {
     const id = setTimeout(() => setDebounced(term.trim()), 300)
@@ -109,21 +166,48 @@ export default function GlobalSearch() {
   }, [open])
 
   useEffect(() => {
+    if (!open && !mobileOpen) return undefined
+
+    const onEscape = (event) => {
+      if (event.key !== 'Escape') return
+      setOpen(false)
+      setMobileOpen(false)
+    }
+
+    document.addEventListener('keydown', onEscape)
+    return () => document.removeEventListener('keydown', onEscape)
+  }, [open, mobileOpen])
+
+  useEffect(() => {
     const onShortcut = (event) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
-        event.preventDefault()
+      if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== 'k') return
+
+      event.preventDefault()
+      const isDesktop = window.matchMedia('(min-width: 640px)').matches
+
+      if (isDesktop) {
+        setMobileOpen(false)
         setOpen(true)
-        inputRef.current?.focus()
+        desktopInputRef.current?.focus()
+        return
       }
+
+      setOpen(false)
+      setMobileOpen(true)
+      window.requestAnimationFrame(() => overlayInputRef.current?.focus())
     }
     document.addEventListener('keydown', onShortcut)
     return () => document.removeEventListener('keydown', onShortcut)
   }, [])
 
-  const reset = () => {
+  const clearSearch = () => {
     setTerm('')
     setDebounced('')
     setActiveIndex(0)
+  }
+
+  const reset = () => {
+    clearSearch()
     setOpen(false)
     setMobileOpen(false)
   }
@@ -152,49 +236,43 @@ export default function GlobalSearch() {
     }
   }
 
-  const field = (
-    <div className="relative">
-      <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-muted" aria-hidden />
-      <input
-        ref={inputRef}
-        type="text"
-        role="searchbox"
-        inputMode="search"
-        value={term}
-        onChange={(event) => {
-          setTerm(event.target.value)
-          setActiveIndex(0)
-          setOpen(true)
-        }}
-        onFocus={() => setOpen(true)}
-        onKeyDown={onKeyDown}
-        placeholder="Search patients, appointments…"
-        aria-label="Global search"
-        className="h-10 w-full rounded-xl border border-line bg-surface pl-9 pr-9 text-sm text-ink outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/30"
-      />
-      {term ? (
-        <button
-          type="button"
-          onClick={reset}
-          aria-label="Clear search"
-          className="absolute right-2 top-1/2 grid size-6 -translate-y-1/2 place-items-center rounded-md text-ink-muted hover:bg-canvas hover:text-ink"
-        >
-          <X className="size-4" aria-hidden />
-        </button>
-      ) : (
-        <kbd className="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 rounded border border-line px-1.5 py-0.5 text-[10px] font-medium text-ink-muted lg:block">
-          Ctrl K
-        </kbd>
-      )}
-    </div>
-  )
+  const updateTerm = (event) => {
+    setTerm(event.target.value)
+    setActiveIndex(0)
+  }
+
+  const handleInlineChange = (event) => {
+    updateTerm(event)
+    setOpen(true)
+  }
+
+  const handleOverlayChange = (event) => {
+    updateTerm(event)
+  }
+
+  const openOverlay = () => {
+    setOpen(false)
+    setMobileOpen(true)
+  }
+
+  const closeOverlay = () => {
+    setMobileOpen(false)
+  }
 
   return (
     <>
-      <div ref={containerRef} className="relative hidden w-full max-w-md sm:block">
-        {field}
+      <div ref={containerRef} className="relative hidden min-w-0 flex-1 sm:block sm:max-w-md">
+        <SearchField
+          inputRef={desktopInputRef}
+          term={term}
+          onChange={handleInlineChange}
+          onFocus={() => setOpen(true)}
+          onKeyDown={onKeyDown}
+          onClear={clearSearch}
+          showShortcut
+        />
         {open ? (
-          <div className="absolute inset-x-0 top-12 z-40 max-h-[70vh] overflow-y-auto rounded-xl border border-line bg-surface py-1 shadow-[var(--shadow-dialog)]">
+          <div className="animate-fade-in absolute inset-x-0 top-12 z-40 max-h-[70vh] overflow-y-auto rounded-xl border border-line bg-surface py-1 shadow-[var(--shadow-dialog)]">
             <ResultList
               groups={groups}
               activeIndex={safeIndex}
@@ -210,36 +288,59 @@ export default function GlobalSearch() {
 
       <button
         type="button"
-        onClick={() => setMobileOpen(true)}
-        aria-label="Open search"
-        className="grid size-10 place-items-center rounded-lg text-ink-muted transition-colors hover:bg-canvas sm:hidden"
+        onClick={openOverlay}
+        aria-label={t('Open global search')}
+        title={t('Search (Ctrl K)')}
+        className="grid size-10 shrink-0 place-items-center rounded-lg text-ink-muted transition-colors hover:bg-canvas hover:text-ink sm:hidden"
       >
         <Search className="size-5" aria-hidden />
       </button>
 
       {mobileOpen ? (
-        <div className="fixed inset-0 z-50 flex flex-col bg-canvas sm:hidden">
-          <div className="flex items-center gap-2 border-b border-line p-3">
-            <div className="min-w-0 flex-1">{field}</div>
-            <button
-              type="button"
-              onClick={() => setMobileOpen(false)}
-              aria-label="Close search"
-              className="grid size-10 shrink-0 place-items-center rounded-lg text-ink-muted hover:bg-surface"
-            >
-              <ArrowLeft className="size-5" aria-hidden />
-            </button>
-          </div>
-          <div className="flex-1 overflow-y-auto">
-            <ResultList
-              groups={groups}
-              activeIndex={safeIndex}
-              onHoverIndex={setActiveIndex}
-              onSelect={go}
-              isLoading={enabled && query.isLoading}
-              isError={query.isError}
-              term={debounced}
-            />
+        <div
+          className="fixed inset-0 z-[60] sm:hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-label={t('Global search')}
+        >
+          <div
+            aria-hidden="true"
+            onClick={closeOverlay}
+            className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm"
+          />
+          <div className="animate-fade-in relative mx-auto flex h-full w-full flex-col bg-canvas sm:mt-16 sm:h-auto sm:max-h-[calc(100vh-8rem)] sm:max-w-2xl sm:overflow-hidden sm:rounded-2xl sm:border sm:border-line sm:bg-surface sm:shadow-[var(--shadow-dialog)]">
+            <div className="flex shrink-0 items-center gap-2 border-b border-line p-3 sm:p-4">
+              <div className="min-w-0 flex-1">
+                <SearchField
+                  autoFocus
+                  inputRef={overlayInputRef}
+                  term={term}
+                  onChange={handleOverlayChange}
+                  onKeyDown={onKeyDown}
+                  onClear={clearSearch}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={closeOverlay}
+                aria-label={t('Close search')}
+                className="grid size-10 shrink-0 place-items-center rounded-lg text-ink-muted transition-colors hover:bg-surface hover:text-ink sm:hover:bg-canvas"
+              >
+                <ArrowLeft className="size-5 sm:hidden" aria-hidden />
+                <X className="hidden size-5 sm:block" aria-hidden />
+              </button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              <ResultList
+                groups={groups}
+                activeIndex={safeIndex}
+                onHoverIndex={setActiveIndex}
+                onSelect={go}
+                isLoading={enabled && query.isLoading}
+                isError={query.isError}
+                term={debounced}
+              />
+            </div>
           </div>
         </div>
       ) : null}

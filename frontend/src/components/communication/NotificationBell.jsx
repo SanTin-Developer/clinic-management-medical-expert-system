@@ -8,37 +8,40 @@ import { cn } from '../../utils/cn.js'
 import { notificationApi } from '../../api/communication.js'
 import { getEcho } from '../../lib/echo.js'
 import { useAuth } from '../../hooks/useAuth.js'
+import { useLanguage } from '../../hooks/useLanguage.js'
 import { formatDateTime } from '../../utils/format.js'
 import { playNotificationSound, primeNotificationAudio } from '../../utils/notificationSound.js'
 
 const BROADCAST_EVENT = '.Illuminate\\Notifications\\Events\\BroadcastNotificationCreated'
 
-function describe(notification) {
+function describe(notification, t) {
   const data = notification.data ?? {}
   if (notification.kind === 'new_message' || data.kind === 'new_message') {
     return {
-      title: data.sender_name ? `${data.sender_name} sent a message` : 'New message',
+      title: data.sender_name
+        ? t('{name} sent a message', { name: data.sender_name })
+        : t('New message'),
       body: data.preview ?? data.conversation_title ?? '',
       url: data.url,
     }
   }
   if (notification.kind === 'telegram_delivery_failed' || data.kind === 'telegram_delivery_failed') {
     return {
-      title: 'Telegram delivery failed',
-      body: 'A Telegram copy of your message could not be delivered.',
+      title: t('Telegram delivery failed'),
+      body: t('A Telegram copy of your message could not be delivered.'),
       url: data.url,
     }
   }
   if (notification.kind === 'system_announcement' || data.kind === 'system_announcement') {
     return {
-      title: data.title ?? 'Announcement',
+      title: data.title ?? t('Announcement'),
       body: data.body ?? '',
       url: data.url ?? '/news',
       priority: data.priority ?? 'normal',
     }
   }
   return {
-    title: data.title ?? 'Notification',
+    title: data.title ?? t('Notification'),
     body: data.body ?? data.message ?? '',
     url: data.url,
   }
@@ -46,6 +49,7 @@ function describe(notification) {
 
 export default function NotificationBell() {
   const { user } = useAuth()
+  const { t } = useLanguage()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const greetedRef = useRef(false)
@@ -92,14 +96,14 @@ export default function NotificationBell() {
     channel.listen(BROADCAST_EVENT, (payload) => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] })
       playNotificationSound()
-      const info = describe({ kind: payload?.kind, data: payload })
+      const info = describe({ kind: payload?.kind, data: payload }, t)
       toast.info(info.title, { description: info.body || undefined })
     })
 
     return () => {
       echo.leave(`notifications.${user.id}`)
     }
-  }, [user?.id, queryClient])
+  }, [user?.id, queryClient, t])
 
   useEffect(() => {
     if (greetedRef.current) return
@@ -109,16 +113,18 @@ export default function NotificationBell() {
     greetedRef.current = true
     playNotificationSound()
     toast.info(
-      count === 1 ? 'You have 1 new notification' : `You have ${count} new notifications`,
-      { id: 'notification-greeting', description: 'Open the bell to review them.' },
+      count === 1
+        ? t('You have 1 new notification')
+        : t('You have {count} new notifications', { count }),
+      { id: 'notification-greeting', description: t('Open the bell to review them.') },
     )
-  }, [unread.data])
+  }, [unread.data, t])
 
   const unreadCount = unread.data ?? 0
   const notifications = list.data?.data ?? []
 
   const openNotification = async (notification) => {
-    const info = describe(notification)
+    const info = describe(notification, t)
     if (!notification.read_at) {
       try {
         await notificationApi.markRead(notification.id)
@@ -145,7 +151,11 @@ export default function NotificationBell() {
       trigger={
         <button
           type="button"
-          aria-label={`Notifications${unreadCount ? ` (${unreadCount} unread)` : ''}`}
+          aria-label={
+            unreadCount
+              ? t('Notifications ({count} unread)', { count: unreadCount })
+              : t('Notifications')
+          }
           className="relative grid size-10 place-items-center rounded-lg text-ink-muted transition-colors hover:bg-canvas"
         >
           <Bell className="size-5" aria-hidden />
@@ -158,25 +168,25 @@ export default function NotificationBell() {
       }
     >
       <div className="flex items-center justify-between px-4 py-2">
-        <span className="text-sm font-semibold text-ink">Notifications</span>
+        <span className="text-sm font-semibold text-ink">{t('Notifications')}</span>
         {unreadCount > 0 ? (
           <button
             type="button"
             onClick={markAll}
             className="flex items-center gap-1 text-xs font-semibold text-brand hover:text-brand-dark"
           >
-            <CheckCheck className="size-3.5" aria-hidden /> Mark all read
+            <CheckCheck className="size-3.5" aria-hidden /> {t('Mark all read')}
           </button>
         ) : null}
       </div>
       <div className="max-h-96 overflow-y-auto border-t border-line">
         {list.isLoading ? (
-          <p className="px-4 py-6 text-center text-sm text-ink-muted">Loading…</p>
+          <p className="px-4 py-6 text-center text-sm text-ink-muted">{t('Loading…')}</p>
         ) : notifications.length === 0 ? (
-          <p className="px-4 py-6 text-center text-sm text-ink-muted">You're all caught up.</p>
+          <p className="px-4 py-6 text-center text-sm text-ink-muted">{t("You're all caught up.")}</p>
         ) : (
           notifications.map((notification) => {
-            const info = describe(notification)
+            const info = describe(notification, t)
             return (
               <button
                 key={notification.id}
@@ -210,7 +220,7 @@ export default function NotificationBell() {
         onClick={() => { navigate('/news'); }}
         className="flex w-full items-center justify-center gap-1 border-t border-line px-4 py-2.5 text-xs font-semibold text-brand transition-colors hover:bg-canvas"
       >
-        <Newspaper className="size-3.5" aria-hidden /> View all news &amp; announcements
+        <Newspaper className="size-3.5" aria-hidden /> {t('View all news & announcements')}
       </button>
     </Dropdown>
   )

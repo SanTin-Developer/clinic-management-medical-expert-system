@@ -1,14 +1,17 @@
 import { Loader2 } from 'lucide-react'
 import { cn } from '../../utils/cn.js'
+import { useLanguage } from '../../hooks/useLanguage.js'
 
 export function Spinner({ label, className }) {
+  const { t } = useLanguage()
+
   return (
     <div
       role="status"
       className={cn('inline-flex items-center gap-2 text-ink-muted', className)}
     >
       <Loader2 className="size-5 animate-spin text-brand" aria-hidden />
-      {label ? <span className="text-sm">{label}</span> : <span className="sr-only">Loading…</span>}
+      {label ? <span className="text-sm">{label}</span> : <span className="sr-only">{t('Loading…')}</span>}
     </div>
   )
 }

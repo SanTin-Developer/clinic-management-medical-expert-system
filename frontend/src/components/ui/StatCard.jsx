@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom'
+import { ArrowUpRight } from 'lucide-react'
 import { cn } from '../../utils/cn.js'
 
 const TONES = {
@@ -9,25 +11,66 @@ const TONES = {
   navy: 'bg-blue-900/10 text-ink dark:bg-blue-400/15',
 }
 
-export default function StatCard({ label, value, icon: Icon, tone = 'brand', sub, loading }) {
-  return (
-    <div className="rounded-2xl border border-line bg-surface p-5 shadow-[var(--shadow-card)]">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-sm font-medium text-ink-muted">{label}</p>
-          {loading ? (
-            <div className="mt-2 h-7 w-16 animate-pulse rounded-md bg-brand-soft/70" />
-          ) : (
-            <p className="mt-1 truncate text-2xl font-bold text-ink">{value}</p>
-          )}
-          {sub ? <p className="mt-1 text-xs text-ink-muted">{sub}</p> : null}
-        </div>
-        {Icon ? (
-          <span className={cn('grid size-10 shrink-0 place-items-center rounded-xl', TONES[tone])}>
-            <Icon className="size-5" aria-hidden />
-          </span>
-        ) : null}
+export default function StatCard({
+  label,
+  value,
+  icon: Icon,
+  tone = 'brand',
+  sub,
+  loading,
+  to,
+  linkLabel,
+}) {
+  const content = (
+    <div className="flex items-start justify-between gap-3">
+      <div className="min-w-0">
+        <p className="flex items-center gap-1 text-sm font-medium text-ink-muted">
+          {label}
+          {to ? (
+            <ArrowUpRight
+              className="size-3.5 shrink-0 text-ink-muted/70 transition-all duration-200 group-hover:translate-x-0.5 group-hover:text-brand group-focus-visible:translate-x-0.5 group-focus-visible:text-brand"
+              aria-hidden
+            />
+          ) : null}
+        </p>
+        {loading ? (
+          <div className="mt-2 h-7 w-16 animate-pulse rounded-md bg-brand-soft/70" />
+        ) : (
+          <p className="mt-1 truncate text-2xl font-bold text-ink">{value}</p>
+        )}
+        {sub ? <p className="mt-1 text-xs text-ink-muted">{sub}</p> : null}
       </div>
+      {Icon ? (
+        <span
+          className={cn(
+            'grid size-10 shrink-0 place-items-center rounded-xl transition-transform duration-200',
+            TONES[tone],
+            to && 'group-hover:scale-105 group-focus-visible:scale-105',
+          )}
+        >
+          <Icon className="size-5" aria-hidden />
+        </span>
+      ) : null}
     </div>
   )
+
+  const className = cn(
+    'rounded-2xl border border-line bg-surface p-5 shadow-[var(--shadow-card)]',
+    to &&
+      'group block h-full cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-[var(--shadow-card-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30',
+  )
+
+  if (to) {
+    const accessibleLabel = `${label}: ${loading ? 'Loading' : value}${sub ? `. ${sub}` : ''}. ${
+      linkLabel ?? `View ${label}`
+    }`
+
+    return (
+      <Link to={to} aria-label={accessibleLabel} className={className}>
+        {content}
+      </Link>
+    )
+  }
+
+  return <div className={className}>{content}</div>
 }

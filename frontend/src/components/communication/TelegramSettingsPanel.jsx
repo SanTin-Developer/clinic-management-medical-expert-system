@@ -13,6 +13,7 @@ import { ErrorState } from '../ui/State.jsx'
 import { cn } from '../../utils/cn.js'
 import { telegramApi } from '../../api/communication.js'
 import { useAuth } from '../../hooks/useAuth.js'
+import { useLanguage } from '../../hooks/useLanguage.js'
 import { formatDateTime } from '../../utils/format.js'
 
 const CATEGORIES = [
@@ -22,6 +23,7 @@ const CATEGORIES = [
 ]
 
 function CopyButton({ value }) {
+  const { t } = useLanguage()
   const [copied, setCopied] = useState(false)
   return (
     <Button
@@ -34,18 +36,19 @@ function CopyButton({ value }) {
           setCopied(true)
           setTimeout(() => setCopied(false), 2000)
         } catch {
-          toast.error('Could not copy to clipboard.')
+          toast.error(t('Could not copy to clipboard.'))
         }
       }}
     >
       {copied ? <Check className="size-4" aria-hidden /> : <Copy className="size-4" aria-hidden />}
-      {copied ? 'Copied' : 'Copy'}
+      {copied ? t('Copied') : t('Copy')}
     </Button>
   )
 }
 
 export default function TelegramSettingsPanel() {
   const { can } = useAuth()
+  const { t } = useLanguage()
   const queryClient = useQueryClient()
   const [linking, setLinking] = useState(false)
   const [linkResult, setLinkResult] = useState(null)
@@ -86,9 +89,9 @@ export default function TelegramSettingsPanel() {
     if (status.data?.linked && linkResult) {
       setLinkResult(null)
       setPollUntil(0)
-      toast.success('Telegram account linked.')
+      toast.success(t('Telegram account linked.'))
     }
-  }, [status.data?.linked, linkResult])
+  }, [status.data?.linked, linkResult, t])
 
   const startLink = async () => {
     setLinking(true)
@@ -109,7 +112,7 @@ export default function TelegramSettingsPanel() {
       await telegramApi.unlink()
       setLinkResult(null)
       queryClient.invalidateQueries({ queryKey: ['telegram', 'status'] })
-      toast.success('Telegram account unlinked.')
+      toast.success(t('Telegram account unlinked.'))
     } catch (err) {
       toast.error(err.message)
     }
@@ -125,7 +128,7 @@ export default function TelegramSettingsPanel() {
       }
       const data = await telegramApi.updateGroupConfig(payload)
       queryClient.setQueryData(['telegram', 'group-config'], data)
-      toast.success('Group configuration saved.')
+      toast.success(t('Group configuration saved.'))
     } catch (err) {
       toast.error(err.message)
     } finally {
@@ -136,7 +139,7 @@ export default function TelegramSettingsPanel() {
   const registerWebhook = async () => {
     try {
       const result = await telegramApi.registerWebhook()
-      toast.success(`Webhook registered at ${result.url}`)
+      toast.success(t('Webhook registered at {url}', { url: result.url }))
     } catch (err) {
       toast.error(err.message)
     }
@@ -153,7 +156,7 @@ export default function TelegramSettingsPanel() {
 
   if (status.isLoading) {
     return (
-      <Card title="Telegram">
+      <Card title={t('Telegram')}>
         <CardSkeleton rows={3} />
       </Card>
     )
@@ -161,7 +164,7 @@ export default function TelegramSettingsPanel() {
 
   if (status.isError) {
     return (
-      <Card title="Telegram">
+      <Card title={t('Telegram')}>
         <ErrorState message={status.error.message} onRetry={() => status.refetch()} />
       </Card>
     )
@@ -172,12 +175,12 @@ export default function TelegramSettingsPanel() {
   return (
     <div className="space-y-6">
       <Card
-        title="Telegram notifications"
-        subtitle="Receive clinic alerts directly in Telegram."
+        title={t('Telegram notifications')}
+        subtitle={t('Receive clinic alerts directly in Telegram.')}
       >
         {!data.enabled ? (
           <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-700">
-            Telegram integration is currently disabled by an administrator.
+            {t('Telegram integration is currently disabled by an administrator.')}
           </p>
         ) : data.linked ? (
           <div className="space-y-4">
@@ -187,31 +190,30 @@ export default function TelegramSettingsPanel() {
               </span>
               <div>
                 <p className="flex items-center gap-2 text-sm font-semibold text-ink">
-                  Linked
+                  {t('Linked')}
                   {data.telegram_username ? (
                     <Badge tone="green">@{data.telegram_username}</Badge>
                   ) : null}
                 </p>
                 <p className="text-xs text-ink-muted">
-                  Linked {formatDateTime(data.linked_at)}
+                  {t('Linked {date}', { date: formatDateTime(data.linked_at) })}
                 </p>
               </div>
             </div>
             <Button variant="outline" onClick={unlink}>
-              <Unlink className="size-4" aria-hidden /> Unlink Telegram
+              <Unlink className="size-4" aria-hidden /> {t('Unlink Telegram')}
             </Button>
           </div>
         ) : (
           <div className="space-y-4">
             <p className="text-sm text-ink-muted">
-              Link your Telegram account to receive notifications on your phone. Open the bot and
-              share the link below to complete setup.
+              {t('Link your Telegram account to receive notifications on your phone. Open the bot and share the link below to complete setup.')}
             </p>
             {linkResult ? (
               <div className="space-y-3 rounded-xl border border-line bg-canvas/50 p-4">
                 <div>
-                  <p className="text-xs font-medium text-ink-muted">Telegram bot</p>
-                  <p className="text-sm font-semibold text-ink">@{data.bot_username ?? 'RoyalCare bot'}</p>
+                  <p className="text-xs font-medium text-ink-muted">{t('Telegram bot')}</p>
+                  <p className="text-sm font-semibold text-ink">@{data.bot_username ?? t('RoyalCare bot')}</p>
                 </div>
                 {linkResult.deep_link ? (
                   <div className="flex items-center gap-2">
@@ -221,14 +223,16 @@ export default function TelegramSettingsPanel() {
                       rel="noreferrer"
                       className="text-sm font-semibold text-brand hover:text-brand-dark"
                     >
-                      Open in Telegram
+                      {t('Open in Telegram')}
                     </a>
                     <CopyButton value={linkResult.deep_link} />
                   </div>
                 ) : null}
                 <div>
                   <p className="text-xs font-medium text-ink-muted">
-                    Or send this command to the bot (expires {formatDateTime(linkResult.expires_at)})
+                    {t('Or send this command to the bot (expires {date})', {
+                      date: formatDateTime(linkResult.expires_at),
+                    })}
                   </p>
                   <div className="mt-1 flex items-center gap-2">
                     <code className="flex-1 truncate rounded-lg border border-line bg-surface px-3 py-2 text-xs text-ink">
@@ -239,17 +243,17 @@ export default function TelegramSettingsPanel() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Button variant="outline" size="sm" onClick={() => status.refetch()}>
-                    <RefreshCw className="size-4" aria-hidden /> Check status
+                    <RefreshCw className="size-4" aria-hidden /> {t('Check status')}
                   </Button>
                   <span className="text-xs text-ink-muted">
-                    Waiting for the bot to confirm… this updates automatically.
+                    {t('Waiting for the bot to confirm… this updates automatically.')}
                   </span>
                 </div>
               </div>
             ) : null}
             <Button onClick={startLink} loading={linking}>
               <Link2 className="size-4" aria-hidden />
-              {linkResult ? 'Generate new link' : 'Link Telegram account'}
+              {linkResult ? t('Generate new link') : t('Link Telegram account')}
             </Button>
           </div>
         )}
@@ -257,11 +261,11 @@ export default function TelegramSettingsPanel() {
 
       {can('telegram.group.manage') ? (
         <Card
-          title="Group notifications"
-          subtitle="Mirror selected events into a Telegram group for the whole clinic."
+          title={t('Group notifications')}
+          subtitle={t('Mirror selected events into a Telegram group for the whole clinic.')}
           actions={
             <Button variant="outline" size="sm" onClick={registerWebhook}>
-              <Webhook className="size-4" aria-hidden /> Register webhook
+              <Webhook className="size-4" aria-hidden /> {t('Register webhook')}
             </Button>
           }
         >
@@ -272,15 +276,15 @@ export default function TelegramSettingsPanel() {
           ) : (
             <div className="space-y-5">
               <Toggle
-                label="Enable group notifications"
-                hint="When enabled, selected events are posted to the configured Telegram group."
+                label={t('Enable group notifications')}
+                hint={t('When enabled, selected events are posted to the configured Telegram group.')}
                 checked={config.is_enabled}
                 onChange={(value) => setConfig((prev) => ({ ...prev, is_enabled: value }))}
               />
 
               <Field
-                label="Telegram group chat ID"
-                hint="Add the bot to your group and provide the numeric chat ID (e.g. -1001234567890)."
+                label={t('Telegram group chat ID')}
+                hint={t('Add the bot to your group and provide the numeric chat ID (e.g. -1001234567890).')}
               >
                 <Input
                   type="number"
@@ -291,7 +295,7 @@ export default function TelegramSettingsPanel() {
               </Field>
 
               <div>
-                <p className="mb-2 text-sm font-medium text-ink">Event categories</p>
+                <p className="mb-2 text-sm font-medium text-ink">{t('Event categories')}</p>
                 <div className="flex flex-wrap gap-2">
                   {CATEGORIES.map((category) => {
                     const active = config.event_categories.includes(category.value)
@@ -307,7 +311,7 @@ export default function TelegramSettingsPanel() {
                             : 'border-line text-ink-muted hover:text-ink',
                         )}
                       >
-                        {category.label}
+                        {t(category.label)}
                       </button>
                     )
                   })}
@@ -315,7 +319,7 @@ export default function TelegramSettingsPanel() {
               </div>
 
               <Button onClick={saveConfig} loading={savingConfig}>
-                Save configuration
+                {t('Save configuration')}
               </Button>
             </div>
           )}

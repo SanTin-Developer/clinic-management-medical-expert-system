@@ -6,6 +6,7 @@ import Toggle from '../ui/Toggle.jsx'
 import { CardSkeleton } from '../ui/Skeleton.jsx'
 import { ErrorState } from '../ui/State.jsx'
 import { notificationApi } from '../../api/communication.js'
+import { useLanguage } from '../../hooks/useLanguage.js'
 
 const OPTIONS = [
   { key: 'new_message', label: 'Direct messages', hint: 'Alerts when a colleague sends you a private message.' },
@@ -15,6 +16,7 @@ const OPTIONS = [
 ]
 
 export default function NotificationPreferencesPanel() {
+  const { t } = useLanguage()
   const queryClient = useQueryClient()
 
   const preferences = useQuery({
@@ -34,8 +36,8 @@ export default function NotificationPreferencesPanel() {
 
   return (
     <Card
-      title="Notification preferences"
-      subtitle="Choose which events reach you in-app and via Telegram."
+      title={t('Notification preferences')}
+      subtitle={t('Choose which events reach you in-app and via Telegram.')}
     >
       {preferences.isLoading ? (
         <CardSkeleton rows={4} />
@@ -46,8 +48,8 @@ export default function NotificationPreferencesPanel() {
           {OPTIONS.map((option) => (
             <div key={option.key} className="border-b border-line py-3 last:border-b-0">
               <Toggle
-                label={option.label}
-                hint={option.hint}
+                label={t(option.label)}
+                hint={t(option.hint)}
                 checked={Boolean(preferences.data?.[option.key])}
                 onChange={(value) => update(option.key, value)}
               />
@@ -55,8 +57,7 @@ export default function NotificationPreferencesPanel() {
           ))}
           <p className="flex items-center gap-1.5 pt-3 text-xs text-ink-muted">
             <Bell className="size-3.5" aria-hidden />
-            In-app notifications always appear in the bell menu; these preferences control which
-            events are delivered.
+            {t('In-app notifications always appear in the bell menu; these preferences control which events are delivered.')}
           </p>
         </div>
       )}

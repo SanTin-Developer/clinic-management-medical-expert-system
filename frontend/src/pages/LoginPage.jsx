@@ -1,15 +1,18 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { toast } from 'sonner'
 import Button from '../components/ui/Button.jsx'
 import Field from '../components/ui/Field.jsx'
 import Input from '../components/ui/Input.jsx'
 import { useAuth } from '../hooks/useAuth.js'
 import { usePageTitle } from '../hooks/usePageTitle.js'
+import { useLanguage } from '../hooks/useLanguage.js'
 import { APP_NAME } from '../constants/index.js'
 import AuthShell from './auth/AuthShell.jsx'
 
 export default function LoginPage() {
-  usePageTitle('Sign In')
+  const { t } = useLanguage()
+  usePageTitle(t('Sign In'))
   const { login } = useAuth()
   const navigate = useNavigate()
 
@@ -21,8 +24,8 @@ export default function LoginPage() {
   const handleSubmit = async (event) => {
     event.preventDefault()
     const next = {}
-    if (!identifier.trim()) next.identifier = 'Email or username is required.'
-    if (!password) next.password = 'Password is required.'
+    if (!identifier.trim()) next.identifier = t('Email or username is required.')
+    if (!password) next.password = t('Password is required.')
     setErrors(next)
     if (Object.keys(next).length) return
 
@@ -43,6 +46,8 @@ export default function LoginPage() {
         })
         return
       }
+      const userName = result?.user?.name || identifier.trim()
+      toast.success(t('Welcome back, {name}!', { name: userName }))
       navigate('/', { replace: true })
     } catch (err) {
       setErrors({ form: err.message })
@@ -52,7 +57,7 @@ export default function LoginPage() {
   }
 
   return (
-    <AuthShell title={APP_NAME} description="Sign in to your account to continue.">
+    <AuthShell title={APP_NAME} description={t('Sign in to your account to continue.')}>
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
         {errors.form ? (
           <div
@@ -62,19 +67,19 @@ export default function LoginPage() {
             {errors.form}
           </div>
         ) : null}
-        <Field label="Email or username" htmlFor="login-identifier" required error={errors.identifier}>
+        <Field label={t('Email or username')} htmlFor="login-identifier" required error={errors.identifier}>
           <Input
             id="login-identifier"
             name="email"
             type="text"
             autoComplete="username"
-            placeholder="you@clinic.local or username"
+            placeholder={t('you@clinic.local or username')}
             value={identifier}
             onChange={(e) => setIdentifier(e.target.value)}
             invalid={Boolean(errors.identifier)}
           />
         </Field>
-        <Field label="Password" htmlFor="login-password" required error={errors.password}>
+        <Field label={t('Password')} htmlFor="login-password" required error={errors.password}>
           <Input
             id="login-password"
             name="password"
@@ -92,12 +97,12 @@ export default function LoginPage() {
           size="lg"
           loading={loading}
         >
-          Sign in
+          {t('Sign in')}
         </Button>
         <p className="pt-1 text-center text-sm text-ink-muted">
-          Forgotten your password?{' '}
+          {t('Forgotten your password?')}{' '}
           <Link className="font-medium text-brand hover:text-brand-dark" to="/forgot-password">
-            Reset it
+            {t('Reset it')}
           </Link>
         </p>
       </form>

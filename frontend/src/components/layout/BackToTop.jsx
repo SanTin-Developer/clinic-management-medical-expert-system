@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { ArrowUp } from 'lucide-react'
 import { cn } from '../../utils/cn.js'
 import { useOverlayOpen } from '../../hooks/useOverlay.js'
+import { useLanguage } from '../../hooks/useLanguage.js'
 
 /** Show the button once the admin has scrolled meaningfully inside the main pane. */
 const SHOW_AFTER_PX = 320
@@ -20,6 +21,7 @@ const SHOW_AFTER_PX = 320
  * floats on top of a modal or its confirmation buttons.
  */
 export default function BackToTop({ scrollRef }) {
+  const { t } = useLanguage()
   const [scrolled, setScrolled] = useState(false)
   const overlayOpen = useOverlayOpen()
   const visible = scrolled && !overlayOpen
@@ -58,7 +60,7 @@ export default function BackToTop({ scrollRef }) {
     <button
       type="button"
       onClick={scrollToTop}
-      aria-label="Back to top"
+      aria-label={t('Back to top')}
       aria-hidden={!visible}
       tabIndex={visible ? 0 : -1}
       className={cn(

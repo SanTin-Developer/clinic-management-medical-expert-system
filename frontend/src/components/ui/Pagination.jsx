@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '../../utils/cn.js'
+import { useLanguage } from '../../hooks/useLanguage.js'
 
 function pageList(page, lastPage) {
   const pages = new Set()
@@ -12,6 +13,8 @@ function pageList(page, lastPage) {
 }
 
 export default function Pagination({ page, lastPage, total, onChange }) {
+  const { t } = useLanguage()
+
   if (!lastPage || lastPage <= 1) return null
 
   const pages = pageList(page, lastPage)
@@ -19,18 +22,18 @@ export default function Pagination({ page, lastPage, total, onChange }) {
   return (
     <nav
       className="flex items-center justify-between gap-3 border-t border-line px-5 py-3"
-      aria-label="Pagination"
+      aria-label={t('Pagination')}
     >
       <p className="text-sm text-ink-muted">
-        {total !== undefined ? `${total} records` : 'Page'} · page {page} of{' '}
-        {lastPage}
+        {total !== undefined ? t('{count} records', { count: total }) : t('Page')} ·{' '}
+        {t('page {page} of {lastPage}', { page, lastPage })}
       </p>
       <div className="flex items-center gap-1">
         <button
           type="button"
           onClick={() => onChange(page - 1)}
           disabled={page <= 1}
-          aria-label="Previous page"
+          aria-label={t('Previous page')}
           className="grid size-8 place-items-center rounded-lg border border-line bg-surface text-ink-muted transition-colors hover:bg-canvas disabled:opacity-40"
         >
           <ChevronLeft className="size-4" aria-hidden />
@@ -61,7 +64,7 @@ export default function Pagination({ page, lastPage, total, onChange }) {
           type="button"
           onClick={() => onChange(page + 1)}
           disabled={page >= lastPage}
-          aria-label="Next page"
+          aria-label={t('Next page')}
           className="grid size-8 place-items-center rounded-lg border border-line bg-surface text-ink-muted transition-colors hover:bg-canvas disabled:opacity-40"
         >
           <ChevronRight className="size-4" aria-hidden />

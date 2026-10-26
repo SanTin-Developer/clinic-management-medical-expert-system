@@ -1,10 +1,13 @@
 import { cn } from '../../utils/cn.js'
+import { useLanguage } from '../../hooks/useLanguage.js'
 
 export default function Tabs({ tabs, value, onChange, className }) {
+  const { t } = useLanguage()
+
   return (
     <div
       role="tablist"
-      aria-label="Section tabs"
+      aria-label={t('Section tabs')}
       className={cn(
         'no-scrollbar flex w-full min-w-0 max-w-full gap-1 overflow-x-auto border-b border-line',
         className,
@@ -26,7 +29,7 @@ export default function Tabs({ tabs, value, onChange, className }) {
                 : 'border-transparent text-ink-muted hover:text-ink',
             )}
           >
-            {tab.label}
+            {t(tab.label)}
             {typeof tab.count === 'number' ? (
               <span
                 className={cn(

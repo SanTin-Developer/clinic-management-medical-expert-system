@@ -1,12 +1,14 @@
 import { Check, X } from 'lucide-react'
 import { passwordChecks } from '../../utils/password.js'
 import { cn } from '../../utils/cn.js'
+import { useLanguage } from '../../hooks/useLanguage.js'
 
 export default function PasswordChecklist({ value, className, id }) {
+  const { t } = useLanguage()
   const checks = passwordChecks(value)
 
   return (
-    <ul id={id} className={cn('grid grid-cols-1 gap-1 sm:grid-cols-2', className)} aria-label="Password requirements">
+    <ul id={id} className={cn('grid grid-cols-1 gap-1 sm:grid-cols-2', className)} aria-label={t('Password requirements')}>
       {checks.map((check) => (
         <li
           key={check.key}
@@ -25,7 +27,7 @@ export default function PasswordChecklist({ value, className, id }) {
           >
             {check.met ? <Check size={11} aria-hidden /> : <X size={11} aria-hidden />}
           </span>
-          {check.label}
+          {t(check.label)}
         </li>
       ))}
     </ul>
