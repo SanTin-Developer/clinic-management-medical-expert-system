@@ -26,3 +26,9 @@ _ide_helper.php
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Local AI tooling and stray database artifacts
+/.agents
+/AGENTS.md
+/boost.json
+/clinic_db

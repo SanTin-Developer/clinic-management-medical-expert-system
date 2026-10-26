@@ -74,5 +74,3 @@ inventory, stock movements), billing (invoices, payments, print), reports +
 CSV/PDF export, users & roles, settings (profile, trusted devices), and the
 medical expert system (symptom analysis, knowledge base, audit history).
 All screens are RBAC-aware and wired to the live API.
-
-See `../FRONTEND_UI_UX_COMPLETION_REPORT.md` for the full build report.
