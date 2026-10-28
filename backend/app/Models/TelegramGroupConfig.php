@@ -13,10 +13,13 @@ class TelegramGroupConfig extends Model
 
     public const CATEGORY_ANNOUNCEMENTS = 'announcements';
 
+    public const CATEGORY_SYSTEM_ALERTS = 'system_alerts';
+
     public const CATEGORIES = [
         self::CATEGORY_NEW_MESSAGE,
         self::CATEGORY_GROUP_UPDATES,
         self::CATEGORY_ANNOUNCEMENTS,
+        self::CATEGORY_SYSTEM_ALERTS,
     ];
 
     protected $fillable = [

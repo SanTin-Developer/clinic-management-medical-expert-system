@@ -358,4 +358,27 @@ final class TelegramMessages
     {
         return '⚠️ Your reply is too long (maximum '.$limit.' characters). Please shorten it and try again. It was not saved.';
     }
+
+    /**
+     * Sanitised group notification for a critical system alert.
+     *
+     * Only the alert title is included. Patient identifiers, financial amounts,
+     * free-text messages and URLs are deliberately never sent to Telegram.
+     */
+    public static function systemAlert(string $severity, string $title): string
+    {
+        $icon = match ($severity) {
+            'critical' => '🚨',
+            'warning' => '⚠️',
+            default => '🔔',
+        };
+
+        return implode("\n", [
+            "{$icon} <b>RoyalCare system alert</b>",
+            '',
+            '<b>'.e($title).'</b>',
+            '',
+            'Open the RoyalCare notification centre to review and resolve it.',
+        ]);
+    }
 }

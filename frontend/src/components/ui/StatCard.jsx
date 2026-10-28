@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { ArrowUpRight } from 'lucide-react'
 import { cn } from '../../utils/cn.js'
+import { Shimmer } from './Skeleton.jsx'
 
 const TONES = {
   brand: 'bg-brand-soft text-brand-dark',
@@ -34,7 +35,7 @@ export default function StatCard({
           ) : null}
         </p>
         {loading ? (
-          <div className="mt-2 h-7 w-16 animate-pulse rounded-md bg-brand-soft/70" />
+          <Shimmer className="mt-2 h-7 w-16" />
         ) : (
           <p className="mt-1 truncate text-2xl font-bold text-ink">{value}</p>
         )}

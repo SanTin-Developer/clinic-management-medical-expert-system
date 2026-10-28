@@ -16,3 +16,11 @@ Schedule::command('attendance:finalize')->everyMinute()->withoutOverlapping()->r
 // Publish announcements whose scheduled publication time has arrived.
 // Idempotent, so a short interval is safe.
 Schedule::command('announcements:publish-scheduled')->everyMinute()->withoutOverlapping();
+
+// Notify assigned nurses when nursing tasks become overdue (grace period configurable).
+Schedule::command('nursing:notify-overdue --grace=5')->everyMinute()->withoutOverlapping()->runInBackground();
+
+// Generate and resolve system alerts across inventory, inpatient billing,
+// appointments, staff, attendance, clinical, and infrastructure health.
+// Idempotent by source key, so a short interval is safe.
+Schedule::command('alerts:generate')->everyFiveMinutes()->withoutOverlapping();

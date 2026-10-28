@@ -24,7 +24,7 @@ import StatCard from '../components/ui/StatCard.jsx'
 import Card from '../components/ui/Card.jsx'
 import Badge from '../components/ui/Badge.jsx'
 import Table, { THead, TBody, Tr, Th, Td } from '../components/ui/Table.jsx'
-import { CardSkeleton, RowSkeleton } from '../components/ui/Skeleton.jsx'
+import { CardSkeleton, RowSkeleton, Shimmer } from '../components/ui/Skeleton.jsx'
 import Button from '../components/ui/Button.jsx'
 import TrendAreaChart from '../components/charts/TrendAreaChart.jsx'
 import BarChart from '../components/charts/BarChart.jsx'
@@ -65,13 +65,25 @@ function compactCurrency(value) {
   return COMPACT_CURRENCY.format(Number(value ?? 0))
 }
 
+const CHART_BARS = [42, 68, 54, 82, 60, 76, 48, 88, 64, 72, 56, 80]
+
 function ChartSkeleton({ height = 200 }) {
   return (
     <div
-      className="w-full animate-pulse rounded-xl bg-brand-soft/70"
+      className="relative w-full overflow-hidden rounded-xl border border-line/70 bg-canvas/60 p-4"
       style={{ height }}
       aria-hidden
-    />
+    >
+      <div className="flex h-full items-end gap-1.5">
+        {CHART_BARS.map((value, index) => (
+          <div key={index} className="flex-1" style={{ height: `${value}%` }}>
+            <Shimmer className="h-full w-full rounded-t-md" />
+          </div>
+        ))}
+      </div>
+      <div className="pointer-events-none absolute inset-x-4 top-1/3 border-t border-line/50" />
+      <div className="pointer-events-none absolute inset-x-4 top-2/3 border-t border-line/50" />
+    </div>
   )
 }
 

@@ -26,7 +26,7 @@ import Card from '../components/ui/Card.jsx'
 import Badge from '../components/ui/Badge.jsx'
 import ConfirmDialog from '../components/ui/ConfirmDialog.jsx'
 import Table, { THead, TBody, Tr, Th, Td } from '../components/ui/Table.jsx'
-import { Spinner } from '../components/ui/Skeleton.jsx'
+import { PageSkeleton } from '../components/ui/Skeleton.jsx'
 import { ErrorState, ForbiddenState } from '../components/ui/State.jsx'
 import StaffFormModal from '../components/staff/StaffFormModal.jsx'
 import StaffSalaryModal from '../components/staff/StaffSalaryModal.jsx'
@@ -137,9 +137,12 @@ export default function StaffDetailPage() {
 
   if (loading) {
     return (
-      <div className="grid min-h-[300px] place-items-center">
-        <Spinner label="Loading staff profile…" />
-      </div>
+      <PageSkeleton
+        title="Staff Profile"
+        description="Loading employment details, credentials, documents and compensation…"
+        cards={4}
+        rows={3}
+      />
     )
   }
 

@@ -15,6 +15,68 @@ return [
     'chat' => [
         'messages_per_page' => (int) env('CHAT_MESSAGES_PER_PAGE', 30),
         'max_message_length' => (int) env('CHAT_MAX_MESSAGE_LENGTH', 4000),
+
+        /*
+        |----------------------------------------------------------------------
+        | Message attachments
+        |----------------------------------------------------------------------
+        |
+        | Images, documents and videos are stored on a private disk and served
+        | through short-lived signed URLs. Limits are expressed in kilobytes
+        | (Laravel's file validation unit). The video limit is 50 MB; the
+        | two-minute duration is a recommendation shown in the UI, not a hard
+        | server-side limit.
+        |
+        */
+
+        'attachments' => [
+            'disk' => env('CHAT_ATTACHMENTS_DISK', 'local'),
+            'signed_url_ttl_minutes' => (int) env('CHAT_ATTACHMENT_URL_TTL', 360),
+            'recommended_video_seconds' => (int) env('CHAT_RECOMMENDED_VIDEO_SECONDS', 120),
+
+            'max_image_size_kb' => (int) env('CHAT_MAX_IMAGE_KB', 10240),
+            'max_file_size_kb' => (int) env('CHAT_MAX_FILE_KB', 20480),
+            'max_video_size_kb' => (int) env('CHAT_MAX_VIDEO_KB', 51200),
+
+            'image_extensions' => ['jpg', 'jpeg', 'png', 'webp', 'gif'],
+            'image_mime_types' => ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
+
+            'video_extensions' => ['mp4', 'webm', 'mov'],
+            'video_mime_types' => ['video/mp4', 'video/webm', 'video/quicktime'],
+
+            // Only browser-playable video codecs. HEVC/H.265 is deliberately
+            // excluded because it is not broadly supported outside Safari.
+            'video_codecs' => ['avc1', 'avc3', 'av01', 'vp09', 'V_VP8', 'V_VP9', 'V_AV1'],
+
+            'file_extensions' => ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'csv'],
+
+            'file_expected_mimes' => [
+                'pdf' => ['application/pdf'],
+                'doc' => ['application/msword', 'application/x-ole-storage', 'application/vnd.ms-office', 'application/cdfv2'],
+                'docx' => [
+                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    'application/zip',
+                    'application/x-zip',
+                    'application/x-zip-compressed',
+                ],
+                'xls' => ['application/vnd.ms-excel', 'application/x-ole-storage', 'application/vnd.ms-office', 'application/cdfv2'],
+                'xlsx' => [
+                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    'application/zip',
+                    'application/x-zip',
+                    'application/x-zip-compressed',
+                ],
+                'ppt' => ['application/vnd.ms-powerpoint', 'application/x-ole-storage', 'application/vnd.ms-office', 'application/cdfv2'],
+                'pptx' => [
+                    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+                    'application/zip',
+                    'application/x-zip',
+                    'application/x-zip-compressed',
+                ],
+                'txt' => ['text/plain'],
+                'csv' => ['text/plain', 'text/csv', 'application/csv'],
+            ],
+        ],
     ],
 
     /*

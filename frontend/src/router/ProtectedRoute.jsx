@@ -1,5 +1,5 @@
 import { Navigate, useLocation } from 'react-router-dom'
-import { Spinner } from '../components/ui/Skeleton.jsx'
+import { LoadingBar, LoadingPill, Shimmer } from '../components/ui/Skeleton.jsx'
 import { useAuth } from '../hooks/useAuth.js'
 
 export default function ProtectedRoute({ children }) {
@@ -8,8 +8,22 @@ export default function ProtectedRoute({ children }) {
 
   if (isLoading) {
     return (
-      <div className="grid min-h-screen place-items-center bg-canvas">
-        <Spinner label="Restoring your session..." />
+      <div className="grid min-h-screen place-items-center bg-canvas px-6">
+        <div
+          role="status"
+          aria-live="polite"
+          aria-label="Restoring your session"
+          className="w-full max-w-sm space-y-5 rounded-2xl border border-line bg-surface p-6 shadow-[var(--shadow-card)]"
+        >
+          <div className="flex justify-center">
+            <LoadingPill label="Restoring your session" />
+          </div>
+          <LoadingBar />
+          <div className="space-y-3">
+            <Shimmer className="mx-auto h-4 w-3/4" />
+            <Shimmer className="mx-auto h-3 w-1/2" />
+          </div>
+        </div>
       </div>
     )
   }

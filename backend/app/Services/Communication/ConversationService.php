@@ -15,12 +15,11 @@ use App\Notifications\NewMessageNotification;
 use App\Services\Telegram\TelegramClient;
 use App\Services\Telegram\TelegramMessages;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class ConversationService
 {
-    public function __construct(private readonly TelegramClient $telegram) {}
+    public function __construct(private readonly TelegramClient $telegram, private readonly ConversationAttachmentService $attachments) {}
 
     public function findOrCreatePrivate(User $user, int $otherUserId): Conversation
     {
@@ -115,13 +114,20 @@ class ConversationService
             ->update(['left_at' => now()]);
     }
 
-    public function sendMessage(Conversation $conversation, User $sender, string $body): ConversationMessage
-    {
+    public function sendMessage(
+        Conversation $conversation,
+        User $sender,
+        string $body,
+        ?array $attachment = null,
+    ): ConversationMessage {
         return $this->createMessage(
             $conversation,
             $sender,
             $body,
             ConversationMessage::SOURCE_WEB,
+            null,
+            null,
+            $attachment,
         );
     }
 
@@ -155,6 +161,7 @@ class ConversationService
         string $source,
         int|string|null $telegramChatId = null,
         ?int $telegramMessageId = null,
+        ?array $attachment = null,
     ): ConversationMessage {
         $message = DB::transaction(function () use (
             $conversation,
@@ -163,6 +170,7 @@ class ConversationService
             $source,
             $telegramChatId,
             $telegramMessageId,
+            $attachment,
         ) {
             $message = $conversation->messages()->create([
                 'sender_id' => $sender->id,
@@ -170,6 +178,11 @@ class ConversationService
                 'source' => $source,
                 'telegram_chat_id' => $telegramChatId,
                 'telegram_message_id' => $telegramMessageId,
+                'attachment_kind' => $attachment['kind'] ?? null,
+                'attachment_path' => $attachment['path'] ?? null,
+                'attachment_name' => $attachment['name'] ?? null,
+                'attachment_mime' => $attachment['mime'] ?? null,
+                'attachment_size' => $attachment['size'] ?? null,
             ]);
 
             $conversation->participants()
@@ -259,7 +272,7 @@ class ConversationService
                     conversationTitle: $conversation->isGroup() ? $conversation->title : null,
                     messageId: $message->id,
                     senderName: $sender->name,
-                    preview: Str::limit($message->body, 120),
+                    preview: $message->previewText(),
                     isGroup: $conversation->isGroup(),
                 ));
             }
@@ -287,6 +300,46 @@ class ConversationService
             return;
         }
 
+        $photoUrl = null;
+        $documentUrl = null;
+        $photoDisk = null;
+        $photoPath = null;
+        $documentDisk = null;
+        $documentPath = null;
+        $documentFilename = $message->attachment_name;
+
+        if ($message->hasAttachment()) {
+            $path = (string) $message->attachment_path;
+            if (str_starts_with($path, 'http')) {
+                if ($message->attachment_kind === ConversationMessage::ATTACHMENT_IMAGE) {
+                    $photoUrl = $path;
+                } elseif ($message->attachment_kind === ConversationMessage::ATTACHMENT_VIDEO) {
+                    $documentUrl = $path;
+                } elseif ($message->attachment_kind === ConversationMessage::ATTACHMENT_FILE) {
+                    $documentUrl = $path;
+                }
+            } else {
+                $ttl = max(1, (int) config('communication.chat.attachments.signed_url_ttl_minutes', 360));
+                $parameters = [
+                    'conversation' => $message->conversation_id,
+                    'message' => $message->id,
+                ];
+                $signedUrl = \Illuminate\Support\Facades\URL::temporarySignedRoute(
+                    'conversations.attachments.show',
+                    now()->addMinutes($ttl),
+                    $parameters,
+                );
+
+                if ($message->attachment_kind === ConversationMessage::ATTACHMENT_IMAGE) {
+                    $photoUrl = $signedUrl;
+                } elseif ($message->attachment_kind === ConversationMessage::ATTACHMENT_VIDEO) {
+                    $documentUrl = $signedUrl;
+                } elseif ($message->attachment_kind === ConversationMessage::ATTACHMENT_FILE) {
+                    $documentUrl = $signedUrl;
+                }
+            }
+        }
+
         SendTelegramMessage::dispatch(
             chatId: $connection->telegram_chat_id,
             text: $this->telegramText($conversation, $message, $sender),
@@ -296,6 +349,13 @@ class ConversationService
             idempotencyKey: 'message:'.$message->id.':user:'.$recipient->id,
             conversationId: $conversation->id,
             conversationMessageId: $message->id,
+            photoDisk: $photoDisk,
+            photoPath: $photoPath,
+            photoUrl: $photoUrl,
+            documentDisk: $documentDisk,
+            documentPath: $documentPath,
+            documentUrl: $documentUrl,
+            documentFilename: $documentFilename,
         );
     }
 
@@ -314,6 +374,46 @@ class ConversationService
             return;
         }
 
+        $photoUrl = null;
+        $documentUrl = null;
+        $photoDisk = null;
+        $photoPath = null;
+        $documentDisk = null;
+        $documentPath = null;
+        $documentFilename = $message->attachment_name;
+
+        if ($message->hasAttachment()) {
+            $path = (string) $message->attachment_path;
+            if (str_starts_with($path, 'http')) {
+                if ($message->attachment_kind === ConversationMessage::ATTACHMENT_IMAGE) {
+                    $photoUrl = $path;
+                } elseif ($message->attachment_kind === ConversationMessage::ATTACHMENT_VIDEO) {
+                    $documentUrl = $path;
+                } elseif ($message->attachment_kind === ConversationMessage::ATTACHMENT_FILE) {
+                    $documentUrl = $path;
+                }
+            } else {
+                $ttl = max(1, (int) config('communication.chat.attachments.signed_url_ttl_minutes', 360));
+                $parameters = [
+                    'conversation' => $message->conversation_id,
+                    'message' => $message->id,
+                ];
+                $signedUrl = \Illuminate\Support\Facades\URL::temporarySignedRoute(
+                    'conversations.attachments.show',
+                    now()->addMinutes($ttl),
+                    $parameters,
+                );
+
+                if ($message->attachment_kind === ConversationMessage::ATTACHMENT_IMAGE) {
+                    $photoUrl = $signedUrl;
+                } elseif ($message->attachment_kind === ConversationMessage::ATTACHMENT_VIDEO) {
+                    $documentUrl = $signedUrl;
+                } elseif ($message->attachment_kind === ConversationMessage::ATTACHMENT_FILE) {
+                    $documentUrl = $signedUrl;
+                }
+            }
+        }
+
         SendTelegramMessage::dispatch(
             chatId: $config->chat_id,
             text: $this->telegramText($conversation, $message, $sender),
@@ -323,6 +423,13 @@ class ConversationService
             idempotencyKey: 'message:'.$message->id.':group',
             conversationId: $conversation->id,
             conversationMessageId: $message->id,
+            photoDisk: $photoDisk,
+            photoPath: $photoPath,
+            photoUrl: $photoUrl,
+            documentDisk: $documentDisk,
+            documentPath: $documentPath,
+            documentUrl: $documentUrl,
+            documentFilename: $documentFilename,
         );
     }
 
@@ -331,7 +438,7 @@ class ConversationService
         return TelegramMessages::newMessage(
             $sender->name,
             $conversation->isGroup() ? (string) $conversation->title : null,
-            Str::limit($message->body, 500),
+            $message->previewText(500),
         );
     }
 }

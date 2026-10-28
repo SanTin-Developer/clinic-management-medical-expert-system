@@ -257,6 +257,59 @@ input[type="search"]::-webkit-search-decoration {
   animation: aurora 18s ease-in-out infinite;
 }
 
+/* Shimmering placeholders for loading states */
+@keyframes skeleton-shimmer {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+.skeleton-shimmer {
+  position: relative;
+  overflow: hidden;
+  background-color: color-mix(in srgb, var(--color-brand-soft) 55%, var(--color-surface));
+}
+
+.skeleton-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background-image: linear-gradient(
+    90deg,
+    transparent,
+    rgb(255 255 255 / 0.7),
+    transparent
+  );
+  animation: skeleton-shimmer 1.6s ease-in-out infinite;
+}
+
+.dark .skeleton-shimmer::after {
+  background-image: linear-gradient(
+    90deg,
+    transparent,
+    rgb(255 255 255 / 0.08),
+    transparent
+  );
+}
+
+/* Indeterminate progress bar used by in-page loading states */
+@keyframes loading-bar {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(420%);
+  }
+}
+
+.loading-bar {
+  animation: loading-bar 1.3s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
 /* Decorative grid for the auth showcase panel */
 .auth-grid {
   background-image:

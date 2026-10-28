@@ -58,6 +58,15 @@ class RolePermissionSeeder extends Seeder
             'medications.view',
             'medications.record',
 
+            // Inpatient operations (billing/nursing) are authorised by these
+            // permissions. Legacy billing.* permissions must never grant access
+            // to inpatient financial or nursing workflows.
+            'inpatient.view',
+            'inpatient.billing.view',
+            'inpatient.billing.manage',
+            'inpatient.nursing.view',
+            'inpatient.nursing.manage',
+
             // Appointments
             'appointments.view',
             'appointments.create',
@@ -182,6 +191,10 @@ class RolePermissionSeeder extends Seeder
             'notifications.view',
             'notifications.manage',
 
+            // System health alerts are restricted to administrators because
+            // they expose infrastructure state rather than patient/staff data.
+            'system.health.view',
+
             'telegram.connect',
             'telegram.group.manage',
         ];
@@ -225,6 +238,9 @@ class RolePermissionSeeder extends Seeder
             'billing.view',
             'billing.create',
             'billing.update',
+            'inpatient.view',
+            'inpatient.billing.view',
+            'inpatient.billing.manage',
             'wards.view',
             'beds.view',
             'admissions.view',
@@ -269,6 +285,9 @@ class RolePermissionSeeder extends Seeder
             'nursing-tasks.complete',
             'medications.view',
             'medications.record',
+            'inpatient.view',
+            'inpatient.nursing.view',
+            'inpatient.nursing.manage',
             'expert-system.view',
             'documents.view',
             'documents.manage',
@@ -308,6 +327,10 @@ class RolePermissionSeeder extends Seeder
             'nursing-tasks.complete',
             'medications.view',
             'medications.record',
+            'inpatient.view',
+            'inpatient.billing.view',
+            'inpatient.nursing.view',
+            'inpatient.nursing.manage',
             'vitals.view',
             'medical-records.view',
             'prescriptions.view',
@@ -369,6 +392,8 @@ class RolePermissionSeeder extends Seeder
             'admissions.update',
             'nursing-tasks.view',
             'medications.view',
+            'inpatient.view',
+            'inpatient.nursing.view',
             'documents.view',
             'documents.manage',
             'chat.view',

@@ -7,6 +7,7 @@ use App\Models\Admission;
 use App\Models\AssignmentAuditLog;
 use App\Models\Patient;
 use App\Models\PatientAssignment;
+use App\Models\Shift;
 use App\Models\User;
 use App\Notifications\PatientAssignedNotification;
 use App\Services\Nursing\AssignmentAudit;
@@ -15,6 +16,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class PatientAssignmentController extends Controller
@@ -93,7 +95,7 @@ class PatientAssignmentController extends Controller
             'admission_id' => ['nullable', 'integer', 'exists:admissions,id'],
             'shift' => ['nullable', 'string', 'max:20'],
             'starts_at' => ['nullable', 'date'],
-            'ends_at' => ['nullable', 'date|after_or_equal:starts_at'],
+            'ends_at' => ['nullable', 'date', Rule::when($request->filled('starts_at'), ['after_or_equal:starts_at'])],
             'notes' => ['nullable', 'string'],
         ]);
 
@@ -112,6 +114,8 @@ class PatientAssignmentController extends Controller
         }
 
         $nurse = User::query()->role('Nurse')->findOrFail($validated['nurse_id']);
+
+        $this->assertShiftCompatible($request->user(), $nurse, $validated['shift'] ?? null);
 
         $assignment = DB::transaction(function () use ($validated, $nurse, $request) {
             $assignment = PatientAssignment::create([
@@ -213,7 +217,7 @@ class PatientAssignmentController extends Controller
             'admission_id' => ['nullable', 'integer', 'exists:admissions,id'],
             'shift' => ['nullable', 'string', 'max:20'],
             'starts_at' => ['nullable', 'date'],
-            'ends_at' => ['nullable', 'date|after_or_equal:starts_at'],
+            'ends_at' => ['nullable', 'date', Rule::when($request->filled('starts_at'), ['after_or_equal:starts_at'])],
             'notes' => ['nullable', 'string'],
             'reason' => ['nullable', 'string'],
         ]);
@@ -238,6 +242,9 @@ class PatientAssignmentController extends Controller
             || ($validated['patient_id'] ?? null) !== $assignment->patient_id
             || ($validated['ward_id'] ?? null) !== $assignment->ward_id
             || ($validated['admission_id'] ?? null) !== $assignment->admission_id;
+
+        $shiftToCheck = array_key_exists('shift', $validated) ? ($validated['shift'] ?? null) : $assignment->shift;
+        $this->assertShiftCompatible($request->user(), $nurse, $shiftToCheck);
 
         $before = $this->audit->snapshot($assignment);
         $reason = $validated['reason'] ?? null;
@@ -305,9 +312,9 @@ class PatientAssignmentController extends Controller
         }
 
         $assignment->update([
-            'shift' => $validated['shift'] ?? null,
+            'shift' => array_key_exists('shift', $validated) ? ($validated['shift'] ?? null) : $assignment->shift,
             'starts_at' => $validated['starts_at'] ?? $assignment->starts_at,
-            'ends_at' => $validated['ends_at'] ?? null,
+            'ends_at' => array_key_exists('ends_at', $validated) ? ($validated['ends_at'] ?? null) : $assignment->ends_at,
             'notes' => $validated['notes'] ?? $assignment->notes,
         ]);
 
@@ -370,5 +377,148 @@ class PatientAssignmentController extends Controller
             ->get();
 
         return response()->json(['data' => $patients]);
+    }
+
+    private function assertShiftCompatible(User $actor, User $nurse, ?string $targetShift): void
+    {
+        $targetShift = strtolower(trim((string) $targetShift));
+        if ($targetShift === '') {
+            $targetShift = 'full_time';
+        }
+        if ($targetShift === 'fulltime' || $targetShift === 'full-time') {
+            $targetShift = 'full_time';
+        }
+
+        $nurseShift = $this->getActiveShiftTypeForUser($nurse);
+        if ($nurseShift === '') {
+            return;
+        }
+
+        $isMorningTarget = in_array($targetShift, ['day', 'morning', 'am', 'full_time'], true);
+        $isAfternoonTarget = in_array($targetShift, ['afternoon', 'pm'], true);
+        $isEveningTarget = in_array($targetShift, ['evening'], true);
+        $isNightTarget = in_array($targetShift, ['night'], true);
+
+        if (in_array($nurseShift, ['day', 'morning'], true)) {
+            if ($isAfternoonTarget || $isEveningTarget || $isNightTarget) {
+                throw ValidationException::withMessages([
+                    'shift' => 'Morning/day-shift staff cannot be assigned to afternoon, evening, or night shifts.',
+                ]);
+            }
+
+            return;
+        }
+
+        if ($nurseShift === 'afternoon') {
+            if ($isMorningTarget || $isEveningTarget || $isNightTarget) {
+                throw ValidationException::withMessages([
+                    'shift' => 'Afternoon-shift staff cannot be assigned to morning, evening, or night shifts.',
+                ]);
+            }
+
+            return;
+        }
+
+        if ($nurseShift === 'evening') {
+            if ($isMorningTarget || $isAfternoonTarget || $isNightTarget) {
+                throw ValidationException::withMessages([
+                    'shift' => 'Evening-shift staff cannot be assigned to morning, afternoon, or night shifts.',
+                ]);
+            }
+
+            return;
+        }
+
+        if ($nurseShift === 'night') {
+            if ($isMorningTarget || $isAfternoonTarget || $isEveningTarget) {
+                throw ValidationException::withMessages([
+                    'shift' => 'Night-shift staff cannot be assigned to morning, afternoon, or evening shifts.',
+                ]);
+            }
+        }
+    }
+
+    private function actorWorksDayShift(User $actor): bool
+    {
+        if (! $actor->hasRole('Head Nurse')) {
+            return false;
+        }
+
+        $today = now()->toDateString();
+        $shift = Shift::query()
+            ->with('shiftTemplate')
+            ->where('user_id', $actor->id)
+            ->whereDate('shift_date', $today)
+            ->where('status', '!=', 'cancelled')
+            ->latest('id')
+            ->first();
+
+        if (! $shift) {
+            return false;
+        }
+
+        $type = strtolower((string) ($shift->type ?? ''));
+        $templateType = strtolower((string) ($shift->shiftTemplate?->type ?? ''));
+
+        if (in_array($type, ['day', 'morning', 'am'], true) || in_array($templateType, ['day', 'morning', 'am'], true)) {
+            return true;
+        }
+
+        if ($shift->start_time) {
+            $hour = (int) substr((string) $shift->start_time, 0, 2);
+            if ($hour >= 6 && $hour < 14) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function getActiveShiftTypeForUser(User $nurse): string
+    {
+        $today = now()->toDateString();
+        $shift = Shift::query()
+            ->with('shiftTemplate')
+            ->where('user_id', $nurse->id)
+            ->whereDate('shift_date', $today)
+            ->where('status', '!=', 'cancelled')
+            ->latest('id')
+            ->first();
+
+        if (! $shift) {
+            return '';
+        }
+
+        $type = strtolower((string) ($shift->type ?? ''));
+        if ($type !== '') {
+            if ($type === 'on_call') {
+                return '';
+            }
+
+            return $type;
+        }
+
+        $templateType = strtolower((string) ($shift->shiftTemplate?->type ?? ''));
+        if ($templateType !== '') {
+            if ($templateType === 'on_call') {
+                return '';
+            }
+
+            return $templateType;
+        }
+
+        if ($shift->start_time) {
+            $hour = (int) substr((string) $shift->start_time, 0, 2);
+            if ($hour >= 6 && $hour < 14) {
+                return 'day';
+            }
+            if ($hour >= 14 && $hour < 22) {
+                return 'evening';
+            }
+
+            return 'night';
+        }
+
+        return '';
     }
 }

@@ -32,6 +32,7 @@ use App\Http\Controllers\Api\MedicineController;
 use App\Http\Controllers\Api\NewsController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\NursingTaskController;
+use App\Http\Controllers\Api\SystemAlertController;
 use App\Http\Controllers\Api\PasswordResetController;
 use App\Http\Controllers\Api\PatientAssignmentController;
 use App\Http\Controllers\Api\PatientController;
@@ -453,6 +454,10 @@ Route::prefix('v1')->group(function () {
         Route::get('/conversations/{conversation}', [ConversationController::class, 'show']);
         Route::get('/conversations/{conversation}/messages', [ConversationController::class, 'messages']);
         Route::post('/conversations/{conversation}/messages', [ConversationController::class, 'sendMessage']);
+        Route::put('/conversations/{conversation}/messages/{message}', [ConversationController::class, 'updateMessage']);
+        Route::patch('/conversations/{conversation}/messages/{message}', [ConversationController::class, 'updateMessage']);
+        Route::delete('/conversations/{conversation}/messages/{message}', [ConversationController::class, 'deleteMessage']);
+        Route::post('/conversations/{conversation}/messages/bulk-delete', [ConversationController::class, 'bulkDeleteMessages']);
         Route::get('/conversations/{conversation}/messages/{message}/delivery', [ConversationController::class, 'messageDelivery']);
         Route::post('/conversations/{conversation}/read', [ConversationController::class, 'markRead']);
         Route::post('/conversations/{conversation}/participants', [ConversationController::class, 'addParticipants']);
@@ -509,6 +514,15 @@ Route::prefix('v1')->group(function () {
         Route::get('/notification-preferences', [NotificationController::class, 'preferences']);
         Route::put('/notification-preferences', [NotificationController::class, 'updatePreferences']);
 
+        // System alerts
+        Route::get('/system-alerts', [SystemAlertController::class, 'index']);
+        Route::get('/system-alerts/unread-count', [SystemAlertController::class, 'unreadCount']);
+        Route::get('/system-alerts/summary', [SystemAlertController::class, 'summary']);
+        Route::post('/system-alerts/read-all', [SystemAlertController::class, 'markAllRead']);
+        Route::post('/system-alerts/{systemAlert}/read', [SystemAlertController::class, 'markRead']);
+        Route::post('/system-alerts/{systemAlert}/acknowledge', [SystemAlertController::class, 'acknowledge']);
+        Route::post('/system-alerts/{systemAlert}/resolve', [SystemAlertController::class, 'resolve']);
+
         // Telegram linking & group notifications
         Route::get('/telegram/status', [TelegramController::class, 'status']);
         Route::post('/telegram/link', [TelegramController::class, 'link']);
@@ -525,4 +539,14 @@ Route::prefix('v1')->group(function () {
         Route::get('/expert-system/audit-logs', [AuditLogController::class, 'index']);
         Route::get('/expert-system/audit-logs/{auditLog}', [AuditLogController::class, 'show']);
     });
+
+    // Attachments are embedded by <img>/<video> elements, which cannot send a
+    // bearer token. The temporary signature is the authorization mechanism; it
+    // is only generated for participants when messages are serialized.
+    Route::get('/conversations/{conversation}/messages/{message}/attachment', [
+        ConversationController::class,
+        'attachment',
+    ])
+        ->middleware(['signed', 'throttle:api'])
+        ->name('conversations.attachments.show');
 });

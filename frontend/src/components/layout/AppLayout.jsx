@@ -4,6 +4,7 @@ import Sidebar from './Sidebar.jsx'
 import Header from './Header.jsx'
 import BackToTop from './BackToTop.jsx'
 import AdminFooter from './AdminFooter.jsx'
+import QueryLoadingBar from './QueryLoadingBar.jsx'
 import DocumentTitle from '../../hooks/usePageTitle.js'
 import { OverlayProvider } from '../../context/OverlayProvider.jsx'
 
@@ -16,6 +17,7 @@ export default function AppLayout() {
     <OverlayProvider>
       <div className="flex h-screen overflow-hidden bg-canvas">
         <DocumentTitle />
+        <QueryLoadingBar />
         <Sidebar
           open={sidebarOpen}
           onClose={() => setSidebarOpen(false)}

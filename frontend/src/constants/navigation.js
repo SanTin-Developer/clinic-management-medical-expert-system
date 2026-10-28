@@ -1,5 +1,6 @@
 import {
   BarChart3,
+  Bell,
   Boxes,
   BrainCircuit,
   CalendarCheck,
@@ -60,6 +61,20 @@ export const NAV_SECTIONS = [
         label: "Queue Management",
         icon: ListOrdered,
         permissions: ["queue.view"],
+      },
+      {
+        to: "/notifications",
+        label: "Notifications",
+        icon: Bell,
+        permissions: [
+          "inventory.view",
+          "inpatient.billing.view",
+          "appointments.view",
+          "staff.view",
+          "attendance.view",
+          "inpatient.nursing.view",
+          "system.health.view",
+        ],
       },
     ],
   },

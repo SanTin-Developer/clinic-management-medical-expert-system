@@ -6,7 +6,29 @@ export const conversationApi = {
   create: (data) => api.post('/conversations', data).then((r) => r.data),
   get: (id) => api.get(`/conversations/${id}`).then((r) => r.data),
   messages: (id, params) => api.get(`/conversations/${id}/messages`, { params }),
-  send: (id, body) => api.post(`/conversations/${id}/messages`, { body }).then((r) => r.data),
+  send: (id, body, file, onUploadProgress) => {
+    if (file) {
+      const formData = new FormData()
+      if (typeof body === 'string' && body.trim()) {
+        formData.append('body', body.trim())
+      }
+      formData.append('attachment', file)
+      return api
+        .post(`/conversations/${id}/messages`, formData, {
+          onUploadProgress,
+          timeout: 300_000,
+          headers: { 'Content-Type': 'multipart/form-data' },
+        })
+        .then((r) => r.data)
+    }
+    return api.post(`/conversations/${id}/messages`, { body }).then((r) => r.data)
+  },
+  updateMessage: (id, messageId, body) =>
+    api.put(`/conversations/${id}/messages/${messageId}`, { body }).then((r) => r.data),
+  deleteMessage: (id, messageId, scope) =>
+    api.delete(`/conversations/${id}/messages/${messageId}`, { data: { scope } }).then((r) => r.data),
+  bulkDeleteMessages: (id, messageIds, scope) =>
+    api.post(`/conversations/${id}/messages/bulk-delete`, { message_ids: messageIds, scope }).then((r) => r.data),
   messageDelivery: (id, messageId) =>
     api.get(`/conversations/${id}/messages/${messageId}/delivery`).then((r) => r.data),
   markRead: (id, messageId) =>
@@ -25,6 +47,16 @@ export const notificationApi = {
   remove: (id) => api.delete(`/notifications/${id}`),
   preferences: () => api.get('/notification-preferences').then((r) => r.data),
   updatePreferences: (data) => api.put('/notification-preferences', data).then((r) => r.data),
+}
+
+export const systemAlertApi = {
+  list: (params) => api.get('/system-alerts', { params }),
+  unreadCount: () => api.get('/system-alerts/unread-count').then((r) => r.unread_count),
+  summary: () => api.get('/system-alerts/summary').then((r) => r.data),
+  markRead: (id) => api.post(`/system-alerts/${id}/read`).then((r) => r.data),
+  markAllRead: () => api.post('/system-alerts/read-all').then((r) => r.count),
+  acknowledge: (id) => api.post(`/system-alerts/${id}/acknowledge`).then((r) => r.data),
+  resolve: (id) => api.post(`/system-alerts/${id}/resolve`).then((r) => r.data),
 }
 
 export const telegramApi = {

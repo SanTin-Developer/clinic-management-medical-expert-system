@@ -39,9 +39,9 @@ export default function Modal({
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-4 sm:pt-6">
       <div
-          className="absolute inset-0 bg-slate-950/50 backdrop-blur-[2px]"
+        className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm"
         onClick={onClose}
         aria-hidden
       />
@@ -50,7 +50,7 @@ export default function Modal({
         aria-modal="true"
         aria-label={title ?? t('Dialog')}
         className={cn(
-          'animate-fade-in relative z-10 max-h-[92vh] w-full overflow-y-auto rounded-t-2xl bg-surface shadow-[var(--shadow-dialog)] sm:rounded-2xl',
+          'animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 relative z-10 max-h-[94vh] w-full overflow-y-auto rounded-2xl border border-line/80 bg-surface shadow-2xl ring-1 ring-black/5',
           SIZES[size],
         )}
       >

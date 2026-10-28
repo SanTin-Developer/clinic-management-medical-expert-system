@@ -26,6 +26,7 @@ class AdmissionBillingController extends Controller
     public function ledger(Request $request, Admission $admission): JsonResponse
     {
         $this->authorize('view', $admission);
+        abort_unless($request->user()->can('inpatient.billing.view'), 403);
         if ($this->access->isRestricted($request->user())) {
             abort_unless($this->access->canAccessPatient($request->user(), $admission->patient_id), 403);
         }
@@ -72,6 +73,7 @@ class AdmissionBillingController extends Controller
     public function generateRoomCharges(Request $request, Admission $admission): JsonResponse
     {
         $this->authorize('update', $admission);
+        abort_unless($request->user()->can('inpatient.billing.manage'), 403);
         if ($this->access->isRestricted($request->user())) {
             abort_unless($this->access->canAccessPatient($request->user(), $admission->patient_id), 403);
         }
@@ -87,6 +89,7 @@ class AdmissionBillingController extends Controller
     public function addCharge(Request $request, Admission $admission): JsonResponse
     {
         $this->authorize('update', $admission);
+        abort_unless($request->user()->can('inpatient.billing.manage'), 403);
         if ($this->access->isRestricted($request->user())) {
             abort_unless($this->access->canAccessPatient($request->user(), $admission->patient_id), 403);
         }
@@ -116,6 +119,7 @@ class AdmissionBillingController extends Controller
     public function generateDailyInvoice(Request $request, Admission $admission): JsonResponse
     {
         $this->authorize('update', $admission);
+        abort_unless($request->user()->can('inpatient.billing.manage'), 403);
         if ($this->access->isRestricted($request->user())) {
             abort_unless($this->access->canAccessPatient($request->user(), $admission->patient_id), 403);
         }
@@ -135,6 +139,7 @@ class AdmissionBillingController extends Controller
     public function recordPayment(Request $request, Admission $admission): JsonResponse
     {
         $this->authorize('update', $admission);
+        abort_unless($request->user()->can('inpatient.billing.manage'), 403);
         if ($this->access->isRestricted($request->user())) {
             abort_unless($this->access->canAccessPatient($request->user(), $admission->patient_id), 403);
         }
@@ -166,6 +171,7 @@ class AdmissionBillingController extends Controller
     public function dischargeReconciliation(Request $request, Admission $admission): JsonResponse
     {
         $this->authorize('update', $admission);
+        abort_unless($request->user()->can('inpatient.billing.manage'), 403);
         if ($this->access->isRestricted($request->user())) {
             abort_unless($this->access->canAccessPatient($request->user(), $admission->patient_id), 403);
         }
@@ -185,6 +191,7 @@ class AdmissionBillingController extends Controller
     public function voidCharge(Request $request, AdmissionCharge $charge): JsonResponse
     {
         $this->authorize('update', $charge->admission);
+        abort_unless($request->user()->can('inpatient.billing.manage'), 403);
 
         if ($charge->status === AdmissionCharge::STATUS_INVOICED) {
             return response()->json(['message' => 'Cannot void a charge that has already been invoiced. Use a credit note.'], 422);

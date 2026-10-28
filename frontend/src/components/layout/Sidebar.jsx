@@ -73,7 +73,7 @@ export default function Sidebar({ open, onClose, collapsed = false }) {
               alt={APP_NAME}
               draggable={false}
               style={{ WebkitUserDrag: "none", userSelect: "none" }}
-              className="pointer-events-none size-7 object-contain"
+              className="pointer-events-none size-9 object-contain"
             />
           </span>
           <div

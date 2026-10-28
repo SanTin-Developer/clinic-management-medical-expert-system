@@ -13,10 +13,12 @@ use App\Models\PharmacySale;
 use App\Models\Prescription;
 use App\Models\Staff;
 use App\Models\StaffDocument;
+use App\Models\SystemAlert;
 use App\Models\User;
 use App\Policies\PharmacySalePolicy;
 use App\Policies\StaffDocumentPolicy;
 use App\Policies\StaffPolicy;
+use App\Policies\SystemAlertPolicy;
 use App\Services\Announcements\AnnouncementPosterStorage;
 use App\Services\Auth\TotpService;
 use App\Services\Dashboard\DashboardMetricsService;
@@ -46,6 +48,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        $this->app->singleton(CloudinaryClient::class, function (): CloudinaryClient {
+            return new CloudinaryClient((array) config('services.cloudinary', []));
+        });
+
         $this->app->singleton(FileScanner::class, function (): FileScanner {
             return match (config('documents.scanner.driver', 'null')) {
                 'clamav' => new ClamAvFileScanner((array) config('documents.scanner.clamav', [])),
@@ -136,6 +142,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Staff::class, StaffPolicy::class);
         Gate::policy(StaffDocument::class, StaffDocumentPolicy::class);
         Gate::policy(PharmacySale::class, PharmacySalePolicy::class);
+        Gate::policy(SystemAlert::class, SystemAlertPolicy::class);
 
         // Record create/update/delete activity for authenticated users.
         Event::subscribe(ActivityEventSubscriber::class);

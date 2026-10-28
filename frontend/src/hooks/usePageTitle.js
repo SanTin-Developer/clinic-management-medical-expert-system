@@ -39,6 +39,7 @@ export const PAGE_TITLES = [
   { match: /^\/website\/media/, title: 'Website Media' },
   { match: /^\/website/, title: 'Website Management' },
   { match: /^\/queue/, title: 'Queue Management' },
+  { match: /^\/notifications/, title: 'Notifications' },
   { match: /^\/inventory/, title: 'Inventory & Supplies' },
   { match: /^\/attendance\/scan/, title: 'Scan Attendance' },
   { match: /^\/attendance/, title: 'Staff Attendance' },

@@ -5,7 +5,7 @@ import AuthLayout from '../components/layout/AuthLayout.jsx'
 import ProtectedRoute from './ProtectedRoute.jsx'
 import Guard from './Guard.jsx'
 import { COMING_SOON_ITEMS } from '../constants/navigation.js'
-import { Spinner } from '../components/ui/Skeleton.jsx'
+import { LoadingBar, LoadingPill, Shimmer } from '../components/ui/Skeleton.jsx'
 
 const LoginPage = lazy(() => import('../pages/LoginPage.jsx'))
 const OtpVerifyPage = lazy(() => import('../pages/OtpVerifyPage.jsx'))
@@ -16,6 +16,7 @@ const ResetPasswordPage = lazy(() => import('../pages/ResetPasswordPage.jsx'))
 const NewPasswordPage = lazy(() => import('../pages/NewPasswordPage.jsx'))
 const VerifyEmailPage = lazy(() => import('../pages/VerifyEmailPage.jsx'))
 const DashboardPage = lazy(() => import('../pages/DashboardPage.jsx'))
+const NotificationsPage = lazy(() => import('../pages/NotificationsPage.jsx'))
 const PatientListPage = lazy(() => import('../pages/PatientListPage.jsx'))
 const PatientDetailPage = lazy(() => import('../pages/PatientDetailPage.jsx'))
 const AppointmentListPage = lazy(() => import('../pages/AppointmentListPage.jsx'))
@@ -73,18 +74,30 @@ const WebsiteContactMessagesPage = lazy(() => import('../pages/website/WebsiteCo
 const WebsiteContentBlocksPage = lazy(() => import('../pages/website/WebsiteContentBlocksPage.jsx'))
 const WebsitePreviewPage = lazy(() => import('../pages/website/WebsitePreviewPage.jsx'))
 
-function withSuspense(element) {
+function RouteFallback() {
   return (
-    <Suspense
-      fallback={
-        <div className="grid min-h-screen place-items-center bg-canvas">
-          <Spinner label="Loading page…" />
-        </div>
-      }
+    <div
+      role="status"
+      aria-live="polite"
+      aria-label="Loading page"
+      className="grid min-h-[320px] place-items-center px-4 py-16"
     >
-      {element}                                                                                                                 
-    </Suspense>
+      <div className="w-full max-w-xs space-y-4">
+        <div className="flex justify-center">
+          <LoadingPill label="Loading page" />
+        </div>
+        <LoadingBar />
+        <div className="space-y-2">
+          <Shimmer className="mx-auto h-4 w-3/4" />
+          <Shimmer className="mx-auto h-3 w-1/2" />
+        </div>
+      </div>
+    </div>
   )
+}
+
+function withSuspense(element) {
+  return <Suspense fallback={<RouteFallback />}>{element}</Suspense>
 }
 
 export const router = createBrowserRouter([
@@ -125,6 +138,10 @@ export const router = createBrowserRouter([
             <PatientDetailPage />
           </Guard>,
         ),
+      },
+      {
+        path: 'notifications',
+        element: withSuspense(<NotificationsPage />),
       },
       {
         path: 'appointments',

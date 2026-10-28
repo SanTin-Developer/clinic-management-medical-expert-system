@@ -17,7 +17,7 @@ import Input from '../../components/ui/Input.jsx'
 import Textarea from '../../components/ui/Textarea.jsx'
 import Tabs from '../../components/ui/Tabs.jsx'
 import ConfirmDialog from '../../components/ui/ConfirmDialog.jsx'
-import { Spinner } from '../../components/ui/Skeleton.jsx'
+import { PageSkeleton } from '../../components/ui/Skeleton.jsx'
 import { ErrorState } from '../../components/ui/State.jsx'
 import ImageField from '../../components/ui/ImageField.jsx'
 import { websiteAdminApi } from '../../api/websiteAdmin.js'
@@ -299,9 +299,12 @@ export default function WebsiteSettingsPage() {
 
   if (isLoading) {
     return (
-      <div className="grid place-items-center py-20">
-        <Spinner label="Loading settings…" />
-      </div>
+      <PageSkeleton
+        title="Website Settings"
+        description="Loading branding, contact details, social links and SEO…"
+        cards={2}
+        rows={5}
+      />
     )
   }
 

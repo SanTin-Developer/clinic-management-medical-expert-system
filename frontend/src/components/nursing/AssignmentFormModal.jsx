@@ -192,8 +192,14 @@ export default function AssignmentFormModal({ open, assignment, onClose, onSaved
               </Select>
             </Field>
           )}
-          <Field label="Shift" htmlFor="asg-shift" hint="Optional, e.g. day/night.">
-            <Input id="asg-shift" value={form.shift} onChange={(e) => set('shift')(e.target.value)} />
+          <Field label="Shift" htmlFor="asg-shift" hint="Optional.">
+            <Select id="asg-shift" value={form.shift} onChange={(e) => set('shift')(e.target.value)}>
+              <option value="">Full time (7:30 - 5:00pm)</option>
+              <option value="morning">Morning</option>
+              <option value="afternoon">Afternoon</option>
+              <option value="evening">Evening</option>
+              <option value="night">Night</option>
+            </Select>
           </Field>
           <Field label="Starts at" htmlFor="asg-starts" hint="Defaults to now.">
             <Input id="asg-starts" type="datetime-local" value={form.starts_at} onChange={(e) => set('starts_at')(e.target.value)} />

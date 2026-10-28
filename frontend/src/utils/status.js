@@ -369,7 +369,9 @@ export const ATTENDANCE_STATUS_OPTIONS = Object.entries(ATTENDANCE_STATUS).map((
 }))
 
 export const SHIFT_TYPES = {
-  day: meta('Day', 'blue'),
+  morning: meta('Morning', 'blue'),
+  day: meta('Morning', 'blue'),
+  afternoon: meta('Afternoon', 'amber'),
   evening: meta('Evening', 'amber'),
   night: meta('Night', 'navy'),
   on_call: meta('On call', 'brand'),

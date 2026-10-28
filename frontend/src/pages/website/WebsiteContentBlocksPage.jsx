@@ -10,7 +10,7 @@ import Input from '../../components/ui/Input.jsx'
 import Textarea from '../../components/ui/Textarea.jsx'
 import ImageField from '../../components/ui/ImageField.jsx'
 import Tabs from '../../components/ui/Tabs.jsx'
-import { Spinner } from '../../components/ui/Skeleton.jsx'
+import { PageSkeleton } from '../../components/ui/Skeleton.jsx'
 import { ErrorState } from '../../components/ui/State.jsx'
 import { CONTENT_GROUPS, groupFields } from '../../constants/websiteContent.js'
 import { websiteAdminApi } from '../../api/websiteAdmin.js'
@@ -199,9 +199,12 @@ export default function WebsiteContentBlocksPage() {
 
   if (isLoading) {
     return (
-      <div className="grid place-items-center py-20">
-        <Spinner label="Loading content…" />
-      </div>
+      <PageSkeleton
+        title="Page Content"
+        description={group.description ?? 'Loading editable website content…'}
+        cards={2}
+        rows={4}
+      />
     )
   }
 

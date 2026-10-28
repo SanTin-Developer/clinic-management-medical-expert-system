@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Conversation;
+use App\Models\SystemAlert;
 use App\Models\User;
 use Illuminate\Support\Facades\Broadcast;
 
@@ -22,4 +23,10 @@ Broadcast::channel('notifications.{user}', function (User $user, User $target) {
 // Clinic-wide dashboard analytics: only users who may view reports subscribe.
 Broadcast::channel('dashboard', function (User $user) {
     return $user->can('reports.view');
+});
+
+// Alert query invalidation. The payload is generic; alert data is always read
+// back through the category- and patient-scoped API.
+Broadcast::channel('system-alerts', function (User $user) {
+    return SystemAlert::visibleCategoriesFor($user) !== [];
 });

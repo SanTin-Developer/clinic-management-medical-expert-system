@@ -69,6 +69,7 @@ class NursingTask extends Model
         'scheduled_at',
         'due_at',
         'completed_at',
+        'overdue_notified_at',
         'completed_by',
         'status',
         'outcome',
@@ -83,6 +84,7 @@ class NursingTask extends Model
             'scheduled_at' => 'datetime',
             'due_at' => 'datetime',
             'completed_at' => 'datetime',
+            'overdue_notified_at' => 'datetime',
         ];
     }
 

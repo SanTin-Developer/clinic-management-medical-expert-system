@@ -3,6 +3,7 @@
 namespace App\Events;
 
 use App\Models\ConversationMessage;
+use App\Services\Communication\ConversationMessageSerializer;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
@@ -34,17 +35,6 @@ class MessageSent implements ShouldBroadcast
     {
         $message = $this->message->loadMissing('sender:id,name,username');
 
-        return [
-            'id' => $message->id,
-            'conversation_id' => $message->conversation_id,
-            'body' => $message->body,
-            'source' => $message->source,
-            'created_at' => $message->created_at?->toIso8601String(),
-            'sender' => [
-                'id' => $message->sender?->id,
-                'name' => $message->sender?->name,
-                'username' => $message->sender?->username,
-            ],
-        ];
+        return app(ConversationMessageSerializer::class)->toArray($message);
     }
 }

@@ -35,12 +35,7 @@ class TelegramClient
     /**
      * Send a photo by public URL or by uploading local bytes.
      *
-     * Telegram rejects captions longer than 1024 characters, so callers should
-     * keep captions short. When `$photo` is a stream or file path the image is
-     * uploaded as multipart data, which works even when the server is not
-     * reachable from the internet.
-     *
-     * @param  resource|string  $photo  A public URL, a file path, or a stream resource.
+     * @param  resource|string  $photo
      * @param  array<string, mixed>  $options
      * @return array<string, mixed>
      */
@@ -59,6 +54,58 @@ class TelegramClient
         return $this->call('sendPhoto', $payload, null, [
             'name' => 'photo',
             'contents' => $photo,
+            'filename' => $filename,
+        ]);
+    }
+
+    /**
+     * Send a document by public URL or by uploading local bytes.
+     *
+     * @param  resource|string  $document
+     * @param  array<string, mixed>  $options
+     * @return array<string, mixed>
+     */
+    public function sendDocument(int|string $chatId, mixed $document, string $caption = '', ?string $filename = null, array $options = []): array
+    {
+        $payload = array_merge([
+            'chat_id' => $chatId,
+            'caption' => $caption,
+            'parse_mode' => 'HTML',
+        ], $options);
+
+        if (is_string($document) && preg_match('#^https?://#i', $document) === 1) {
+            return $this->call('sendDocument', array_merge($payload, ['document' => $document]));
+        }
+
+        return $this->call('sendDocument', $payload, null, [
+            'name' => 'document',
+            'contents' => $document,
+            'filename' => $filename,
+        ]);
+    }
+
+    /**
+     * Send a video by public URL or by uploading local bytes.
+     *
+     * @param  resource|string  $video
+     * @param  array<string, mixed>  $options
+     * @return array<string, mixed>
+     */
+    public function sendVideo(int|string $chatId, mixed $video, string $caption = '', ?string $filename = null, array $options = []): array
+    {
+        $payload = array_merge([
+            'chat_id' => $chatId,
+            'caption' => $caption,
+            'parse_mode' => 'HTML',
+        ], $options);
+
+        if (is_string($video) && preg_match('#^https?://#i', $video) === 1) {
+            return $this->call('sendVideo', array_merge($payload, ['video' => $video]));
+        }
+
+        return $this->call('sendVideo', $payload, null, [
+            'name' => 'video',
+            'contents' => $video,
             'filename' => $filename,
         ]);
     }
@@ -99,6 +146,17 @@ class TelegramClient
         $response = $this->call('getWebhookInfo');
 
         return $response['result'] ?? [];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function deleteMessage(int|string $chatId, int $messageId): array
+    {
+        return $this->call('deleteMessage', [
+            'chat_id' => $chatId,
+            'message_id' => $messageId,
+        ]);
     }
 
     /**
