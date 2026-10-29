@@ -10,6 +10,9 @@ Management & Medical Expert System.
 > It must never replace assessment by a qualified clinician. The stored
 > `confidence_score` is an unvalidated configuration value, not a probability.
 
+> **Proprietary software.** This repository is not open source. See
+> [../PROPRIETARY-NOTICE.md](../PROPRIETARY-NOTICE.md).
+
 ---
 
 ## 1. Architecture
@@ -40,11 +43,12 @@ PostgreSQL knowledge base
 expert-system/
 ├── app/
 │   ├── __init__.py
+│   ├── audit.py             # opt-in evaluation audit trail
 │   ├── config.py            # environment-driven settings
 │   ├── database.py          # lazy SQLAlchemy engine/session factory
-│   ├── engine.py            # deterministic rule engine (load + match)
+│   ├── engine.py            # deterministic rule engine (load + match + cache)
 │   ├── logging_config.py    # structured JSON logging
-│   ├── main.py              # FastAPI app and endpoints
+│   ├── main.py              # FastAPI app, middleware, and endpoints
 │   └── schemas.py           # Pydantic request/response models
 ├── tests/
 │   ├── conftest.py          # isolated in-memory SQLite fixtures
@@ -69,7 +73,9 @@ Runtime (pinned in `requirements.txt`):
 | SQLAlchemy | 2.1.4 | Database access (parameterised SQL) |
 | psycopg[binary] | 3.3.6 | PostgreSQL driver |
 
-Test-only (`requirements-dev.txt`): `pytest==8.4.2`, `httpx==0.28.1`.
+Test-only (`requirements-dev.txt`): `pytest==8.4.2`, `httpx==0.28.1`,
+`bandit==1.9.4`, `pip-audit==2.10.1`. These are not installed in the runtime
+image.
 
 ## 4. Environment variables
 
@@ -83,6 +89,10 @@ Test-only (`requirements-dev.txt`): `pytest==8.4.2`, `httpx==0.28.1`.
 | `DB_POOL_RECYCLE_SECONDS` | `1800` | Recycle idle connections after N seconds. |
 | `DB_CONNECT_TIMEOUT_SECONDS` | `5` | libpq connect timeout. |
 | `DB_STATEMENT_TIMEOUT_MS` | `5000` | PostgreSQL `statement_timeout`. |
+| `EXPERT_RULES_CACHE_TTL_SECONDS` | `60` | In-process rule cache lifetime; `0` disables caching. |
+| `EXPERT_SYSTEM_REQUEST_TIMEOUT_SECONDS` | `15` | Hard application-level timeout per request. Returns `504` on expiry. |
+| `EXPERT_AUDIT_ENABLED` | `false` | Persist each evaluation to `expert_evaluation_audits`. Stores selected symptom IDs, so enable only with privacy approval. |
+| `APP_NAME` | `expert-system` | Reported service name. |
 | `APP_VERSION` | `1.0.0` | Reported service version. |
 
 A ready-to-copy sample is provided at `expert-system/.env.example`.
@@ -112,15 +122,22 @@ The container runs as the non-root user `appuser` (uid 10001) and exposes a
 `HEALTHCHECK` that polls `/health`. PostgreSQL is reached by DNS name
 `postgres` on the `clinic` network.
 
+The base `docker-compose.yml` does **not** publish the expert-system port. The
+development-only `docker-compose.override.yml` maps it to
+`127.0.0.1:8001:8001`. Do not deploy the override file to production.
+
 ## 6. Local development
 
-```sh
+```powershell
 cd expert-system
-py -3.13 -m venv .venv
+py -3.12 -m venv .venv
 .venv\Scripts\python -m pip install -r requirements-dev.txt
-$env:DATABASE_URL = "postgresql+psycopg://clinic_user:clinic_password@localhost:5432/clinic_db"
+$env:DATABASE_URL = "postgresql+psycopg://<user>:<password>@localhost:5432/clinic_db"
 .venv\Scripts\python -m uvicorn app.main:app --host 127.0.0.1 --port 8001 --reload
 ```
+
+Use your local credentials, not the placeholders. Python 3.12 matches the Docker
+image and CI.
 
 Interactive API docs: `http://127.0.0.1:8001/docs`.
 
@@ -190,6 +207,7 @@ Errors:
 | `401` | Missing/invalid internal API key (when configured). |
 | `422` | Body invalid, empty, > 50 symptoms, or unknown/inactive symptom IDs. |
 | `503` | Database or engine unavailable. |
+| `504` | Application-level request timeout exceeded (`EXPERT_SYSTEM_REQUEST_TIMEOUT_SECONDS`). |
 
 ## 8. Rule evaluation semantics (authoritative)
 
@@ -229,22 +247,25 @@ SQL.
 
 ## 10. Tests
 
-```sh
+```powershell
 cd expert-system
 .venv\Scripts\python -m pytest -q
 ```
+
+Last verified in this working copy on 2026-10-29: **45 passed**, with one
+Starlette/httpx deprecation warning.
 
 Tests use an isolated in-memory SQLite schema; they never touch the development
 or production PostgreSQL database. Coverage includes single/AND/OR matching,
 `present`/`absent`, `expected_value`, priority ordering, inactive
 rules/diseases/symptoms, rules without valid conditions, duplicates, no-match,
 invalid IDs, request validation, readiness failures, database failures, an
-unconfigured `DATABASE_URL` (returns `503`, never `500`), and API key
-enforcement.
+unconfigured `DATABASE_URL` (returns `503`, never `500`), API key enforcement,
+and the opt-in audit path.
 
 Security scans (`requirements-dev.txt`):
 
-```sh
+```powershell
 .venv\Scripts\python -m bandit -q -r app
 .venv\Scripts\python -m pip_audit -r requirements.txt
 ```
@@ -282,20 +303,26 @@ Logs are single-line JSON on stdout: `docker logs clinic_expert_system --tail 50
 
 * Rule matching is a deterministic pattern matcher, not a probabilistic or
   clinically validated model. `confidence_score` is not a probability.
-* No per-request application-level timeout beyond DB statement timeouts.
 * Knowledge-base indexes on `expert_rule_conditions(expert_rule_id)` are not
   added; fine for the current small KB, worth revisiting at scale.
-* No automated clinical validation, no audit trail of evaluations.
+* There is no automated clinical validation. The optional audit trail records
+  evaluations but is not a substitute for clinical review.
+* Rule changes take effect after the in-process cache TTL expires
+  (`EXPERT_RULES_CACHE_TTL_SECONDS`, default 60 seconds).
 
 ## 14. Deployment configuration
 
 1. Set a strong `EXPERT_SYSTEM_API_KEY` shared by backend and expert system.
-2. Remove the `ports:` mapping for the `expert-system` service so it is only
-   reachable on the private network.
-3. Set `APP_ENV=production`, `APP_DEBUG=false`, and a real `DATABASE_URL`.
+2. Do **not** deploy `docker-compose.override.yml`; the base Compose file already
+   keeps the service off the host network.
+3. Set `APP_ENV=production`, `APP_DEBUG=false` on the backend, and supply a real
+   `DATABASE_URL` through the deployment environment.
 4. Run behind a reverse proxy that terminates TLS for the Laravel API.
 5. Keep `restart: unless-stopped` and the Docker healthcheck enabled.
-6. Do not run `migrate:fresh`/`db:wipe`/`down -v` against production data.
+6. Decide whether `EXPERT_AUDIT_ENABLED` is permitted by the privacy policy.
+7. Do not run `migrate:fresh`/`db:wipe`/`down -v` against production data.
+
+See [Deployment & Infrastructure](../docs/10-deployment/index.md).
 
 ## 15. Adding clinically reviewed knowledge safely
 
@@ -309,3 +336,13 @@ Logs are single-line JSON on stdout: `docker logs clinic_expert_system --tail 50
    prunes placeholder fixtures.
 5. Deactivate (do not delete) superseded symptoms/diseases/rules via `is_active`.
 6. Re-run the test suite and a manual `/evaluate` smoke test after any change.
+
+## 16. Related documentation
+
+- [Root README](../README.md)
+- [API Documentation](../docs/07-api-documentation/index.md)
+- [Database Design](../docs/05-database-design/index.md)
+- [System Design](../docs/04-system-design/index.md)
+- [Deployment & Infrastructure](../docs/10-deployment/index.md)
+- [Postman collection guide](postman/README.md)
+- [Proprietary Notice](../PROPRIETARY-NOTICE.md)

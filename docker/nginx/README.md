@@ -6,6 +6,13 @@ the private Docker network. The Python expert system must stay unpublished.
 
 Example configuration: [`clinic.conf.example`](clinic.conf.example).
 
+> The example sets `client_max_body_size 8m`. The backend accepts multipart
+> uploads up to `64m` and Laravel enforces a 10 MB per-file default. Raise the
+> proxy limit to at least `64m` before enabling document or media uploads.
+
+See [Deployment & Infrastructure](../../docs/10-deployment/index.md) for the
+overall release sequence.
+
 ## 1. Provide certificates
 
 Use a real certificate (e.g. Let's Encrypt) and mount it read-only into the
