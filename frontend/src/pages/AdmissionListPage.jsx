@@ -45,11 +45,15 @@ export default function AdmissionListPage() {
       if (action.type === 'discharge') {
         await admissionApi.discharge(action.record.id)
         toast.success('Patient discharged.')
-        try {
-          await inpatientBillingApi.dischargeReconciliation(action.record.id)
-          toast.success('Discharge reconciliation completed.')
-        } catch (reconErr) {
-          toast.error(reconErr?.response?.data?.message || reconErr?.message || 'Reconciliation had issues')
+        // Reconciliation is a billing action; only run it for users who hold
+        // the billing permission (Head Nurses can discharge without it).
+        if (can('inpatient.billing.manage')) {
+          try {
+            await inpatientBillingApi.dischargeReconciliation(action.record.id)
+            toast.success('Discharge reconciliation completed.')
+          } catch (reconErr) {
+            toast.error(reconErr?.payload?.message || reconErr?.message || 'Reconciliation had issues')
+          }
         }
       }
       if (action.type === 'cancel') await admissionApi.cancel(action.record.id)

@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { ArrowRight } from 'lucide-react'
 import { publicWebsiteApi } from '../../api/website.js'
 import { blockText, useContentBlocks } from '../../utils/content.js'
+import { useLanguage } from '../../hooks/useLanguage.js'
 import { Spinner } from '../../components/ui/Skeleton.jsx'
 import { ErrorState } from '../../components/ui/State.jsx'
 import { ArticleCard, Section, SectionHeading, ServiceCard } from '../../components/public/PublicUI.jsx'
@@ -18,11 +19,12 @@ export default function HomePage() {
   // Hook must run unconditionally — the copy map below is built after the
   // loading/error guards.
   const blocks = useContentBlocks()
+  const { language, t } = useLanguage()
 
   if (isLoading) {
     return (
       <div className="grid min-h-screen place-items-center">
-        <Spinner label="Loading website…" />
+        <Spinner label={t('Loading website…')} />
       </div>
     )
   }
@@ -42,26 +44,28 @@ export default function HomePage() {
   const gallery = data?.gallery ?? []
 
   // Admin-editable section headings and links (Page Content → Home Page).
+  const copy = (key, fallback) => blockText(blocks, key, t(fallback), language)
+
   const sectionCopy = {
     services: {
-      eyebrow: blockText(blocks, 'home_services_eyebrow', 'What we offer'),
-      heading: blockText(blocks, 'home_services_heading', 'Our Medical Services'),
-      link: blockText(blocks, 'home_services_link', 'View all services'),
+      eyebrow: copy('home_services_eyebrow', 'What we offer'),
+      heading: copy('home_services_heading', 'Our Medical Services'),
+      link: copy('home_services_link', 'View all services'),
     },
     team: {
-      eyebrow: blockText(blocks, 'home_team_eyebrow', 'Meet the experts'),
-      heading: blockText(blocks, 'home_team_heading', 'Our Team'),
-      link: blockText(blocks, 'home_team_link', 'View all team'),
+      eyebrow: copy('home_team_eyebrow', 'Meet the experts'),
+      heading: copy('home_team_heading', 'Our Team'),
+      link: copy('home_team_link', 'View all team'),
     },
     news: {
-      eyebrow: blockText(blocks, 'home_news_eyebrow', 'Stay informed'),
-      heading: blockText(blocks, 'home_news_heading', 'News & Health Tips'),
-      link: blockText(blocks, 'home_news_link', 'Read all articles'),
+      eyebrow: copy('home_news_eyebrow', 'Stay informed'),
+      heading: copy('home_news_heading', 'News & Health Tips'),
+      link: copy('home_news_link', 'Read all articles'),
     },
     gallery: {
-      eyebrow: blockText(blocks, 'home_gallery_eyebrow', 'Our facilities'),
-      heading: blockText(blocks, 'home_gallery_heading', 'A Glimpse Inside'),
-      link: blockText(blocks, 'home_gallery_link', 'View full gallery'),
+      eyebrow: copy('home_gallery_eyebrow', 'Our facilities'),
+      heading: copy('home_gallery_heading', 'A Glimpse Inside'),
+      link: copy('home_gallery_link', 'View full gallery'),
     },
   }
 
@@ -153,7 +157,7 @@ export default function HomePage() {
                 <img
                   key={item.id}
                   src={item.image.url}
-                  alt={item.title ?? 'Facility photo'}
+                  alt={item.title || t('Facility photo')}
                   loading="lazy"
                   className="h-40 w-full rounded-2xl object-cover"
                 />

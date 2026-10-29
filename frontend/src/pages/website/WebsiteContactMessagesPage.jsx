@@ -47,8 +47,9 @@ export default function WebsiteContactMessagesPage() {
       const res = row.read_at
         ? await websiteAdminApi.markContactMessageUnread(row.id)
         : await websiteAdminApi.markContactMessageRead(row.id)
-      toast.success(res.message)
-      setSelected((current) => (current?.id === row.id ? { ...current, ...res.data } : current))
+      const updated = res?.data ?? res
+      toast.success(res?.message ?? 'Contact message updated.')
+      setSelected((current) => (current?.id === row.id ? { ...current, ...updated } : current))
       query.refetch()
     } catch (err) {
       toast.error(err.message)

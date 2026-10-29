@@ -242,8 +242,16 @@ export function formatBytes(bytes) {
 }
 
 export function toIsoDate(value) {
+  // Date-only strings already carry the intended calendar date; do not run
+  // them through UTC conversion (which can shift the day).
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value)) {
+    return value.slice(0, 10)
+  }
   const d = toDate(value)
-  return d ? d.toISOString().slice(0, 10) : ''
+  if (!d) return ''
+  // Use local calendar components so "today" is correct for users ahead of UTC.
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
 export function truncate(value, length = 60) {

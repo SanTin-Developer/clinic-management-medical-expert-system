@@ -20,6 +20,8 @@ const DEFAULT_LIST_FIELDS = [
   { key: 'text', label: 'Description', placeholder: 'Description', multiline: true },
 ]
 
+const KM_HINT = 'Shown on the Khmer version of the website. Leave empty to reuse the English text.'
+
 function RepeatableList({ field, items, onChange }) {
   const listFields = field.listFields ?? DEFAULT_LIST_FIELDS
 
@@ -104,6 +106,8 @@ export default function WebsiteContentBlocksPage() {
   })
 
   const [values, setValues] = useState({})
+  const [titlesKm, setTitlesKm] = useState({})
+  const [bodiesKm, setBodiesKm] = useState({})
   const [lists, setLists] = useState({})
   const [images, setImages] = useState({})
   const [saving, setSaving] = useState(false)
@@ -116,6 +120,8 @@ export default function WebsiteContentBlocksPage() {
   useEffect(() => {
     const byKey = Object.fromEntries(blocks.map((block) => [block.key, block]))
     const nextValues = {}
+    const nextTitlesKm = {}
+    const nextBodiesKm = {}
     const nextLists = {}
     const nextImages = {}
     fields.forEach((field) => {
@@ -133,37 +139,52 @@ export default function WebsiteContentBlocksPage() {
         return
       }
       nextValues[field.key] = byKey[field.key]?.body ?? ''
+      nextTitlesKm[field.key] = byKey[field.key]?.title_km ?? ''
+      nextBodiesKm[field.key] = byKey[field.key]?.body_km ?? ''
     })
     setValues(nextValues)
+    setTitlesKm(nextTitlesKm)
+    setBodiesKm(nextBodiesKm)
     setLists(nextLists)
     setImages(nextImages)
   }, [blocks, fields])
 
   const setValue = (key) => (value) => setValues((current) => ({ ...current, [key]: value }))
+  const setTitleKm = (key) => (value) =>
+    setTitlesKm((current) => ({ ...current, [key]: value }))
+  const setBodyKm = (key) => (value) =>
+    setBodiesKm((current) => ({ ...current, [key]: value }))
 
   const submit = async (event) => {
     event.preventDefault()
     setSaving(true)
     try {
+      const byKey = Object.fromEntries(blocks.map((entry) => [entry.key, entry]))
       const blocksPayload = [
         ...Object.entries(values).map(([key, body]) => ({
           group: group.id,
           key,
-          title: blocks.find((entry) => entry.key === key)?.title ?? null,
+          title: byKey[key]?.title ?? null,
+          title_km: titlesKm[key]?.trim() || null,
           body: body || null,
+          body_km: bodiesKm[key]?.trim() || null,
         })),
         ...Object.entries(lists).map(([key, list]) => ({
           group: group.id,
           key,
-          title: blocks.find((entry) => entry.key === key)?.title ?? null,
+          title: byKey[key]?.title ?? null,
+          title_km: byKey[key]?.title_km ?? null,
           data: list,
+          body_km: byKey[key]?.body_km ?? null,
         })),
         // Image blocks are sent as bare rows so the record always exists and
         // the picture can be attached to it right after the bulk save.
         ...Object.keys(images).map((key) => ({
           group: group.id,
           key,
-          title: blocks.find((entry) => entry.key === key)?.title ?? null,
+          title: byKey[key]?.title ?? null,
+          title_km: byKey[key]?.title_km ?? null,
+          body_km: byKey[key]?.body_km ?? null,
         })),
       ]
       await websiteAdminApi.bulkUpdateContentBlocks({ blocks: blocksPayload })
@@ -274,22 +295,58 @@ export default function WebsiteContentBlocksPage() {
                     )
                   }
                   return (
-                    <Field key={field.key} label={field.label} htmlFor={field.key} hint={field.hint}>
-                      {field.type === 'textarea' ? (
-                        <Textarea
-                          id={field.key}
-                          rows={field.rows ?? 2}
-                          value={values[field.key] ?? ''}
-                          onChange={(e) => setValue(field.key)(e.target.value)}
-                        />
-                      ) : (
+                    <div key={field.key} className="space-y-3">
+                      <Field label={field.label} htmlFor={field.key} hint={field.hint}>
+                        {field.type === 'textarea' ? (
+                          <Textarea
+                            id={field.key}
+                            rows={field.rows ?? 2}
+                            value={values[field.key] ?? ''}
+                            onChange={(e) => setValue(field.key)(e.target.value)}
+                          />
+                        ) : (
+                          <Input
+                            id={field.key}
+                            value={values[field.key] ?? ''}
+                            onChange={(e) => setValue(field.key)(e.target.value)}
+                          />
+                        )}
+                      </Field>
+                      <Field
+                        label="Title (Khmer)"
+                        htmlFor={`${field.key}-title-km`}
+                        hint={KM_HINT}
+                      >
                         <Input
-                          id={field.key}
-                          value={values[field.key] ?? ''}
-                          onChange={(e) => setValue(field.key)(e.target.value)}
+                          id={`${field.key}-title-km`}
+                          lang="km"
+                          value={titlesKm[field.key] ?? ''}
+                          onChange={(e) => setTitleKm(field.key)(e.target.value)}
                         />
-                      )}
-                    </Field>
+                      </Field>
+                      <Field
+                        label={`${field.label} (Khmer)`}
+                        htmlFor={`${field.key}-body-km`}
+                        hint={KM_HINT}
+                      >
+                        {field.type === 'textarea' ? (
+                          <Textarea
+                            id={`${field.key}-body-km`}
+                            lang="km"
+                            rows={field.rows ?? 2}
+                            value={bodiesKm[field.key] ?? ''}
+                            onChange={(e) => setBodyKm(field.key)(e.target.value)}
+                          />
+                        ) : (
+                          <Input
+                            id={`${field.key}-body-km`}
+                            lang="km"
+                            value={bodiesKm[field.key] ?? ''}
+                            onChange={(e) => setBodyKm(field.key)(e.target.value)}
+                          />
+                        )}
+                      </Field>
+                    </div>
                   )
                 })}
               </div>

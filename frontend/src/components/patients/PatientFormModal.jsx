@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import Modal from "../ui/Modal.jsx";
 import Button from "../ui/Button.jsx";
@@ -9,6 +9,7 @@ import Select from "../ui/Select.jsx";
 import Textarea from "../ui/Textarea.jsx";
 import { patientApi } from "../../api/patients.js";
 import { GENDER_OPTIONS, BLOOD_TYPES } from "../../utils/status.js";
+import { toIsoDate } from "../../utils/format.js";
 
 const BASE_FORM = {
   first_name: "",
@@ -27,14 +28,30 @@ const BASE_FORM = {
 
 export default function PatientFormModal({ open, onClose, initial, onSaved }) {
   const editing = Boolean(initial?.id);
-  const [form, setForm] = useState(
-    initial ? { ...BASE_FORM, ...initial } : BASE_FORM,
-  );
   const { t } = useLanguage();
+  const [form, setForm] = useState(BASE_FORM);
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
 
-  const today = new Date().toISOString().slice(0, 10);
+  // The modal stays mounted between openings, so initialise the form whenever
+  // it opens or a different patient is selected.
+  useEffect(() => {
+    if (!open) return;
+    setForm(
+      initial
+        ? {
+            ...BASE_FORM,
+            ...initial,
+            date_of_birth: initial.date_of_birth
+              ? String(initial.date_of_birth).slice(0, 10)
+              : "",
+          }
+        : BASE_FORM,
+    );
+    setErrors({});
+  }, [open, initial?.id]);
+
+  const today = toIsoDate(new Date());
 
   const set = (key) => (value) => setForm((f) => ({ ...f, [key]: value }));
 

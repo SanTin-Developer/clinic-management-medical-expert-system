@@ -28,11 +28,15 @@ export default function PrescriptionListPage() {
   const [formOpen, setFormOpen] = useState(false)
   const [deleting, setDeleting] = useState(null)
 
-  const query = usePaginated(['prescriptions'], (params) => prescriptionApi.list(params), { page })
+  const query = usePaginated(['prescriptions'], (params) => prescriptionApi.list(params), {
+    page,
+    params: status === 'all' ? {} : { status },
+  })
 
   const all = query.data?.data ?? []
   const stats = query.data?.stats ?? {}
-  const items = status === 'all' ? all : all.filter((p) => p.status === status)
+  // Filtering happens server-side so matches on later pages are kept.
+  const items = all
 
   const confirmDelete = async () => {
     if (!deleting) return

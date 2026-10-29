@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useOutletContext } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
+import DOMPurify from 'dompurify'
 import { ArrowRight, CheckCircle2, ChevronDown, Clock, Mail, MapPin, Phone, Send } from 'lucide-react'
 import { publicWebsiteApi } from '../../api/website.js'
 import Button from '../../components/ui/Button.jsx'
@@ -8,7 +9,8 @@ import Input from '../../components/ui/Input.jsx'
 import { Reveal } from '../../components/public/Reveal.jsx'
 import { BannerBackdrop, Section, SectionHeading } from '../../components/public/PublicUI.jsx'
 import { cn } from '../../utils/cn.js'
-import { blockText, splitHeading, useContentBlocks } from '../../utils/content.js'
+import { blockText, localized, splitHeading, useContentBlocks } from '../../utils/content.js'
+import { useLanguage } from '../../hooks/useLanguage.js'
 
 /**
  * Contact positioning copy — the design defaults shown whenever the matching
@@ -91,7 +93,8 @@ function ContactForm() {
   const [error, setError] = useState(null)
   const mutation = useMutation({ mutationFn: publicWebsiteApi.submitContactMessage })
   const blocks = useContentBlocks()
-  const note = blockText(blocks, 'contact_send_note', SEND_NOTE)
+  const { language, t } = useLanguage()
+  const note = blockText(blocks, 'contact_send_note', t(SEND_NOTE), language)
 
   const handleSubmit = (event) => {
     event.preventDefault()
@@ -103,13 +106,13 @@ function ContactForm() {
     )
 
     if (!payload.name || !payload.email || !payload.message) {
-      setError('Please fill in your name, email and message.')
+      setError(t('Please fill in your name, email and message.'))
       return
     }
 
     mutation.mutate(payload, {
-      onSuccess: (response) => setSuccessMessage(response?.message ?? SEND_SUCCESS_FALLBACK),
-      onError: (err) => setError(err.message || SEND_ERROR_FALLBACK),
+      onSuccess: (response) => setSuccessMessage(response?.message ?? t(SEND_SUCCESS_FALLBACK)),
+      onError: (err) => setError(err.message || t(SEND_ERROR_FALLBACK)),
     })
   }
 
@@ -119,11 +122,11 @@ function ContactForm() {
         <span className="mx-auto grid size-16 place-items-center rounded-full bg-accent/10 text-accent">
           <CheckCircle2 className="size-8" aria-hidden />
         </span>
-        <h3 className="mt-5 font-display text-2xl font-extrabold text-ink">Message sent</h3>
+        <h3 className="mt-5 font-display text-2xl font-extrabold text-ink">{t('Message sent')}</h3>
         <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-ink-muted">{successMessage}</p>
         <div className="mt-6">
           <Button variant="outline" className="rounded-full px-6" onClick={() => setSuccessMessage(null)}>
-            Send another message
+            {t('Send another message')}
           </Button>
         </div>
       </div>
@@ -152,7 +155,7 @@ function ContactForm() {
       <div className="grid gap-5 sm:grid-cols-2">
         <div>
           <label htmlFor="contact-name" className="mb-1.5 block text-sm font-semibold text-ink">
-            Name <span className="text-ink-muted">*</span>
+            {t('Name')} <span className="text-ink-muted">*</span>
           </label>
           <Input
             id="contact-name"
@@ -160,13 +163,13 @@ function ContactForm() {
             required
             maxLength={255}
             autoComplete="name"
-            placeholder="Your full name"
+            placeholder={t('Your full name')}
             className="h-11 rounded-xl"
           />
         </div>
         <div>
           <label htmlFor="contact-email" className="mb-1.5 block text-sm font-semibold text-ink">
-            Email <span className="text-ink-muted">*</span>
+            {t('Email')} <span className="text-ink-muted">*</span>
           </label>
           <Input
             id="contact-email"
@@ -181,7 +184,7 @@ function ContactForm() {
         </div>
         <div>
           <label htmlFor="contact-phone" className="mb-1.5 block text-sm font-semibold text-ink">
-            Phone <span className="text-sm font-normal text-ink-muted">(optional)</span>
+            {t('Phone')} <span className="text-sm font-normal text-ink-muted">{t('(optional)')}</span>
           </label>
           <Input
             id="contact-phone"
@@ -189,25 +192,25 @@ function ContactForm() {
             type="tel"
             maxLength={30}
             autoComplete="tel"
-            placeholder="How we can call you"
+            placeholder={t('How we can call you')}
             className="h-11 rounded-xl"
           />
         </div>
         <div>
           <label htmlFor="contact-subject" className="mb-1.5 block text-sm font-semibold text-ink">
-            Subject <span className="text-sm font-normal text-ink-muted">(optional)</span>
+            {t('Subject')} <span className="text-sm font-normal text-ink-muted">{t('(optional)')}</span>
           </label>
           <Input
             id="contact-subject"
             name="subject"
             maxLength={255}
-            placeholder="What is this about?"
+            placeholder={t('What is this about?')}
             className="h-11 rounded-xl"
           />
         </div>
         <div className="sm:col-span-2">
           <label htmlFor="contact-message" className="mb-1.5 block text-sm font-semibold text-ink">
-            Message <span className="text-ink-muted">*</span>
+            {t('Message')} <span className="text-ink-muted">*</span>
           </label>
           <textarea
             id="contact-message"
@@ -215,7 +218,7 @@ function ContactForm() {
             required
             maxLength={5000}
             rows={5}
-            placeholder="Tell us how we can help…"
+            placeholder={t('Tell us how we can help…')}
             className="min-h-32 w-full resize-y rounded-xl border border-line bg-surface px-3 py-2.5 text-sm text-ink transition-colors placeholder:text-ink-muted/60 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
           />
         </div>
@@ -228,7 +231,7 @@ function ContactForm() {
           loading={mutation.isPending}
           className="h-12 rounded-full bg-accent px-8 text-sm font-semibold text-accent-ink hover:bg-accent-dark"
         >
-          Send Message
+          {t('Send Message')}
           <Send className="size-4" aria-hidden />
         </Button>
       </div>
@@ -241,21 +244,23 @@ export default function ContactPage() {
 
   // Admin-editable copy (Page Content → Contact Page).
   const blocks = useContentBlocks()
-  const heading = splitHeading(blockText(blocks, 'contact_heading', CONTACT_HEADING))
+  const { language, t } = useLanguage()
+  const body = (key, fallback) => blockText(blocks, key, t(fallback), language)
+  const heading = splitHeading(body('contact_heading', CONTACT_HEADING))
   const copy = {
-    eyebrow: blockText(blocks, 'contact_eyebrow', CONTACT_EYEBROW),
-    description: blockText(blocks, 'contact_description', CONTACT_DESCRIPTION),
-    reachHeading: blockText(blocks, 'contact_reach_heading', REACH_HEADING),
-    reachText: blockText(blocks, 'contact_reach_text', REACH_LEAD),
-    findHeading: blockText(blocks, 'contact_find_heading', FIND_HEADING),
-    sendHeading: blockText(blocks, 'contact_send_heading', SEND_HEADING),
-    sendText: blockText(blocks, 'contact_send_text', SEND_LEAD),
+    eyebrow: body('contact_eyebrow', CONTACT_EYEBROW),
+    description: body('contact_description', CONTACT_DESCRIPTION),
+    reachHeading: body('contact_reach_heading', REACH_HEADING),
+    reachText: body('contact_reach_text', REACH_LEAD),
+    findHeading: body('contact_find_heading', FIND_HEADING),
+    sendHeading: body('contact_send_heading', SEND_HEADING),
+    sendText: body('contact_send_text', SEND_LEAD),
   }
 
   const phone = settings?.primary_phone ?? settings?.secondary_phone
   const email = settings?.email
-  const address = settings?.address
-  const hours = settings?.business_hours
+  const address = localized(settings, 'address', language)
+  const hours = localized(settings, 'business_hours', language)
   const map = settings?.map_embed_url
 
   const hasChannels = Boolean(phone || email || address || hours)
@@ -315,7 +320,7 @@ export default function ContactPage() {
                 {email ? <QuickChip icon={Mail} href={`mailto:${email}`}>{email}</QuickChip> : null}
                 {directionsHref ? (
                   <QuickChip icon={MapPin} href={directionsHref} external>
-                    Get Directions
+                    {t('Get Directions')}
                   </QuickChip>
                 ) : null}
               </div>
@@ -324,7 +329,7 @@ export default function ContactPage() {
 
           <a
             href="#channels"
-            aria-label="Scroll to contact channels"
+            aria-label={t('Scroll to contact channels')}
             className="mx-auto mt-12 hidden w-fit text-white/45 transition-colors hover:text-white sm:block"
           >
             <ChevronDown className="size-6 animate-bounce" aria-hidden />
@@ -342,7 +347,7 @@ export default function ContactPage() {
           <div className="lg:sticky lg:top-28 lg:self-start">
             <Reveal>
               <SectionHeading
-                eyebrow="01 — Reach Us"
+                eyebrow={t('01 — Reach Us')}
                 title={copy.reachHeading}
                 description={copy.reachText}
               />
@@ -355,7 +360,7 @@ export default function ContactPage() {
           <div className="grid gap-5 sm:grid-cols-2">
             {phone ? (
               <Reveal delay={0} className="h-full">
-                <ChannelCard icon={Phone} title="Phone">
+                <ChannelCard icon={Phone} title={t('Phone')}>
                   {settings.primary_phone ? (
                     <a
                       href={`tel:${settings.primary_phone}`}
@@ -378,7 +383,7 @@ export default function ContactPage() {
 
             {email ? (
               <Reveal delay={70} className="h-full">
-                <ChannelCard icon={Mail} title="Email">
+                <ChannelCard icon={Mail} title={t('Email')}>
                   <a
                     href={`mailto:${email}`}
                     className="block break-words font-medium text-ink transition-colors hover:text-azure-700"
@@ -391,7 +396,7 @@ export default function ContactPage() {
 
             {address ? (
               <Reveal delay={140} className="h-full">
-                <ChannelCard icon={MapPin} title="Address">
+                <ChannelCard icon={MapPin} title={t('Address')}>
                   <p className="font-medium text-ink">{address}</p>
                 </ChannelCard>
               </Reveal>
@@ -399,7 +404,7 @@ export default function ContactPage() {
 
             {hours ? (
               <Reveal delay={210} className="h-full">
-                <ChannelCard icon={Clock} title="Opening Hours">
+                <ChannelCard icon={Clock} title={t('Opening Hours')}>
                   <p className="whitespace-pre-line">{hours}</p>
                 </ChannelCard>
               </Reveal>
@@ -407,13 +412,13 @@ export default function ContactPage() {
 
             {!hasChannels ? (
               <Reveal className="sm:col-span-2">
-                <ChannelCard icon={Mail} title="Contact details coming soon">
+                <ChannelCard icon={Mail} title={t('Contact details coming soon')}>
                   <p>
-                    Our contact details are being updated. Please check back soon, or visit the{' '}
+                    {t('Our contact details are being updated. Please check back soon, or visit the')}{' '}
                     <Link to="/home" className="font-semibold text-azure-700 hover:text-azure-600">
-                      home page
+                      {t('home page')}
                     </Link>{' '}
-                    for the latest information.
+                    {t('for the latest information.')}
                   </p>
                 </ChannelCard>
               </Reveal>
@@ -429,7 +434,7 @@ export default function ContactPage() {
           <Reveal>
             <SectionHeading
               align="center"
-              eyebrow="03 — Send a Message"
+              eyebrow={t('03 — Send a Message')}
               title={copy.sendHeading}
               description={copy.sendText}
             />
@@ -459,7 +464,7 @@ export default function ContactPage() {
             <Reveal>
               <p className="flex items-center gap-3 text-xs font-bold uppercase tracking-[0.28em] text-white/60">
                 <span aria-hidden className="h-px w-10 bg-white/25" />
-                03 — Find Us
+                {t('03 — Find Us')}
               </p>
               <h2 className="mt-4 font-display text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
                 {copy.findHeading}
@@ -496,7 +501,7 @@ export default function ContactPage() {
                     rel="noreferrer"
                     className="inline-flex items-center gap-2 rounded-full bg-accent px-7 py-3.5 text-sm font-semibold text-accent-ink shadow-[0_16px_34px_-14px_rgb(76_175_80_/_0.75)] transition-transform hover:-translate-y-0.5 hover:bg-accent-dark"
                   >
-                    Get Directions
+                    {t('Get Directions')}
                     <ArrowRight className="size-4" aria-hidden />
                   </a>
                   {mapsSearchHref ? (
@@ -506,7 +511,7 @@ export default function ContactPage() {
                       rel="noreferrer"
                       className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/10 px-7 py-3.5 text-sm font-semibold text-white backdrop-blur transition-colors hover:bg-white/20"
                     >
-                      Open in Maps
+                      {t('Open in Maps')}
                     </a>
                   ) : null}
                 </div>
@@ -520,12 +525,17 @@ export default function ContactPage() {
                     {map.includes('<iframe') ? (
                       <div
                         className="absolute inset-0 [&_iframe]:h-full [&_iframe]:w-full"
-                        dangerouslySetInnerHTML={{ __html: map }}
+                        dangerouslySetInnerHTML={{
+                          __html: DOMPurify.sanitize(map, {
+                            ADD_TAGS: ['iframe'],
+                            ADD_ATTR: ['allowfullscreen', 'frameborder', 'loading', 'referrerpolicy'],
+                          }),
+                        }}
                       />
                     ) : (
                       <iframe
                         src={map}
-                        title="Clinic location map"
+                        title={t('Clinic location map')}
                         className="absolute inset-0 h-full w-full border-0"
                         loading="lazy"
                         referrerPolicy="no-referrer-when-downgrade"

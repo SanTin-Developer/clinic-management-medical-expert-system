@@ -47,6 +47,34 @@ class WebsitePublicTest extends TestCase
             ->assertJsonPath('services.0.title', 'Cardiology');
     }
 
+    public function test_public_payloads_expose_khmer_variants_alongside_english(): void
+    {
+        WebsiteSetting::factory()->create(['tagline_km' => 'ការថែទាំដែលអ្នកអាចទុកចិត្ត']);
+
+        PublicPage::factory()->published()->create([
+            'title' => 'About',
+            'title_km' => 'អំពីយើង',
+            'slug' => 'about',
+            'show_in_footer' => true,
+        ]);
+
+        Service::factory()->published()->create(['title' => 'Cardiology', 'title_km' => 'ជំងឺបេះដូង']);
+
+        $this->getJson('/api/v1/website/bootstrap')
+            ->assertOk()
+            ->assertJsonPath('settings.tagline_km', 'ការថែទាំដែលអ្នកអាចទុកចិត្ត')
+            ->assertJsonPath('footer_pages.0.title_km', 'អំពីយើង')
+            ->assertJsonPath('services.0.title_km', 'ជំងឺបេះដូង');
+
+        $this->getJson('/api/v1/website/services')
+            ->assertOk()
+            ->assertJsonPath('data.0.title_km', 'ជំងឺបេះដូង');
+
+        $this->getJson('/api/v1/website/pages/about')
+            ->assertOk()
+            ->assertJsonPath('data.title_km', 'អំពីយើង');
+    }
+
     public function test_bootstrap_exposes_the_homepage_copy_from_content_blocks(): void
     {
         $asset = MediaAsset::factory()->create([

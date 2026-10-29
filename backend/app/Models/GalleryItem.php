@@ -21,9 +21,12 @@ class GalleryItem extends Model
      */
     protected $fillable = [
         'title',
+        'title_km',
         'caption',
+        'caption_km',
         'image_media_id',
         'category',
+        'category_km',
         'is_published',
         'sort_order',
     ];

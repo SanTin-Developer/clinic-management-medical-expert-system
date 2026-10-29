@@ -1,5 +1,7 @@
 import { Mail, Phone } from 'lucide-react'
 import { cn } from '../../utils/cn.js'
+import { localized } from '../../utils/content.js'
+import { useLanguage } from '../../hooks/useLanguage.js'
 import { Reveal } from './Reveal.jsx'
 
 function initialsOf(name) {
@@ -18,6 +20,10 @@ function initialsOf(name) {
  * team data fields so nothing is invented and missing data degrades gracefully.
  */
 export function TeamProfileCard({ member }) {
+  const { language, t } = useLanguage()
+  const position = localized(member, 'position', language)
+  const specialization = localized(member, 'specialization', language)
+  const bio = localized(member, 'bio', language)
   const hasContact = Boolean(member.email || member.phone)
 
   return (
@@ -38,7 +44,7 @@ export function TeamProfileCard({ member }) {
           <>
             <img
               src={member.photo.url}
-              alt={member.name ?? 'Team member'}
+              alt={member.name ?? t('Team member')}
               loading="lazy"
               className="h-full w-full object-cover object-top transition-transform duration-[900ms] ease-out group-hover:scale-[1.06]"
             />
@@ -66,23 +72,23 @@ export function TeamProfileCard({ member }) {
           </>
         )}
 
-        {member.specialization ? (
+        {specialization ? (
           <span className="absolute left-4 top-4 rounded-full border border-white/40 bg-white/85 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-azure-700 backdrop-blur">
-            {member.specialization}
+            {specialization}
           </span>
         ) : null}
 
         <div className="absolute inset-x-0 bottom-0 p-5">
           <h3 className="font-display text-lg font-bold leading-tight text-white">{member.name}</h3>
-          {member.position ? (
-            <p className="mt-0.5 text-sm font-medium text-azure-100">{member.position}</p>
+          {position ? (
+            <p className="mt-0.5 text-sm font-medium text-azure-100">{position}</p>
           ) : null}
         </div>
       </div>
 
       <div className="flex flex-1 flex-col p-5">
-        {member.bio ? (
-          <p className="line-clamp-3 text-sm leading-relaxed text-ink-muted">{member.bio}</p>
+        {bio ? (
+          <p className="line-clamp-3 text-sm leading-relaxed text-ink-muted">{bio}</p>
         ) : null}
 
         {hasContact ? (
@@ -92,7 +98,7 @@ export function TeamProfileCard({ member }) {
                 href={`mailto:${member.email}`}
                 className="inline-flex items-center gap-1.5 rounded-full bg-azure-50 px-3 py-1.5 text-xs font-semibold text-azure-700 transition-colors hover:bg-azure-100"
               >
-                <Mail className="size-3.5" aria-hidden /> Email
+                <Mail className="size-3.5" aria-hidden /> {t('Email')}
               </a>
             ) : null}
             {member.phone ? (
@@ -100,7 +106,7 @@ export function TeamProfileCard({ member }) {
                 href={`tel:${member.phone}`}
                 className="inline-flex items-center gap-1.5 rounded-full bg-azure-50 px-3 py-1.5 text-xs font-semibold text-azure-700 transition-colors hover:bg-azure-100"
               >
-                <Phone className="size-3.5" aria-hidden /> Call
+                <Phone className="size-3.5" aria-hidden /> {t('Call')}
               </a>
             ) : null}
           </div>

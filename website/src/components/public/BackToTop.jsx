@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { ArrowUp } from 'lucide-react'
 import { cn } from '../../utils/cn.js'
+import { useLanguage } from '../../hooks/useLanguage.js'
 
 /** Show the button once the visitor has scrolled meaningfully down the page. */
 const SHOW_AFTER_PX = 320
@@ -21,6 +22,7 @@ const SHOW_AFTER_PX = 320
  * sheet is dismissed.
  */
 export default function BackToTop() {
+  const { t } = useLanguage()
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {

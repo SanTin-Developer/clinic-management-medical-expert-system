@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
+import DOMPurify from 'dompurify'
 import {
   ArrowRight,
   CheckCircle2,
@@ -21,6 +22,8 @@ import { Reveal } from '../../components/public/Reveal.jsx'
 import { BannerBackdrop, Section, SectionHeading } from '../../components/public/PublicUI.jsx'
 import TeamGrid from '../../components/public/TeamGrid.jsx'
 import { cn } from '../../utils/cn.js'
+import { blockText, localized } from '../../utils/content.js'
+import { useLanguage } from '../../hooks/useLanguage.js'
 import { ABOUT_CLINIC_IMAGE, APP_NAME, CLINIC_SUMMARY } from '../../constants/index.js'
 
 /**
@@ -220,6 +223,7 @@ function setMetaDescription(content) {
  * from assistive tech and the row pauses on hover so captions can be read.
  */
 function FacilitiesMarquee({ items, reverse = false }) {
+  const { language, t } = useLanguage()
   const row = reverse ? [...items].reverse() : items
   const doubled = [...row, ...row]
 
@@ -229,30 +233,35 @@ function FacilitiesMarquee({ items, reverse = false }) {
       style={{ maskImage: MARQUEE_EDGE_MASK, WebkitMaskImage: MARQUEE_EDGE_MASK }}
     >
       <div className={cn('marquee-track flex w-max gap-4 pr-4', reverse && 'marquee-track-reverse')}>
-        {doubled.map((item, index) => (
-          <figure
-            key={`${item.id}-${index}`}
-            aria-hidden={index >= row.length ? 'true' : undefined}
-            className="group relative w-[260px] shrink-0 overflow-hidden rounded-3xl border border-line bg-surface shadow-[var(--shadow-card)] transition-shadow duration-300 hover:shadow-[var(--shadow-card-hover)] sm:w-[360px]"
-          >
-            <img
-              src={item.image.url}
-              alt={item.title || item.caption || 'RoyalCare clinic facility'}
-              loading="lazy"
-              className="h-48 w-full object-cover transition-transform duration-700 group-hover:scale-105 sm:h-56"
-            />
-            {item.title || item.caption ? (
-              <figcaption className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-navy-700/90 via-navy-700/50 to-transparent p-4 pt-12">
-                <h3 className="line-clamp-1 text-sm font-semibold text-white">
-                  {item.title || item.caption}
-                </h3>
-                {item.title && item.caption ? (
-                  <p className="mt-0.5 line-clamp-1 text-xs text-white/75">{item.caption}</p>
-                ) : null}
-              </figcaption>
-            ) : null}
-          </figure>
-        ))}
+        {doubled.map((item, index) => {
+          const title = localized(item, 'title', language)
+          const caption = localized(item, 'caption', language)
+
+          return (
+            <figure
+              key={`${item.id}-${index}`}
+              aria-hidden={index >= row.length ? 'true' : undefined}
+              className="group relative w-[260px] shrink-0 overflow-hidden rounded-3xl border border-line bg-surface shadow-[var(--shadow-card)] transition-shadow duration-300 hover:shadow-[var(--shadow-card-hover)] sm:w-[360px]"
+            >
+              <img
+                src={item.image.url}
+                alt={title || caption || t('RoyalCare clinic facility')}
+                loading="lazy"
+                className="h-48 w-full object-cover transition-transform duration-700 group-hover:scale-105 sm:h-56"
+              />
+              {title || caption ? (
+                <figcaption className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-navy-700/90 via-navy-700/50 to-transparent p-4 pt-12">
+                  <h3 className="line-clamp-1 text-sm font-semibold text-white">
+                    {title || caption}
+                  </h3>
+                  {title && caption ? (
+                    <p className="mt-0.5 line-clamp-1 text-xs text-white/75">{caption}</p>
+                  ) : null}
+                </figcaption>
+              ) : null}
+            </figure>
+          )
+        })}
       </div>
     </div>
   )
@@ -269,6 +278,8 @@ function FacilitiesMarquee({ items, reverse = false }) {
  * ringed closing CTA.
  */
 export default function AboutPage() {
+  const { language, t } = useLanguage()
+
   const bootstrapQuery = useQuery({
     queryKey: ['website', 'bootstrap'],
     queryFn: publicWebsiteApi.bootstrap,
@@ -312,7 +323,10 @@ export default function AboutPage() {
    * back to the developer default so the page never renders empty.
    */
   const blocks = indexBlocks(bootstrapQuery.data?.content_blocks)
-  const body = (key, fallback) => blocks[key]?.body?.trim() || fallback
+  // The CMS value wins (Khmer `body_km` when the editor filled it), then the
+  // developer default. The dictionary then translates whichever English string
+  // won, so seeded English blocks still read in Khmer.
+  const body = (key, fallback) => t(blockText(blocks, key, fallback, language))
   const list = (key, fallback) => {
     const value = blocks[key]?.data
     return Array.isArray(value) && value.length > 0 ? value : fallback
@@ -345,16 +359,16 @@ export default function AboutPage() {
   const valuesSubheading = body('about_values_subheading', '')
   const values = list('about_values', CORE_VALUES).map((item, index) => ({
     icon: CORE_VALUES[index]?.icon ?? HeartPulse,
-    title: item.title ?? '',
-    text: item.text ?? '',
+    title: t(localized(item, 'title', language)),
+    text: t(localized(item, 'text', language)),
   }))
 
   const commitmentHeading = body('about_commitment_heading', 'Our Commitment to Patients')
   const commitmentSubheading = body('about_commitment_subheading', '')
   const commitments = list('about_commitments', COMMITMENTS).map((item, index) => ({
     icon: COMMITMENTS[index]?.icon ?? MessageCircle,
-    title: item.title ?? '',
-    text: item.text ?? '',
+    title: t(localized(item, 'title', language)),
+    text: t(localized(item, 'text', language)),
   }))
 
   const ctaHeading = body('about_cta_heading', CLOSING.heading)
@@ -394,9 +408,15 @@ export default function AboutPage() {
   const ctaPrimaryLabel = body('about_cta_primary_link', CTA_PRIMARY_LINK)
   const ctaSecondaryLabel = body('about_cta_secondary_link', CTA_SECONDARY_LINK)
 
+  const pageTitle = localized(page, 'title', language)
   const seoTitle =
-    page.seo_title || (page.title ? `${page.title} — ${settings.site_name || APP_NAME}` : '')
-  const seoDescription = page.seo_description || plainText(page.excerpt)
+    localized(page, 'seo_title', language) ||
+    (pageTitle ? `${pageTitle} — ${settings.site_name || APP_NAME}` : '')
+  const seoDescription =
+    localized(page, 'seo_description', language) ||
+    t(plainText(localized(page, 'excerpt', language)))
+  const siteSeoTitle = localized(settings, 'seo_title', language) || settings.site_name || APP_NAME
+  const siteSeoDescription = localized(settings, 'seo_description', language)
 
   /**
    * Publishes page-specific SEO, then re-asserts it on the next tick: the
@@ -418,21 +438,15 @@ export default function AboutPage() {
 
     return () => {
       clearTimeout(timer)
-      document.title = settings.seo_title || settings.site_name || APP_NAME
-      if (settings.seo_description) setMetaDescription(settings.seo_description)
+      document.title = siteSeoTitle
+      if (siteSeoDescription) setMetaDescription(siteSeoDescription)
     }
-  }, [
-    seoTitle,
-    seoDescription,
-    settings.seo_title,
-    settings.site_name,
-    settings.seo_description,
-  ])
+  }, [seoTitle, seoDescription, siteSeoTitle, siteSeoDescription])
 
   if (pageQuery.isLoading) {
     return (
       <div className="grid min-h-[60vh] place-items-center">
-        <Spinner label="Loading page…" />
+        <Spinner label={t('Loading page…')} />
       </div>
     )
   }
@@ -442,8 +456,10 @@ export default function AboutPage() {
     return (
       <Section className="py-24">
         <ErrorState
-          title={notFound ? 'About page unavailable' : undefined}
-          message={notFound ? 'This page is being updated. Please check back soon.' : undefined}
+          title={notFound ? t('About page unavailable') : undefined}
+          message={
+            notFound ? t('This page is being updated. Please check back soon.') : undefined
+          }
           onRetry={notFound ? undefined : pageQuery.refetch}
         />
       </Section>
@@ -452,9 +468,14 @@ export default function AboutPage() {
 
   // The lead paragraph belongs to the About page record; the shared clinic
   // blurb is the fallback when the admin has not written an excerpt yet.
-  const lead = plainText(page.excerpt) || CLINIC_SUMMARY
-  const bodyHtml = page.body ?? ''
-  const bodyText = bodyHtml ? (/<[a-z][\s\S]*>/i.test(bodyHtml) ? '' : plainText(bodyHtml)) : plainText(page.excerpt)
+  const excerptText = t(plainText(localized(page, 'excerpt', language)))
+  const lead = excerptText || t(CLINIC_SUMMARY)
+  const bodyHtml = localized(page, 'body', language)
+  const bodyText = bodyHtml
+    ? /<[a-z][\s\S]*>/i.test(bodyHtml)
+      ? ''
+      : t(plainText(bodyHtml))
+    : excerptText
   const heroImage = page.cover?.url || ABOUT_CLINIC_IMAGE
 
   return (
@@ -474,7 +495,7 @@ export default function AboutPage() {
                 />
                 <span className="relative inline-flex size-1.5 rounded-full bg-accent" />
               </span>
-              {heroBadge || `About ${settings.site_name || 'RoyalCare'}`}
+              {heroBadge || t('About {name}', { name: settings.site_name || 'RoyalCare' })}
             </span>
           </Reveal>
 
@@ -515,7 +536,7 @@ export default function AboutPage() {
 
           <Reveal delay={320}>
             <nav
-              aria-label="About page sections"
+              aria-label={t('About page sections')}
               className="mx-auto mt-10 flex max-w-3xl flex-wrap items-center justify-center gap-2"
             >
               {sectionLinks.filter(
@@ -534,7 +555,7 @@ export default function AboutPage() {
 
           <a
             href="#story"
-            aria-label="Scroll to our story"
+            aria-label={t('Scroll to our story')}
             className="mx-auto mt-12 hidden w-fit text-white/45 transition-colors hover:text-white sm:block"
           >
             <ChevronDown className="size-6 animate-bounce" aria-hidden />
@@ -553,7 +574,7 @@ export default function AboutPage() {
             <div className="overflow-hidden rounded-[2rem] border border-line shadow-[var(--shadow-float)]">
               <img
                 src={storyImageUrl}
-                alt="Inside RoyalCare Clinic"
+                alt={t('Inside RoyalCare Clinic')}
                 loading="lazy"
                 className="block aspect-[4/3] w-full object-cover"
               />
@@ -588,7 +609,7 @@ export default function AboutPage() {
             !bodyHtml.toLowerCase().includes('edit this page from the website management') ? (
               <div
                 className="prose prose-slate mt-4 max-w-none prose-p:leading-relaxed prose-p:text-ink-muted prose-strong:text-ink"
-                dangerouslySetInnerHTML={{ __html: bodyHtml }}
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(bodyHtml) }}
               />
             ) : bodyText && !bodyText.toLowerCase().includes('edit this page from the website management') ? (
               <p className="mt-4 whitespace-pre-line text-base leading-relaxed text-ink-muted sm:text-[17px]">
@@ -764,14 +785,16 @@ export default function AboutPage() {
         ) : featuredGallery.length === 0 ? (
           <Section reveal={false} className="mt-10">
             <EmptyState
-              title="Facilities gallery coming soon"
-              message="Photos of our clinic spaces will appear here once they have been published."
+              title={t('Facilities gallery coming soon')}
+              message={t(
+                'Photos of our clinic spaces will appear here once they have been published.',
+              )}
               action={
                 <Link
                   to="/gallery"
                   className="inline-flex rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-dark"
                 >
-                  Visit the gallery
+                  {t('Visit the gallery')}
                 </Link>
               }
             />

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Download, X } from 'lucide-react'
 import { cn } from '../../utils/cn.js'
+import { useLanguage } from '../../hooks/useLanguage.js'
 
 /** After a dismissal the alert stays away for two weeks. */
 const SNOOZE_MS = 14 * 24 * 60 * 60 * 1000
@@ -47,6 +48,7 @@ function rememberDismissed() {
  * a dismissal.
  */
 export default function InstallPrompt() {
+  const { t } = useLanguage()
   const eventRef = useRef(null)
   const [open, setOpen] = useState(false)
   // True while a native beforeinstallprompt event is available to replay.
@@ -129,7 +131,7 @@ export default function InstallPrompt() {
   return (
     <div
       role="dialog"
-      aria-label="Install RoyalCare Clinic"
+      aria-label={t('Install RoyalCare Clinic')}
       className={cn(
         'animate-sheet-in fixed inset-x-3 z-[45] overflow-hidden rounded-3xl border border-white/50 bg-white/95 shadow-[var(--shadow-float)] backdrop-blur-xl',
         'bottom-[calc(4.75rem_+_env(safe-area-inset-bottom))]',
@@ -139,7 +141,7 @@ export default function InstallPrompt() {
       <button
         type="button"
         onClick={dismiss}
-        aria-label="Close install prompt"
+        aria-label={t('Close install prompt')}
         className="absolute right-3 top-3 grid size-8 place-items-center rounded-full text-ink-muted transition-colors hover:bg-canvas hover:text-ink"
       >
         <X className="size-4" aria-hidden />
@@ -153,7 +155,7 @@ export default function InstallPrompt() {
           className="size-12 shrink-0 rounded-2xl bg-white object-contain p-1 shadow-sm ring-1 ring-line"
         />
         <div className="min-w-0">
-          <p className="text-sm font-extrabold tracking-tight text-ink">Install RoyalCare Clinic</p>
+          <p className="text-sm font-extrabold tracking-tight text-ink">{t('Install RoyalCare Clinic')}</p>
           <p className="mt-1 text-[13px] leading-relaxed text-ink-muted">{copy}</p>
         </div>
       </div>
@@ -167,14 +169,14 @@ export default function InstallPrompt() {
               className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-ink shadow-[0_12px_26px_-12px_rgb(76_175_80_/_0.9)] transition hover:bg-accent-dark"
             >
               <Download className="size-4" aria-hidden />
-              Install now
+              {t('Install now')}
             </button>
             <button
               type="button"
               onClick={dismiss}
               className="rounded-full border border-line px-5 py-2.5 text-sm font-semibold text-ink-muted transition-colors hover:bg-canvas"
             >
-              Maybe later
+              {t('Maybe later')}
             </button>
           </>
         ) : (
@@ -183,7 +185,7 @@ export default function InstallPrompt() {
             onClick={dismiss}
             className="inline-flex flex-1 items-center justify-center rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-ink shadow-[0_12px_26px_-12px_rgb(76_175_80_/_0.9)] transition hover:bg-accent-dark"
           >
-            Got it
+            {t('Got it')}
           </button>
         )}
       </div>

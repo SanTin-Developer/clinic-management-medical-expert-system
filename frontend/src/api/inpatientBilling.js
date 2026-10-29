@@ -1,7 +1,9 @@
 import { api } from './client.js'
 
 const withData = (promise) => promise.then((res) => {
-  const data = res?.data?.data ?? res?.data?.result ?? res?.data
+  // Some endpoints wrap the payload in { data } / { result }; the ledger
+  // endpoint returns its fields at the top level.
+  const data = res?.data?.data ?? res?.data?.result ?? res?.data ?? res
   return data === undefined ? {} : data
 })
 

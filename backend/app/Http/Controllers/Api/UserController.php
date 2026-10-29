@@ -27,10 +27,18 @@ class UserController extends Controller
         $query = User::query()->with('roles:id,name');
         $base = clone $query;
 
+        if ($search = $request->query('search')) {
+            $query->where(function ($builder) use ($search) {
+                foreach (['name', 'username', 'email'] as $column) {
+                    $builder->orWhereLike($column, "%{$search}%", caseSensitive: false);
+                }
+            });
+        }
+
         $users = $query->latest()->paginate(15);
 
         $stats = [
-            'total' => $users->total(),
+            'total' => (clone $base)->count(),
             'active' => (clone $base)->where('account_status', 'active')->count(),
             'inactive' => (clone $base)->where('account_status', 'inactive')->count(),
             'suspended' => (clone $base)->where('account_status', 'suspended')->count(),

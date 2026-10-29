@@ -122,7 +122,7 @@ class ConsultationController extends Controller
         }
 
         // Do not create consultation for cancelled/no-show appointments.
-        if (in_array($appointment->status, ['cancelled', 'no-show'])) {
+        if (in_array($appointment->status, ['cancelled', 'no_show'])) {
             return response()->json([
                 'message' => 'Cannot create consultation for cancelled or no-show appointment.',
             ], 422);

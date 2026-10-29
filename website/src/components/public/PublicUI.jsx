@@ -15,8 +15,9 @@ import {
 } from 'lucide-react'
 import { cn } from '../../utils/cn.js'
 import { formatDate } from '../../utils/format.js'
-import { blockImage, useContentBlocks } from '../../utils/content.js'
+import { blockImage, localized, useContentBlocks } from '../../utils/content.js'
 import { APP_NAME, DEFAULT_HERO_IMAGE } from '../../constants/index.js'
+import { useLanguage } from '../../hooks/useLanguage.js'
 import { useInView } from './Reveal.jsx'
 
 const ICONS = {
@@ -120,10 +121,14 @@ export function SectionHeading({ eyebrow, title, description, align = 'left' }) 
 
 export function ServiceCard({ service }) {
   const Icon = resolveIcon(service.icon)
+  const { language, t } = useLanguage()
+  const title = localized(service, 'title', language)
+  const description = localized(service, 'short_description', language)
+
   return (
     <article className="group flex flex-col overflow-hidden rounded-3xl border border-line bg-surface shadow-[var(--shadow-card)] transition-transform duration-300 hover:-translate-y-1 hover:shadow-[var(--shadow-card-hover)]">
       {service.image?.url ? (
-        <img src={service.image.url} alt={service.title} loading="lazy" className="h-44 w-full object-cover" />
+        <img src={service.image.url} alt={title} loading="lazy" className="h-44 w-full object-cover" />
       ) : (
         <div className="grid h-44 w-full place-items-center bg-azure-50">
           <Icon className="size-12 text-azure-500" aria-hidden />
@@ -133,15 +138,15 @@ export function ServiceCard({ service }) {
         <span className="grid size-11 place-items-center rounded-2xl bg-azure-100 text-azure-700">
           <Icon className="size-5" aria-hidden />
         </span>
-        <h3 className="mt-4 text-base font-semibold text-ink">{service.title}</h3>
-        {service.short_description ? (
-          <p className="mt-2 flex-1 text-sm text-ink-muted">{service.short_description}</p>
+        <h3 className="mt-4 text-base font-semibold text-ink">{title}</h3>
+        {description ? (
+          <p className="mt-2 flex-1 text-sm text-ink-muted">{description}</p>
         ) : null}
         <Link
           to="/services"
           className="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-azure-700 hover:text-azure-600"
         >
-          Learn more →
+          {t('Learn more')} →
         </Link>
       </div>
     </article>
@@ -149,6 +154,11 @@ export function ServiceCard({ service }) {
 }
 
 export function TeamCard({ profile }) {
+  const { language } = useLanguage()
+  const position = localized(profile, 'position', language)
+  const specialization = localized(profile, 'specialization', language)
+  const bio = localized(profile, 'bio', language)
+
   return (
     <article className="group flex flex-col overflow-hidden rounded-3xl border border-line bg-surface text-center shadow-[var(--shadow-card)] transition-transform duration-300 hover:-translate-y-1">
       {profile.photo?.url ? (
@@ -160,39 +170,44 @@ export function TeamCard({ profile }) {
       )}
       <div className="flex flex-1 flex-col p-6">
         <h3 className="text-base font-semibold text-ink">{profile.name}</h3>
-        {profile.position ? <p className="mt-0.5 text-sm font-medium text-azure-700">{profile.position}</p> : null}
-        {profile.specialization ? (
-          <p className="mt-1 text-xs text-ink-muted">{profile.specialization}</p>
+        {position ? <p className="mt-0.5 text-sm font-medium text-azure-700">{position}</p> : null}
+        {specialization ? (
+          <p className="mt-1 text-xs text-ink-muted">{specialization}</p>
         ) : null}
-        {profile.bio ? <p className="mt-3 line-clamp-3 text-sm text-ink-muted">{profile.bio}</p> : null}
+        {bio ? <p className="mt-3 line-clamp-3 text-sm text-ink-muted">{bio}</p> : null}
       </div>
     </article>
   )
 }
 
 export function ArticleCard({ article }) {
+  const { language } = useLanguage()
+  const title = localized(article, 'title', language)
+  const excerpt = localized(article, 'excerpt', language)
+  const category = localized(article, 'category', language)
+
   return (
     <article className="flex flex-col overflow-hidden rounded-3xl border border-line bg-surface shadow-[var(--shadow-card)] transition-transform duration-300 hover:-translate-y-1">
       <Link to={`/health-news/${article.slug}`} className="block">
         {article.cover?.url ? (
-          <img src={article.cover.url} alt={article.title} loading="lazy" className="h-44 w-full object-cover" />
+          <img src={article.cover.url} alt={title} loading="lazy" className="h-44 w-full object-cover" />
         ) : (
           <div className="h-44 w-full bg-azure-50" />
         )}
       </Link>
       <div className="flex flex-1 flex-col p-6">
-        {article.category ? (
+        {category ? (
           <span className="text-xs font-semibold uppercase tracking-wide text-azure-600">
-            {article.category}
+            {category}
           </span>
         ) : null}
         <h3 className="mt-1 text-base font-semibold text-ink">
           <Link to={`/health-news/${article.slug}`} className="hover:text-azure-700">
-            {article.title}
+            {title}
           </Link>
         </h3>
-        {article.excerpt ? (
-          <p className="mt-2 line-clamp-3 flex-1 text-sm text-ink-muted">{article.excerpt}</p>
+        {excerpt ? (
+          <p className="mt-2 line-clamp-3 flex-1 text-sm text-ink-muted">{excerpt}</p>
         ) : null}
         <p className="mt-4 text-xs text-ink-muted">{formatDate(article.published_at)}</p>
       </div>

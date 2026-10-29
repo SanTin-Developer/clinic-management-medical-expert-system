@@ -6,7 +6,8 @@ import { Spinner } from '../../components/ui/Skeleton.jsx'
 import Modal from '../../components/ui/Modal.jsx'
 import { EmptyState, ErrorState } from '../../components/ui/State.jsx'
 import { cn } from '../../utils/cn.js'
-import { blockText, splitHeading, useContentBlocks } from '../../utils/content.js'
+import { blockText, localized, splitHeading, useContentBlocks } from '../../utils/content.js'
+import { useLanguage } from '../../hooks/useLanguage.js'
 import { Reveal } from '../../components/public/Reveal.jsx'
 import { BannerBackdrop, Section } from '../../components/public/PublicUI.jsx'
 
@@ -25,6 +26,7 @@ const GALLERY_SECTION_TITLE = 'Inside the Clinic'
 const GALLERY_SECTION_HELP = 'Tap any photo to view it full size.'
 
 export default function GalleryPage() {
+  const { language, t } = useLanguage()
   const [category, setCategory] = useState('')
   const [activeIndex, setActiveIndex] = useState(null)
 
@@ -38,13 +40,33 @@ export default function GalleryPage() {
 
   // Admin-editable copy (Page Content → Gallery Page).
   const blocks = useContentBlocks()
-  const heading = splitHeading(blockText(blocks, 'gallery_heading', GALLERY_HEADING))
+  const heading = splitHeading(
+    blockText(blocks, 'gallery_heading', t(GALLERY_HEADING), language),
+  )
   const copy = {
-    eyebrow: blockText(blocks, 'gallery_eyebrow', GALLERY_EYEBROW),
-    description: blockText(blocks, 'gallery_description', GALLERY_DESCRIPTION),
-    sectionEyebrow: blockText(blocks, 'gallery_section_eyebrow', GALLERY_SECTION_EYEBROW),
-    sectionHeading: blockText(blocks, 'gallery_section_heading', GALLERY_SECTION_TITLE),
-    sectionHelp: blockText(blocks, 'gallery_section_help', GALLERY_SECTION_HELP),
+    eyebrow: blockText(blocks, 'gallery_eyebrow', t(GALLERY_EYEBROW), language),
+    description: blockText(blocks, 'gallery_description', t(GALLERY_DESCRIPTION), language),
+    sectionEyebrow: blockText(
+      blocks,
+      'gallery_section_eyebrow',
+      t(GALLERY_SECTION_EYEBROW),
+      language,
+    ),
+    sectionHeading: blockText(
+      blocks,
+      'gallery_section_heading',
+      t(GALLERY_SECTION_TITLE),
+      language,
+    ),
+    sectionHelp: blockText(blocks, 'gallery_section_help', t(GALLERY_SECTION_HELP), language),
+  }
+
+  // The category list arrives as plain English strings. Where a loaded photo
+  // carries a Khmer category we show that label instead, so chips match the
+  // localized captions on the tiles.
+  const categoryLabel = (value) => {
+    const match = items.find((item) => item.category === value)
+    return (match ? localized(match, 'category', language) : '') || value
   }
 
   // Clamp the lightbox to the currently loaded list so a category switch
@@ -84,7 +106,10 @@ export default function GalleryPage() {
     setActiveIndex(null)
   }
 
-  const photoCount = `${items.length} ${items.length === 1 ? 'photo' : 'photos'}`
+  const photoCount =
+    items.length === 1
+      ? t('{count} photo', { count: items.length })
+      : t('{count} photos', { count: items.length })
 
   return (
     <>
@@ -137,7 +162,7 @@ export default function GalleryPage() {
                       : 'border-white/20 bg-white/10 text-white/75 backdrop-blur hover:bg-white/15 hover:text-white',
                   )}
                 >
-                  All
+                  {t('All photos')}
                 </button>
                 {categories.map((cat) => (
                   <button
@@ -151,7 +176,7 @@ export default function GalleryPage() {
                         : 'border-white/20 bg-white/10 text-white/75 backdrop-blur hover:bg-white/15 hover:text-white',
                     )}
                   >
-                    {cat}
+                    {categoryLabel(cat)}
                   </button>
                 ))}
               </div>
@@ -160,7 +185,7 @@ export default function GalleryPage() {
 
           <a
             href="#gallery"
-            aria-label="Scroll to gallery"
+            aria-label={t('Scroll to gallery')}
             className="mx-auto mt-10 hidden w-fit text-white/45 transition-colors hover:text-white sm:block"
           >
             <ChevronDown className="size-6 animate-bounce" aria-hidden />
@@ -185,7 +210,7 @@ export default function GalleryPage() {
             {data && !isError ? (
               <span className="rounded-full border border-line bg-canvas px-4 py-2 text-xs font-bold text-azure-700 shadow-sm">
                 {photoCount}
-                {category ? ` · ${category}` : ''}
+                {category ? ` · ${categoryLabel(category)}` : ''}
               </span>
             ) : null}
           </Reveal>
@@ -193,17 +218,25 @@ export default function GalleryPage() {
           <div className="mt-8">
             {isLoading ? (
               <div className="grid place-items-center py-16">
-                <Spinner label="Loading gallery…" />
+                <Spinner label={t('Loading gallery…')} />
               </div>
             ) : isError ? (
-              <ErrorState onRetry={refetch} />
+              <ErrorState
+                title={t('Gallery unavailable')}
+                message={t(
+                  "We couldn't load the gallery right now. Please try again in a moment.",
+                )}
+                onRetry={refetch}
+              />
             ) : items.length === 0 ? (
               <EmptyState
-                title="No photos yet"
+                title={t('No photos yet')}
                 message={
                   category
-                    ? `No photos are listed under “${category}” right now.`
-                    : 'Gallery images will appear here soon.'
+                    ? t('No photos are listed under “{category}” right now.', {
+                        category: categoryLabel(category),
+                      })
+                    : t('Gallery images will appear here soon.')
                 }
                 icon={Images}
               />
@@ -219,7 +252,11 @@ export default function GalleryPage() {
                     >
                       <img
                         src={item.image.url}
-                        alt={item.title ?? item.caption ?? 'Gallery image'}
+                        alt={
+                          localized(item, 'title', language) ||
+                          localized(item, 'caption', language) ||
+                          t('Gallery image')
+                        }
                         loading="lazy"
                         className="w-full object-cover transition-transform duration-700 group-hover:scale-105"
                       />
@@ -234,14 +271,14 @@ export default function GalleryPage() {
                         <Maximize2 className="size-4" />
                       </span>
                       <span className="pointer-events-none absolute inset-x-0 bottom-0 translate-y-2 p-4 opacity-0 transition-all duration-500 group-hover:translate-y-0 group-hover:opacity-100">
-                        {item.title ? (
+                        {localized(item, 'title', language) ? (
                           <span className="block font-display text-sm font-bold text-white">
-                            {item.title}
+                            {localized(item, 'title', language)}
                           </span>
                         ) : null}
-                        {item.category ? (
+                        {localized(item, 'category', language) ? (
                           <span className="mt-0.5 block text-[11px] font-semibold uppercase tracking-[0.14em] text-azure-200">
-                            {item.category}
+                            {localized(item, 'category', language)}
                           </span>
                         ) : null}
                       </span>
@@ -259,15 +296,19 @@ export default function GalleryPage() {
       <Modal
         open={Boolean(active)}
         onClose={() => setActiveIndex(null)}
-        title={active?.title ?? 'Gallery photo'}
-        description={active?.category ?? undefined}
+        title={localized(active, 'title', language) || t('Gallery photo')}
+        description={localized(active, 'category', language) || undefined}
         size="xl"
       >
         {active?.image?.url ? (
           <figure className="relative">
             <img
               src={active.image.url}
-              alt={active.title ?? active.caption ?? 'Gallery image'}
+              alt={
+                localized(active, 'title', language) ||
+                localized(active, 'caption', language) ||
+                t('Gallery image')
+              }
               className="max-h-[70vh] w-full rounded-xl bg-canvas object-contain"
             />
 
@@ -276,7 +317,7 @@ export default function GalleryPage() {
                 <button
                   type="button"
                   onClick={() => showRelative(-1)}
-                  aria-label="Previous photo"
+                  aria-label={t('Previous photo')}
                   className="absolute left-3 top-1/2 grid size-10 -translate-y-1/2 place-items-center rounded-full border border-white/30 bg-black/45 text-white backdrop-blur transition-colors hover:bg-black/75"
                 >
                   <ChevronLeft className="size-5" aria-hidden />
@@ -284,7 +325,7 @@ export default function GalleryPage() {
                 <button
                   type="button"
                   onClick={() => showRelative(1)}
-                  aria-label="Next photo"
+                  aria-label={t('Next photo')}
                   className="absolute right-3 top-1/2 grid size-10 -translate-y-1/2 place-items-center rounded-full border border-white/30 bg-black/45 text-white backdrop-blur transition-colors hover:bg-black/75"
                 >
                   <ChevronRight className="size-5" aria-hidden />
@@ -295,8 +336,10 @@ export default function GalleryPage() {
               </>
             ) : null}
 
-            {active.caption ? (
-              <figcaption className="mt-3 text-sm text-ink-muted">{active.caption}</figcaption>
+            {localized(active, 'caption', language) ? (
+              <figcaption className="mt-3 text-sm text-ink-muted">
+                {localized(active, 'caption', language)}
+              </figcaption>
             ) : null}
           </figure>
         ) : null}

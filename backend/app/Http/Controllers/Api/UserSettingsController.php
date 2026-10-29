@@ -33,9 +33,22 @@ class UserSettingsController extends Controller
     {
         $user = $request->user();
 
+        // Usernames are stored lowercase; login lowercases the identifier before
+        // querying, so accepting mixed case here would lock the user out.
+        if ($request->filled('username')) {
+            $request->merge(['username' => strtolower(trim((string) $request->input('username')))]);
+        }
+
         $validated = $request->validate([
             'name' => ['sometimes', 'string', 'max:255'],
-            'username' => ['sometimes', 'string', 'max:255', Rule::unique('users', 'username')->ignore($user->id)],
+            'username' => [
+                'sometimes',
+                'string',
+                'min:3',
+                'max:50',
+                'regex:/^[A-Za-z0-9._-]+$/',
+                Rule::unique('users', 'username')->ignore($user->id),
+            ],
             'phone' => ['nullable', 'string', 'max:50'],
             'timezone' => ['nullable', 'string', 'timezone:all'],
             'locale' => ['nullable', 'string', 'max:10', Rule::in(['en', 'km'])],

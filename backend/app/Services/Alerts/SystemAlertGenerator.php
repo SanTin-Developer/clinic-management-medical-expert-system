@@ -542,9 +542,11 @@ class SystemAlertGenerator
         // Published shifts for today whose start time has passed by the grace
         // period, where the scheduled user has no attendance record at all.
         $graceMinutes = max(1, (int) config('alerts.attendance.no_checkin_grace_minutes', 60));
+        $clinicTz = (string) config('attendance.timezone', 'Asia/Phnom_Penh');
         $now = Carbon::now();
         $flagBefore = $now->copy()->subMinutes($graceMinutes);
-        $today = $now->toDateString();
+        // Shift dates and times are authored in the clinic timezone, not UTC.
+        $today = $now->copy()->setTimezone($clinicTz)->toDateString();
 
         $clockedToday = AttendanceRecord::query()
             ->whereDate('work_date', $today)
@@ -564,7 +566,7 @@ class SystemAlertGenerator
             ->where('status', 'scheduled')
             ->whereDate('shift_date', $today)
             ->lazyById(200)
-            ->each(function (Shift $shift) use (&$seen, $clockedToday, $shiftNames, $flagBefore, $graceMinutes) {
+            ->each(function (Shift $shift) use (&$seen, $clockedToday, $shiftNames, $flagBefore, $graceMinutes, $clinicTz) {
                 if ($shift->user_id === null || $clockedToday->has($shift->user_id)) {
                     return;
                 }
@@ -574,7 +576,10 @@ class SystemAlertGenerator
                 }
 
                 try {
-                    $start = $shift->shift_date->copy()->setTimeString($shift->start_time);
+                    $start = Carbon::parse(
+                        $shift->shift_date->toDateString().' '.substr((string) $shift->start_time, 0, 5),
+                        $clinicTz,
+                    );
                 } catch (Throwable) {
                     return;
                 }

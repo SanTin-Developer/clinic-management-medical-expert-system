@@ -16,6 +16,7 @@ import {
   EMPLOYMENT_TYPE_OPTIONS,
   PAY_FREQUENCY_OPTIONS,
 } from '../../utils/status.js'
+import { toIsoDate } from '../../utils/format.js'
 
 const BASE_FORM = {
   first_name: '',
@@ -164,7 +165,7 @@ export default function StaffFormModal({ open, onClose, initial, onSaved }) {
     if (!form.first_name.trim()) next.first_name = 'First name is required.'
     if (!form.last_name.trim()) next.last_name = 'Last name is required.'
     if (form.email && !/^\S+@\S+\.\S+$/.test(form.email.trim())) next.email = 'Enter a valid email address.'
-    if (form.date_of_birth && form.date_of_birth >= new Date().toISOString().slice(0, 10)) {
+    if (form.date_of_birth && form.date_of_birth >= toIsoDate(new Date())) {
       next.date_of_birth = 'Date of birth must be in the past.'
     }
     if (errors.cv) next.cv = errors.cv

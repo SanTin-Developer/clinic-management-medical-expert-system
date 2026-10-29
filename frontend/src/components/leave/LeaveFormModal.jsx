@@ -8,8 +8,9 @@ import Select from '../ui/Select.jsx'
 import Textarea from '../ui/Textarea.jsx'
 import { leaveApi } from '../../api/leave.js'
 import { LEAVE_TYPE_OPTIONS } from '../../utils/status.js'
+import { toIsoDate } from '../../utils/format.js'
 
-const today = new Date().toISOString().slice(0, 10)
+const today = toIsoDate(new Date())
 
 const EMPTY = {
   type: 'annual',

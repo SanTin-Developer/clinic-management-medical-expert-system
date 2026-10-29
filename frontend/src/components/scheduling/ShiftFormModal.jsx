@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import Modal from '../ui/Modal.jsx'
@@ -17,6 +17,33 @@ import { SHIFT_STATUS_OPTIONS, SHIFT_TYPE_OPTIONS } from '../../utils/status.js'
 
 const today = toIsoDate(new Date())
 
+const BASE_FORM = {
+  user_id: '',
+  shift_date: today,
+  shift_template_id: '',
+  start_time: '08:00',
+  end_time: '16:00',
+  crosses_midnight: false,
+  type: 'day',
+  status: 'scheduled',
+  notes: '',
+}
+
+function formFromShift(shift) {
+  if (!shift) return BASE_FORM
+  return {
+    user_id: shift.user_id ?? '',
+    shift_date: toIsoDate(shift.shift_date),
+    shift_template_id: shift.shift_template_id ? String(shift.shift_template_id) : '',
+    start_time: (shift.start_time ?? '').slice(0, 5),
+    end_time: (shift.end_time ?? '').slice(0, 5),
+    crosses_midnight: Boolean(shift.crosses_midnight),
+    type: shift.type ?? 'day',
+    status: shift.status ?? 'scheduled',
+    notes: shift.notes ?? '',
+  }
+}
+
 export default function ShiftFormModal({ open, onClose, shift, onSaved }) {
   const editing = Boolean(shift?.id)
   const staff = useAll(['users', 'all'], (params) => userApi.list(params))
@@ -27,33 +54,17 @@ export default function ShiftFormModal({ open, onClose, shift, onSaved }) {
   })
   const templates = templatesQuery.data ?? []
 
-  const [form, setForm] = useState(
-    shift
-      ? {
-          user_id: shift.user_id ?? '',
-          shift_date: toIsoDate(shift.shift_date),
-          shift_template_id: shift.shift_template_id ? String(shift.shift_template_id) : '',
-          start_time: (shift.start_time ?? '').slice(0, 5),
-          end_time: (shift.end_time ?? '').slice(0, 5),
-          crosses_midnight: Boolean(shift.crosses_midnight),
-          type: shift.type ?? 'day',
-          status: shift.status ?? 'scheduled',
-          notes: shift.notes ?? '',
-        }
-      : {
-          user_id: '',
-          shift_date: today,
-          shift_template_id: '',
-          start_time: '08:00',
-          end_time: '16:00',
-          crosses_midnight: false,
-          type: 'day',
-          status: 'scheduled',
-          notes: '',
-        },
-  )
+  const [form, setForm] = useState(BASE_FORM)
   const [errors, setErrors] = useState({})
   const [saving, setSaving] = useState(false)
+
+  // The modal stays mounted between openings, so initialise the form whenever
+  // it opens or a different shift is selected.
+  useEffect(() => {
+    if (!open) return
+    setForm(formFromShift(shift))
+    setErrors({})
+  }, [open, shift?.id])
 
   const set = (key) => (value) => setForm((f) => ({ ...f, [key]: value }))
 

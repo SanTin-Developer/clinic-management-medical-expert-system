@@ -35,17 +35,13 @@ export default function PatientListPage() {
     (params) => patientApi.list(params),
     {
       page,
+      params: search ? { search } : {},
     },
   );
 
+  // Search runs server-side so matches on later pages are kept.
   const items = query.data?.data ?? [];
-  const filtered = search
-    ? items.filter((p) =>
-        [p.first_name, p.last_name, p.patient_number, p.phone_number, p.email]
-          .filter(Boolean)
-          .some((v) => String(v).toLowerCase().includes(search.toLowerCase())),
-      )
-    : items;
+  const filtered = items;
 
   const canManage = can("patients.create") || can("patients.update");
 
@@ -126,7 +122,10 @@ export default function PatientListPage() {
           <SearchInput
             placeholder={t("Search by name, patient number, phone or email...")}
             className="w-full sm:w-80"
-            onDebounced={setSearch}
+            onDebounced={(value) => {
+              setSearch(value);
+              setPage(1);
+            }}
             aria-label="Search patients"
           />
         </div>

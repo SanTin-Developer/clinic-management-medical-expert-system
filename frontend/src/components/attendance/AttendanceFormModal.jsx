@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import Modal from '../ui/Modal.jsx'
 import Button from '../ui/Button.jsx'
@@ -22,6 +22,29 @@ function toLocalInput(value) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
+const BASE_FORM = {
+  user_id: '',
+  work_date: today,
+  clock_in: '',
+  clock_out: '',
+  status: 'present',
+  notes: '',
+  reason: '',
+}
+
+function formFromRecord(record) {
+  if (!record) return BASE_FORM
+  return {
+    user_id: record.user_id ?? '',
+    work_date: toIsoDate(record.work_date),
+    clock_in: toLocalInput(record.clock_in),
+    clock_out: toLocalInput(record.clock_out),
+    status: record.status ?? 'present',
+    notes: record.notes ?? '',
+    reason: '',
+  }
+}
+
 export default function AttendanceFormModal({ open, onClose, record, onSaved }) {
   const editing = Boolean(record?.id)
   const staff = useAll(['users', 'all'], (params) => userApi.list(params))
@@ -34,29 +57,17 @@ export default function AttendanceFormModal({ open, onClose, record, onSaved }) 
       }
     : null
 
-  const [form, setForm] = useState(
-    record
-      ? {
-          user_id: record.user_id ?? '',
-          work_date: toIsoDate(record.work_date),
-          clock_in: toLocalInput(record.clock_in),
-          clock_out: toLocalInput(record.clock_out),
-          status: record.status ?? 'present',
-          notes: record.notes ?? '',
-          reason: '',
-        }
-      : {
-          user_id: '',
-          work_date: today,
-          clock_in: '',
-          clock_out: '',
-          status: 'present',
-          notes: '',
-          reason: '',
-        },
-  )
+  const [form, setForm] = useState(BASE_FORM)
   const [errors, setErrors] = useState({})
   const [saving, setSaving] = useState(false)
+
+  // The modal stays mounted between openings, so initialise the form whenever
+  // it opens or a different record is selected.
+  useEffect(() => {
+    if (!open) return
+    setForm(formFromRecord(record))
+    setErrors({})
+  }, [open, record?.id])
 
   const set = (key) => (value) => setForm((f) => ({ ...f, [key]: value }))
 

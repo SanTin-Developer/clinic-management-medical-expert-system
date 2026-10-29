@@ -31,9 +31,12 @@ class PublicPage extends Model
      */
     protected $fillable = [
         'title',
+        'title_km',
         'slug',
         'excerpt',
+        'excerpt_km',
         'body',
+        'body_km',
         'policy_content',
         'internal_notes',
         'cover_media_id',
@@ -41,7 +44,9 @@ class PublicPage extends Model
         'is_system',
         'show_in_footer',
         'seo_title',
+        'seo_title_km',
         'seo_description',
+        'seo_description_km',
         'published_at',
         'updated_by',
     ];

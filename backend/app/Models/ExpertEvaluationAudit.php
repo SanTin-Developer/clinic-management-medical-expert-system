@@ -20,6 +20,8 @@ class ExpertEvaluationAudit extends Model
     protected function casts(): array
     {
         return [
+            'symptom_ids' => 'array',
+            'matched_rule_codes' => 'array',
             'matched_rule_count' => 'integer',
             'is_clinically_validated' => 'boolean',
         ];

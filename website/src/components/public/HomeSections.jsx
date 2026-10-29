@@ -11,7 +11,8 @@ import {
   Users,
 } from 'lucide-react'
 import { cn } from '../../utils/cn.js'
-import { blockImage, blockList, blockText, useContentBlocks } from '../../utils/content.js'
+import { blockImage, blockList, blockText, localized, useContentBlocks } from '../../utils/content.js'
+import { useLanguage } from '../../hooks/useLanguage.js'
 import { Reveal } from './Reveal.jsx'
 import {
   ABOUT_CLINIC_IMAGE,
@@ -81,24 +82,30 @@ export function HeroSection({ settings = {} }) {
   // Every piece of hero copy and the photo come from the Home tab of Page
   // Content. Only the tagline stays global, so it is read from the settings.
   const blocks = useContentBlocks()
+  const { language, t } = useLanguage()
+  const copy = (key, fallback) => blockText(blocks, key, t(fallback), language)
+
   const heroImage = blockImage(blocks, 'home_hero_image') ?? DEFAULT_HERO_IMAGE
-  const eyebrow = settings.tagline?.trim() || HERO_EYEBROW
-  const heroTitle = blockText(blocks, 'home_hero_title', '')
-  const description = blockText(blocks, 'home_hero_subtitle', HERO_DESCRIPTION)
-  const highlight = blockText(blocks, 'home_hero_highlight', HERO_HIGHLIGHT)
+  const eyebrow = localized(settings, 'tagline', language).trim() || t(HERO_EYEBROW)
+  const heroTitle = blockText(blocks, 'home_hero_title', '', language)
+  const description = copy('home_hero_subtitle', HERO_DESCRIPTION)
+  const highlight = copy('home_hero_highlight', HERO_HIGHLIGHT)
 
   const stats = blockList(blocks, 'home_stats', HERO_STATS).map((stat, index) => ({
     ...stat,
     key: stat.key ?? STAT_KEYS[index] ?? 'hours',
+    title: t(stat.title),
+    value: t(stat.value),
+    label: t(stat.label),
   }))
-  const primaryLabel = blockText(blocks, 'home_hero_primary_link', 'Explore Our Services')
-  const secondaryLabel = blockText(blocks, 'home_hero_secondary_link', 'Book an Appointment')
+  const primaryLabel = copy('home_hero_primary_link', 'Explore Our Services')
+  const secondaryLabel = copy('home_hero_secondary_link', 'Book an Appointment')
 
   return (
     <section className="relative flex min-h-[clamp(640px,52vw,900px)] flex-col overflow-hidden bg-[#F8FBFF]">
       <img
         src={heroImage}
-        alt="Smiling RoyalCare Clinic doctor holding a clipboard in the bright clinic lobby"
+        alt={t('Smiling RoyalCare Clinic doctor holding a clipboard in the bright clinic lobby')}
         className="animate-hero-image-in absolute inset-0 h-full w-full object-cover object-[60%_12%]"
       />
       {/* Desktop: white veil fades left-to-right behind the copy. */}
@@ -168,9 +175,9 @@ export function HeroSection({ settings = {} }) {
               </span>
             ) : (
               <>
-                <span className="block text-[#0B4A8F]">{HERO_HEADING[0]}</span>
+                <span className="block text-[#0B4A8F]">{t(HERO_HEADING[0])}</span>
                 <span className="block bg-gradient-to-r from-[#43A047] to-[#66BB6A] bg-clip-text text-transparent sm:whitespace-nowrap">
-                  {HERO_HEADING[1]}
+                  {t(HERO_HEADING[1])}
                 </span>
               </>
             )}
@@ -230,7 +237,8 @@ export function HeroSection({ settings = {} }) {
 
 export function PartnersStrip() {
   const blocks = useContentBlocks()
-  const heading = blockText(blocks, 'home_partners_heading', 'Trusted by Leading\nPartners')
+  const { language, t } = useLanguage()
+  const heading = blockText(blocks, 'home_partners_heading', t('Trusted by Leading\nPartners'), language)
   const partners = blockList(blocks, 'home_partners', PARTNER_PLACEHOLDERS).map((partner, index) => ({
     key: partner.key ?? `p${index + 1}`,
     label: partner.title ?? partner.label ?? '',
@@ -262,15 +270,18 @@ export function PartnersStrip() {
 export function AboutSection() {
   // Admin-editable copy from the Home tab of Page Content.
   const blocks = useContentBlocks()
-  const summary = blockText(blocks, 'home_about_text', CLINIC_SUMMARY)
-  const eyebrow = blockText(blocks, 'home_about_eyebrow', 'About RoyalCare')
-  const heading = blockText(blocks, 'home_about_heading', 'Compassionate Care, Advanced Medicine')
+  const { language, t } = useLanguage()
+  const copy = (key, fallback) => blockText(blocks, key, t(fallback), language)
+
+  const summary = copy('home_about_text', CLINIC_SUMMARY)
+  const eyebrow = copy('home_about_eyebrow', 'About RoyalCare')
+  const heading = copy('home_about_heading', 'Compassionate Care, Advanced Medicine')
   const pillars = blockList(
     blocks,
     'home_about_pillars',
     ABOUT_PILLARS.map((point) => ({ title: point })),
-  ).map((point) => point.title ?? '')
-  const linkLabel = blockText(blocks, 'home_about_link', 'More about us')
+  ).map((point) => t(point.title ?? ''))
+  const linkLabel = copy('home_about_link', 'More about us')
 
   return (
     <section className="mx-auto w-full max-w-7xl px-4 py-20 sm:px-6 lg:py-28">
@@ -304,14 +315,14 @@ export function AboutSection() {
           <div className="overflow-hidden rounded-[2rem] shadow-[var(--shadow-float)]">
             <img
               src={ABOUT_CLINIC_IMAGE}
-              alt="Inside RoyalCare Clinic"
+              alt={t('Inside RoyalCare Clinic')}
               loading="lazy"
               className="block h-auto w-full"
             />
           </div>
           <span className="absolute -bottom-5 left-6 hidden items-center gap-3 rounded-2xl bg-accent px-5 py-4 text-accent-ink shadow-[var(--shadow-float)] sm:inline-flex">
             <HeartPulse className="size-6" aria-hidden />
-            <span className="text-sm font-bold">Patient-first care</span>
+            <span className="text-sm font-bold">{t('Patient-first care')}</span>
           </span>
         </div>
       </Reveal>
@@ -328,16 +339,17 @@ const CTA_BACKGROUND_IMAGE =
 
 export function CtaBanner({ settings = {} }) {
   const phone = settings.primary_phone ?? settings.secondary_phone
-  const address = settings.address
-
   const blocks = useContentBlocks()
-  const heading = blockText(blocks, 'home_cta_heading', 'Ready to visit us?')
-  const text = blockText(
-    blocks,
+  const { language, t } = useLanguage()
+  const address = localized(settings, 'address', language)
+  const copy = (key, fallback) => blockText(blocks, key, t(fallback), language)
+
+  const heading = copy('home_cta_heading', 'Ready to visit us?')
+  const text = copy(
     'home_cta_text',
     'Reach out to schedule an appointment or ask us anything about our services.',
   )
-  const contactLabel = blockText(blocks, 'home_cta_contact_label', 'Contact Us')
+  const contactLabel = copy('home_cta_contact_label', 'Contact Us')
   const backgroundImage = blockImage(blocks, 'home_cta_image') ?? CTA_BACKGROUND_IMAGE
 
   // Keyless Google Maps embed pinned to the clinic's exact coordinates, with
@@ -377,7 +389,7 @@ export function CtaBanner({ settings = {} }) {
                   className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/40 bg-white/10 px-6 py-3.5 text-sm font-semibold text-white backdrop-blur transition-colors hover:bg-white/20 sm:w-auto"
                 >
                   <HeartPulse className="size-4" aria-hidden />
-                  Call {phone}
+                  {t('Call {phone}', { phone })}
                 </a>
               ) : null}
             </div>
@@ -386,7 +398,7 @@ export function CtaBanner({ settings = {} }) {
           <div className="overflow-hidden rounded-3xl border border-white/25 bg-white/10 p-2 shadow-[var(--shadow-float)] backdrop-blur">
             <div className="relative h-64 w-full overflow-hidden rounded-2xl sm:h-72">
               <iframe
-                title="Clinic location map"
+                title={t('Clinic location map')}
                 src={mapSrc}
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
@@ -408,7 +420,7 @@ export function CtaBanner({ settings = {} }) {
                 rel="noreferrer"
                 className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-white/15 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-white/25"
               >
-                Get directions
+                {t('Get directions')}
                 <ArrowRight className="size-3.5" aria-hidden />
               </a>
             </div>

@@ -1,12 +1,16 @@
 import { useQuery } from '@tanstack/react-query'
+import DOMPurify from 'dompurify'
 import { publicWebsiteApi } from '../../api/website.js'
 import { Spinner } from '../../components/ui/Skeleton.jsx'
 import { ErrorState } from '../../components/ui/State.jsx'
 import { BannerBackdrop, Section } from '../../components/public/PublicUI.jsx'
 import { Reveal } from '../../components/public/Reveal.jsx'
+import { useLanguage } from '../../hooks/useLanguage.js'
 import { cn } from '../../utils/cn.js'
+import { localized } from '../../utils/content.js'
 
 export default function PageView({ slug }) {
+  const { language, t } = useLanguage()
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['website', 'page', slug],
     queryFn: () => publicWebsiteApi.getPage(slug),
@@ -15,7 +19,7 @@ export default function PageView({ slug }) {
   if (isLoading) {
     return (
       <div className="grid min-h-[60vh] place-items-center">
-        <Spinner label="Loading page…" />
+        <Spinner label={t('Loading page…')} />
       </div>
     )
   }
@@ -24,8 +28,12 @@ export default function PageView({ slug }) {
     return (
       <Section className="py-16">
         <ErrorState
-          title={error?.status === 404 ? 'Page not found' : undefined}
-          message={error?.status === 404 ? 'The page you are looking for is unavailable.' : undefined}
+          title={error?.status === 404 ? t('Page not found') : undefined}
+          message={
+            error?.status === 404
+              ? t('The page you are looking for is unavailable.')
+              : undefined
+          }
           onRetry={error?.status === 404 ? undefined : refetch}
         />
       </Section>
@@ -33,7 +41,9 @@ export default function PageView({ slug }) {
   }
 
   const page = data?.data ?? {}
-  const body = page.body ?? ''
+  const title = localized(page, 'title', language)
+  const excerpt = localized(page, 'excerpt', language)
+  const body = localized(page, 'body', language)
 
   return (
     <>
@@ -50,20 +60,20 @@ export default function PageView({ slug }) {
                 />
                 <span className="relative inline-flex size-1.5 rounded-full bg-accent" />
               </span>
-              {page.title}
+              {title}
             </span>
           </Reveal>
 
           <Reveal delay={90}>
             <h1 className="mx-auto mt-6 max-w-4xl font-display text-[clamp(36px,5vw,56px)] font-extrabold leading-[1.08] tracking-[-0.02em] text-white">
-              {page.title}
+              {title}
             </h1>
           </Reveal>
 
-          {page.excerpt ? (
+          {excerpt ? (
             <Reveal delay={170}>
               <p className="mx-auto mt-5 max-w-3xl text-base leading-relaxed text-white/80 sm:text-lg">
-                {page.excerpt}
+                {excerpt}
               </p>
             </Reveal>
           ) : null}
@@ -88,7 +98,7 @@ export default function PageView({ slug }) {
                   {/<[a-z][\s\S]*>/i.test(body) ? (
                     <div
                       className="prose prose-slate max-w-none prose-headings:font-display prose-headings:tracking-tight prose-headings:text-ink prose-p:leading-relaxed prose-p:text-ink/90 prose-li:leading-relaxed prose-li:text-ink/90 prose-a:text-azure-700 prose-a:underline-offset-4 hover:prose-a:text-azure-600 prose-strong:text-ink"
-                      dangerouslySetInnerHTML={{ __html: body }}
+                      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(body) }}
                     />
                   ) : (
                     <div className="whitespace-pre-line text-base leading-relaxed text-ink/90 sm:text-[17px]">

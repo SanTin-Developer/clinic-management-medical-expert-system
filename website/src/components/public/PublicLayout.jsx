@@ -12,10 +12,12 @@ import {
 } from 'lucide-react'
 import { publicWebsiteApi } from '../../api/website.js'
 import { APP_NAME, FOOTER_LINKS, PRIMARY_NAV, SECONDARY_NAV } from '../../constants/index.js'
-import { blockImage, blockText, indexBlocks } from '../../utils/content.js'
+import { blockImage, blockText, indexBlocks, localized } from '../../utils/content.js'
+import { useLanguage } from '../../hooks/useLanguage.js'
 import { cn } from '../../utils/cn.js'
 import BackToTop from './BackToTop.jsx'
 import InstallPrompt from './InstallPrompt.jsx'
+import LanguageToggle from './LanguageToggle.jsx'
 import MobileTabBar from './MobileTabBar.jsx'
 
 const SOCIALS = [
@@ -121,6 +123,7 @@ export default function PublicLayout() {
   const [scrolled, setScrolled] = useState(false)
   const navigatedRef = useRef(false)
   const location = useLocation()
+  const { language, t } = useLanguage()
 
   const { data } = useQuery({
     queryKey: ['website', 'bootstrap'],
@@ -139,11 +142,12 @@ export default function PublicLayout() {
   const blocks = indexBlocks(data?.content_blocks)
   const navLabel = (item) => {
     const key = NAV_BLOCK_KEYS[item.to]
-    return key ? blockText(blocks, `header_nav_${key}`, item.label) : item.label
+    const fallback = t(item.label)
+    return key ? blockText(blocks, `header_nav_${key}`, fallback, language) : fallback
   }
-  const ctaLabel = blockText(blocks, 'header_cta_label', 'Book an Appointment')
+  const ctaLabel = blockText(blocks, 'header_cta_label', t('Book an Appointment'), language)
   // The footer blurb is edited in the Footer tab of Page Content.
-  const footerAbout = blockText(blocks, 'footer_about_text', '')
+  const footerAbout = blockText(blocks, 'footer_about_text', '', language)
   // The homepage hero photo doubles as the social share image.
   const heroImage = blockImage(blocks, 'home_hero_image')
 
@@ -196,15 +200,17 @@ export default function PublicLayout() {
   }, [menuOpen])
 
   useEffect(() => {
-    const title = settings.seo_title || settings.site_name || APP_NAME
+    const seoTitle = localized(settings, 'seo_title', language)
+    const seoDescription = localized(settings, 'seo_description', language)
+    const title = seoTitle || settings.site_name || APP_NAME
     document.title = title
 
-    applyMeta('name', 'description', settings.seo_description)
+    applyMeta('name', 'description', seoDescription)
     applyMeta('name', 'keywords', settings.seo_keywords)
 
     const shareImage = heroImage ?? settings.logo?.url
     applyMeta('property', 'og:title', title)
-    applyMeta('property', 'og:description', settings.seo_description)
+    applyMeta('property', 'og:description', seoDescription)
     applyMeta('property', 'og:image', shareImage)
     applyMeta('property', 'og:type', 'website')
 
@@ -219,12 +225,15 @@ export default function PublicLayout() {
     }
   }, [
     settings.seo_title,
+    settings.seo_title_km,
     settings.site_name,
     settings.seo_description,
+    settings.seo_description_km,
     settings.seo_keywords,
     heroImage,
     settings.logo?.url,
     settings.favicon?.url,
+    language,
   ])
 
   const phone = settings.primary_phone ?? settings.secondary_phone
@@ -247,9 +256,9 @@ export default function PublicLayout() {
               <span className="max-w-[46vw] truncate text-[24px] font-extrabold tracking-tight text-[#0B4A8F] sm:max-w-[280px]" style={{ fontFamily: 'var(--font-display, "Plus Jakarta Sans", system-ui, sans-serif)' }}>
                 {settings.site_name || APP_NAME}
               </span>
-              {settings.tagline ? (
+              {localized(settings, 'tagline', language) ? (
                 <span className="max-w-[46vw] truncate text-[15px] font-medium text-[#1E88C8] sm:max-w-[280px]" style={{ fontFamily: 'var(--font-display, "Plus Jakarta Sans", system-ui, sans-serif)' }}>
-                  {settings.tagline}
+                  {localized(settings, 'tagline', language)}
                 </span>
               ) : null}
             </div>
@@ -257,7 +266,7 @@ export default function PublicLayout() {
 
           <nav
             className="absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 items-center gap-1 xl:flex"
-            aria-label="Primary"
+            aria-label={t('Primary navigation')}
           >
             {PRIMARY_NAV.map((item) => (
               <NavLink key={item.to} to={item.to} className={navLinkClass}>
@@ -267,6 +276,8 @@ export default function PublicLayout() {
           </nav>
 
           <div className="flex items-center gap-2">
+            <LanguageToggle className="hidden sm:inline-flex" />
+
             <Link
               to="/contact"
               className="hidden items-center gap-2 rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-ink shadow-[var(--shadow-card)] transition-transform hover:-translate-y-0.5 hover:bg-accent-dark lg:inline-flex"
@@ -278,7 +289,7 @@ export default function PublicLayout() {
             <button
               type="button"
               onClick={() => setMenuOpen((v) => !v)}
-              aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+              aria-label={menuOpen ? t('Close menu') : t('Open menu')}
               aria-expanded={menuOpen}
               className="grid size-10 place-items-center rounded-xl border border-line bg-surface/70 text-ink xl:hidden"
             >
@@ -290,7 +301,7 @@ export default function PublicLayout() {
         {menuOpen ? (
           <nav
             className="border-t border-line bg-surface px-4 py-3 xl:hidden"
-            aria-label="Mobile"
+            aria-label={t('Mobile navigation')}
             onClick={(event) => {
               // Choosing any destination hides the menu — even the current page.
               if (event.target.closest('a')) setMenuOpen(false)
@@ -318,6 +329,7 @@ export default function PublicLayout() {
                 <Calendar className="size-4" aria-hidden />
                 {ctaLabel}
               </Link>
+              <LanguageToggle className="mt-3 self-start sm:hidden" />
             </div>
           </nav>
         ) : null}
@@ -334,8 +346,8 @@ export default function PublicLayout() {
               <BrandMark settings={settings} className="size-9" />
               <span className="text-base font-bold text-ink">{settings.site_name ?? APP_NAME}</span>
             </Link>
-            {settings.tagline ? (
-              <p className="mt-3 text-sm font-medium text-azure-700">{settings.tagline}</p>
+            {localized(settings, 'tagline', language) ? (
+              <p className="mt-3 text-sm font-medium text-azure-700">{localized(settings, 'tagline', language)}</p>
             ) : null}
             {footerAbout ? (
               <p className="mt-2 line-clamp-4 text-sm text-ink-muted">{footerAbout}</p>
@@ -358,13 +370,13 @@ export default function PublicLayout() {
 
           <div>
             <h2 className="text-sm font-semibold text-ink">
-              {blockText(blocks, 'footer_quick_links_heading', 'Quick Links')}
+              {blockText(blocks, 'footer_quick_links_heading', t('Quick Links'), language)}
             </h2>
             <ul className="mt-3 space-y-2 text-sm">
               {FOOTER_LINKS.map((item) => (
                 <li key={item.to}>
                   <Link to={item.to} className="text-ink-muted transition-colors hover:text-azure-600">
-                    {item.label}
+                    {t(item.label)}
                   </Link>
                 </li>
               ))}
@@ -373,20 +385,20 @@ export default function PublicLayout() {
 
           <div>
             <h2 className="text-sm font-semibold text-ink">
-              {blockText(blocks, 'footer_services_heading', 'Our Services')}
+              {blockText(blocks, 'footer_services_heading', t('Our Services'), language)}
             </h2>
             <ul className="mt-3 space-y-2 text-sm">
               {services.slice(0, 6).map((service) => (
                 <li key={service.id}>
                   <Link to="/services" className="text-ink-muted transition-colors hover:text-azure-600">
-                    {service.title}
+                    {localized(service, 'title', language)}
                   </Link>
                 </li>
               ))}
               {services.length === 0 ? (
                 <li>
                   <Link to="/services" className="text-ink-muted transition-colors hover:text-azure-600">
-                    {blockText(blocks, 'footer_services_link', 'View our services')}
+                    {blockText(blocks, 'footer_services_link', t('View our services'), language)}
                   </Link>
                 </li>
               ) : null}
@@ -395,13 +407,13 @@ export default function PublicLayout() {
 
           <div>
             <h2 className="text-sm font-semibold text-ink">
-              {blockText(blocks, 'footer_contact_heading', 'Get in Touch')}
+              {blockText(blocks, 'footer_contact_heading', t('Get in Touch'), language)}
             </h2>
             <ul className="mt-3 space-y-3 text-sm text-ink-muted">
-              {settings.address ? (
+              {localized(settings, 'address', language) ? (
                 <li className="flex gap-2">
                   <MapPin className="mt-0.5 size-4 shrink-0 text-azure-500" aria-hidden />
-                  <span>{settings.address}</span>
+                  <span>{localized(settings, 'address', language)}</span>
                 </li>
               ) : null}
               {phone ? (
@@ -409,7 +421,9 @@ export default function PublicLayout() {
                   <Phone className="mt-0.5 size-4 shrink-0 text-azure-500" aria-hidden />
                   <a href={`tel:${phone}`} className="transition-colors hover:text-azure-600">
                     {phone}
-                    {settings.secondary_phone ? ` · ${settings.secondary_phone}` : ''}
+                    {settings.primary_phone && settings.secondary_phone
+                      ? ` · ${settings.secondary_phone}`
+                      : ''}
                   </a>
                 </li>
               ) : null}
@@ -421,10 +435,10 @@ export default function PublicLayout() {
                   </a>
                 </li>
               ) : null}
-              {settings.business_hours ? (
+              {localized(settings, 'business_hours', language) ? (
                 <li className="flex gap-2">
                   <Clock className="mt-0.5 size-4 shrink-0 text-azure-500" aria-hidden />
-                  <span className="whitespace-pre-line">{settings.business_hours}</span>
+                  <span className="whitespace-pre-line">{localized(settings, 'business_hours', language)}</span>
                 </li>
               ) : null}
             </ul>
@@ -435,12 +449,12 @@ export default function PublicLayout() {
           <div className="mx-auto flex w-full max-w-7xl flex-col gap-2 px-4 py-4 text-xs text-ink-muted sm:flex-row sm:items-center sm:justify-between sm:px-6">
             <p>
               © {year} {settings.site_name ?? APP_NAME}.{' '}
-              {blockText(blocks, 'footer_rights_text', 'All rights reserved.')}
+              {blockText(blocks, 'footer_rights_text', t('All rights reserved.'), language)}
             </p>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
               {footerPages.map((page) => (
                 <Link key={page.id} to={`/pages/${page.slug}`} className="transition-colors hover:text-azure-600">
-                  {page.title}
+                  {localized(page, 'title', language)}
                 </Link>
               ))}
             </div>

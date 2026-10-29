@@ -586,7 +586,11 @@ function AuditTab({ canView }) {
                   <td className="px-4 py-3 text-ink-muted">{formatDateTime(log.created_at)}</td>
                   <td className="px-4 py-3 font-semibold text-ink">{log.matched_rule_count}</td>
                   <td className="px-4 py-3">
-                    <span className="line-clamp-2 max-w-xs font-mono text-xs text-ink-muted">{log.matched_rule_codes ?? '—'}</span>
+                    <span className="line-clamp-2 max-w-xs font-mono text-xs text-ink-muted">
+                      {Array.isArray(log.matched_rule_codes)
+                        ? log.matched_rule_codes.join(', ') || '—'
+                        : log.matched_rule_codes ?? '—'}
+                    </span>
                   </td>
                   <td className="px-4 py-3 font-mono text-xs text-ink-muted">{log.engine_version ?? '—'}</td>
                   <td className="px-4 py-3">

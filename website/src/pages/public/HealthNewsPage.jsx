@@ -8,8 +8,9 @@ import Pagination from '../../components/ui/Pagination.jsx'
 import { RowSkeleton } from '../../components/ui/Skeleton.jsx'
 import { EmptyState, ErrorState } from '../../components/ui/State.jsx'
 import { cn } from '../../utils/cn.js'
-import { blockText, splitHeading, useContentBlocks } from '../../utils/content.js'
+import { blockText, localized, splitHeading, useContentBlocks } from '../../utils/content.js'
 import { formatDate } from '../../utils/format.js'
+import { useLanguage } from '../../hooks/useLanguage.js'
 import { Reveal } from '../../components/public/Reveal.jsx'
 import { BannerBackdrop, Section, SectionHeading } from '../../components/public/PublicUI.jsx'
 
@@ -81,6 +82,7 @@ function placement(offset) {
 function FeaturedSlider({ slides }) {
   const [active, setActive] = useState(0)
   const [paused, setPaused] = useState(false)
+  const { language, t } = useLanguage()
 
   // If the underlying articles change, keep the active index in range.
   useEffect(() => {
@@ -145,7 +147,11 @@ function FeaturedSlider({ slides }) {
               )}
             >
               {article.cover?.url ? (
-                <img src={article.cover.url} alt={article.title} className="h-44 w-full shrink-0 object-cover sm:h-56" />
+                <img
+                  src={article.cover.url}
+                  alt={localized(article, 'title', language)}
+                  className="h-44 w-full shrink-0 object-cover sm:h-56"
+                />
               ) : (
                 <div className="grid h-44 w-full shrink-0 place-items-center bg-gradient-to-br from-navy-600 via-azure-600 to-azure-400 sm:h-56">
                   <Newspaper className="size-12 text-white/70" aria-hidden />
@@ -153,13 +159,15 @@ function FeaturedSlider({ slides }) {
               )}
               <div className="flex min-h-0 flex-1 flex-col p-6 text-left">
                 <span className="text-xs font-semibold uppercase tracking-wide text-azure-600">
-                  {article.category || 'News & Health'}
+                  {localized(article, 'category', language) || t('News & Health')}
                 </span>
                 <h2 className="mt-1 line-clamp-2 text-lg font-bold text-ink group-hover:text-azure-700 sm:text-xl">
-                  {article.title}
+                  {localized(article, 'title', language)}
                 </h2>
-                {article.excerpt ? (
-                  <p className="mt-2 line-clamp-2 hidden text-sm text-ink-muted sm:block">{article.excerpt}</p>
+                {localized(article, 'excerpt', language) ? (
+                  <p className="mt-2 line-clamp-2 hidden text-sm text-ink-muted sm:block">
+                    {localized(article, 'excerpt', language)}
+                  </p>
                 ) : null}
                 <p className="mt-auto pt-3 text-xs text-ink-muted">{formatDate(article.published_at)}</p>
               </div>
@@ -175,7 +183,7 @@ function FeaturedSlider({ slides }) {
               key={article.id}
               type="button"
               onClick={() => setActive(index)}
-              aria-label={`Show story: ${article.title}`}
+              aria-label={t('Show story: {title}', { title: localized(article, 'title', language) })}
               aria-current={index === active}
               className={cn(
                 'h-2 rounded-full transition-all',
@@ -206,6 +214,11 @@ function FeaturedSlider({ slides }) {
  * from the plain ArticleCard the home page already uses.
  */
 function ArticleTile({ article }) {
+  const { language, t } = useLanguage()
+  const title = localized(article, 'title', language)
+  const excerpt = localized(article, 'excerpt', language)
+  const category = localized(article, 'category', language)
+
   return (
     <article className="group relative flex h-full flex-col overflow-hidden rounded-[28px] border border-line bg-surface shadow-[var(--shadow-card)] transition-all duration-300 hover:-translate-y-1 hover:border-azure-400/70 hover:shadow-[var(--shadow-card-hover)]">
       <span
@@ -218,7 +231,7 @@ function ArticleTile({ article }) {
           <>
             <img
               src={article.cover.url}
-              alt={article.title}
+              alt={title}
               loading="lazy"
               className="h-52 w-full object-cover transition-transform duration-700 group-hover:scale-105"
             />
@@ -232,9 +245,9 @@ function ArticleTile({ article }) {
             <Newspaper className="size-14 text-white/70" aria-hidden />
           </div>
         )}
-        {article.category ? (
+        {category ? (
           <span className="absolute left-4 top-4 rounded-full border border-white/40 bg-white/85 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-[#0B4A8F] backdrop-blur">
-            {article.category}
+            {category}
           </span>
         ) : null}
       </div>
@@ -245,12 +258,12 @@ function ArticleTile({ article }) {
             to={`/health-news/${article.slug}`}
             className="line-clamp-2 after:absolute after:inset-0 after:content-['']"
           >
-            {article.title}
+            {title}
           </Link>
         </h3>
-        {article.excerpt ? (
+        {excerpt ? (
           <p className="mt-2 line-clamp-2 flex-1 text-sm leading-relaxed text-ink-muted">
-            {article.excerpt}
+            {excerpt}
           </p>
         ) : null}
         <div className="mt-5 flex items-center justify-between border-t border-line pt-4">
@@ -258,7 +271,7 @@ function ArticleTile({ article }) {
             {formatDate(article.published_at)}
           </time>
           <span className="inline-flex items-center gap-1.5 text-xs font-bold text-azure-700 transition-transform duration-300 group-hover:translate-x-1">
-            Read
+            {t('Read')}
             <ArrowRight className="size-3.5" aria-hidden />
           </span>
         </div>
@@ -271,6 +284,7 @@ export default function HealthNewsPage() {
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('')
   const [page, setPage] = useState(1)
+  const { language, t } = useLanguage()
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['website', 'articles', { search, category, page }],
@@ -288,15 +302,25 @@ export default function HealthNewsPage() {
   const categories = data?.categories ?? []
   const filtered = Boolean(search) || Boolean(category)
 
+  // The category filter list arrives as plain strings, so resolve a Khmer
+  // label from the article records that carry the `category_km` sibling.
+  const categoryLabels = new Map()
+  for (const article of [featured, ...articles]) {
+    if (article?.category && !categoryLabels.has(article.category)) {
+      categoryLabels.set(article.category, localized(article, 'category', language))
+    }
+  }
+  const categoryLabel = (value) => categoryLabels.get(value) ?? value
+
   // Admin-editable copy (Page Content → News Page).
   const blocks = useContentBlocks()
-  const heading = splitHeading(blockText(blocks, 'news_heading', NEWS_HEADING))
+  const heading = splitHeading(blockText(blocks, 'news_heading', t(NEWS_HEADING), language))
   const copy = {
-    eyebrow: blockText(blocks, 'news_eyebrow', NEWS_EYEBROW),
-    description: blockText(blocks, 'news_description', NEWS_DESCRIPTION),
-    latestHeading: blockText(blocks, 'news_latest_heading', LATEST_HEADING),
-    closingHeading: blockText(blocks, 'news_closing_heading', CLOSING.heading),
-    closingText: blockText(blocks, 'news_closing_text', CLOSING.text),
+    eyebrow: blockText(blocks, 'news_eyebrow', t(NEWS_EYEBROW), language),
+    description: blockText(blocks, 'news_description', t(NEWS_DESCRIPTION), language),
+    latestHeading: blockText(blocks, 'news_latest_heading', t(LATEST_HEADING), language),
+    closingHeading: blockText(blocks, 'news_closing_heading', t(CLOSING.heading), language),
+    closingText: blockText(blocks, 'news_closing_text', t(CLOSING.text), language),
   }
 
   const selectCategory = (next) => {
@@ -304,7 +328,9 @@ export default function HealthNewsPage() {
     setPage(1)
   }
 
-  const filterLabel = [search ? `“${search}”` : null, category].filter(Boolean).join(' · ')
+  const filterLabel = [search ? `“${search}”` : null, category ? categoryLabel(category) : null]
+    .filter(Boolean)
+    .join(' · ')
 
   return (
     <>
@@ -357,8 +383,8 @@ export default function HealthNewsPage() {
                     setSearch(e.target.value)
                     setPage(1)
                   }}
-                  placeholder="Search articles…"
-                  aria-label="Search articles"
+                  placeholder={t('Search articles…')}
+                  aria-label={t('Search articles')}
                   className="h-11 rounded-full border-white/25 pl-10 shadow-[0_14px_34px_-16px_rgba(0,0,0,0.6)]"
                 />
               </div>
@@ -378,7 +404,7 @@ export default function HealthNewsPage() {
                         : 'border-white/20 bg-white/10 text-white/75 backdrop-blur hover:bg-white/15 hover:text-white',
                     )}
                   >
-                    All
+                    {t('All')}
                   </button>
                   {categories.map((cat) => (
                     <button
@@ -392,7 +418,7 @@ export default function HealthNewsPage() {
                           : 'border-white/20 bg-white/10 text-white/75 backdrop-blur hover:bg-white/15 hover:text-white',
                       )}
                     >
-                      {cat}
+                      {categoryLabel(cat)}
                     </button>
                   ))}
                 </div>
@@ -405,7 +431,7 @@ export default function HealthNewsPage() {
               <Reveal className="flex items-center justify-center gap-4">
                 <span aria-hidden className="h-px w-10 bg-white/20" />
                 <p className="text-xs font-bold uppercase tracking-[0.28em] text-white/60">
-                  Featured Stories
+                  {t('Featured Stories')}
                 </p>
                 <span aria-hidden className="h-px w-10 bg-white/20" />
               </Reveal>
@@ -422,7 +448,7 @@ export default function HealthNewsPage() {
 
           <a
             href="#latest"
-            aria-label="Scroll to latest stories"
+            aria-label={t('Scroll to latest stories')}
             className="mx-auto mt-12 hidden w-fit text-white/45 transition-colors hover:text-white sm:block"
           >
             <ChevronDown className="size-6 animate-bounce" aria-hidden />
@@ -435,17 +461,17 @@ export default function HealthNewsPage() {
         <Section reveal={false}>
           <Reveal className="flex flex-wrap items-end justify-between gap-4">
             <SectionHeading
-              eyebrow="01 — Latest Stories"
-              title={filtered ? 'Filtered Results' : copy.latestHeading}
+              eyebrow={t('01 — Latest Stories')}
+              title={filtered ? t('Filtered Results') : copy.latestHeading}
               description={
                 filtered
-                  ? `Matching ${filterLabel}`
-                  : 'Browse every article from our clinic team.'
+                  ? t('Matching {label}', { label: filterLabel })
+                  : t('Browse every article from our clinic team.')
               }
             />
             {data && !isError ? (
               <span className="rounded-full border border-line bg-canvas px-4 py-2 text-xs font-bold text-azure-700 shadow-sm">
-                {data.total} {data.total === 1 ? 'article' : 'articles'}
+                {data.total} {data.total === 1 ? t('article') : t('articles')}
               </span>
             ) : null}
           </Reveal>
@@ -456,7 +482,10 @@ export default function HealthNewsPage() {
             ) : isError ? (
               <ErrorState onRetry={refetch} />
             ) : articles.length === 0 ? (
-              <EmptyState title="No articles found" message="Try a different search or category." />
+              <EmptyState
+                title={t('No articles found')}
+                message={t('Try a different search or category.')}
+              />
             ) : (
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 {articles.map((article, index) => (
@@ -492,7 +521,7 @@ export default function HealthNewsPage() {
           <Section reveal={false} className="relative py-20 text-center sm:py-24">
             <Reveal className="mx-auto max-w-2xl text-white">
               <p className="text-xs font-bold uppercase tracking-[0.28em] text-white/60">
-                02 — Next Steps
+                {t('02 — Next Steps')}
               </p>
               <h2 className="mt-4 font-display text-3xl font-extrabold tracking-tight sm:text-4xl">
                 {copy.closingHeading}
@@ -505,14 +534,14 @@ export default function HealthNewsPage() {
                   to="/contact"
                   className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-accent px-7 py-3.5 text-sm font-semibold text-accent-ink transition-colors hover:bg-accent-dark sm:w-auto"
                 >
-                  Contact Us
+                  {t('Contact Us')}
                   <ArrowRight className="size-4" aria-hidden />
                 </Link>
                 <Link
                   to="/services"
                   className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/30 bg-white/10 px-7 py-3.5 text-sm font-semibold text-white backdrop-blur transition-colors hover:bg-white/20 sm:w-auto"
                 >
-                  Browse Services
+                  {t('Browse Services')}
                 </Link>
               </div>
             </Reveal>

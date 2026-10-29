@@ -31,9 +31,12 @@ class Article extends Model
      */
     protected $fillable = [
         'title',
+        'title_km',
         'slug',
         'excerpt',
+        'excerpt_km',
         'body',
+        'body_km',
         'cover_media_id',
         'category',
         'tags',

@@ -15,7 +15,6 @@ class LeaveRequestPolicy
     public function view(User $user, LeaveRequest $leaveRequest): bool
     {
         return $user->can('leave.approve')
-            || $user->can('leave.view')
             || $user->id === $leaveRequest->user_id;
     }
 

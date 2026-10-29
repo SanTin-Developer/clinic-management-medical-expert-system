@@ -223,7 +223,7 @@ class AttendanceRecordController extends Controller
 
         return response()->json([
             'message' => 'Attendance record approved.',
-            'data' => $attendanceRecord->fresh('user:id,name', 'approver:id,name'),
+            'data' => $attendanceRecord->fresh(['user:id,name', 'approver:id,name']),
         ]);
     }
 

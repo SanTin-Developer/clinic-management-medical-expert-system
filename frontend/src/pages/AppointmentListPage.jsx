@@ -50,7 +50,10 @@ export default function AppointmentListPage() {
     (params) => appointmentApi.list(params),
     {
       page,
-      params: { date: date || undefined },
+      params: {
+        date: date || undefined,
+        status: status === "all" ? undefined : status,
+      },
     },
   );
 
@@ -67,13 +70,14 @@ export default function AppointmentListPage() {
 
   const all = query.data?.data ?? [];
   const stats = query.data?.stats ?? {};
-  const items = status === "all" ? all : all.filter((a) => a.status === status);
+  // Status filtering happens server-side so matches on later pages are kept.
+  const items = all;
   const counts = {
-    all: all.length,
-    scheduled: all.filter((a) => a.status === "scheduled").length,
-    confirmed: all.filter((a) => a.status === "confirmed").length,
-    in_progress: all.filter((a) => a.status === "in_progress").length,
-    completed: all.filter((a) => a.status === "completed").length,
+    all: stats.total ?? all.length,
+    scheduled: stats.scheduled ?? 0,
+    confirmed: stats.confirmed ?? 0,
+    in_progress: stats.in_progress ?? 0,
+    completed: stats.completed ?? 0,
   };
 
   const confirmDelete = async () => {

@@ -8,6 +8,7 @@ import Select from '../ui/Select.jsx'
 import Textarea from '../ui/Textarea.jsx'
 import { staffApi } from '../../api/staff.js'
 import { PAY_FREQUENCY_OPTIONS } from '../../utils/status.js'
+import { toIsoDate } from '../../utils/format.js'
 
 export default function StaffSalaryModal({ open, onClose, staff, onSaved }) {
   const [form, setForm] = useState({
@@ -27,7 +28,7 @@ export default function StaffSalaryModal({ open, onClose, staff, onSaved }) {
       salary_amount: staff.salary_amount != null ? String(staff.salary_amount) : '',
       pay_frequency: staff.pay_frequency || 'monthly',
       allowances: staff.allowances != null ? String(staff.allowances) : '0',
-      effective_from: new Date().toISOString().slice(0, 10),
+      effective_from: toIsoDate(new Date()),
       note: '',
     })
     setErrors({})

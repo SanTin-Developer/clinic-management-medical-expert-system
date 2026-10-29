@@ -2,6 +2,7 @@ import { createBrowserRouter, Link, Navigate, useParams } from 'react-router-dom
 import { lazy, Suspense } from 'react'
 import { Spinner } from '../components/ui/Skeleton.jsx'
 import { PageBanner, Section } from '../components/public/PublicUI.jsx'
+import { useLanguage } from '../hooks/useLanguage.js'
 
 const PublicLayout = lazy(() => import('../components/public/PublicLayout.jsx'))
 const AboutPage = lazy(() => import('../pages/public/AboutPage.jsx'))
@@ -36,18 +37,20 @@ function PageViewRoute() {
 }
 
 function NotFound() {
+  const { t } = useLanguage()
+
   return (
     <>
       <PageBanner
-        title="Page not found"
-        description="The page you are looking for does not exist or may have been moved."
+        title={t('Page not found')}
+        description={t('The page you are looking for does not exist or may have been moved.')}
       />
       <Section className="py-16 text-center">
         <Link
           to="/"
           className="inline-flex rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-dark"
         >
-          Back to home
+          {t('Back to home')}
         </Link>
       </Section>
     </>

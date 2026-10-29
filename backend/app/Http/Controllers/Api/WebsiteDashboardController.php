@@ -35,7 +35,7 @@ class WebsiteDashboardController extends Controller
                 'articles_published' => Article::where('status', Article::STATUS_PUBLISHED)->count(),
                 'media' => MediaAsset::count(),
                 'contact_messages' => ContactMessage::count(),
-                'contact_messages_unread' => ContactMessage::where('status', 'new')->count(),
+                'contact_messages_unread' => ContactMessage::unread()->count(),
             ],
             'recent_articles' => Article::query()
                 ->with('cover:id,file_path,disk')

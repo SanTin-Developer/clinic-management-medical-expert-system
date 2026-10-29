@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import Button from '../components/ui/Button.jsx'
 import Field from '../components/ui/Field.jsx'
@@ -15,6 +15,8 @@ export default function LoginPage() {
   usePageTitle(t('Sign In'))
   const { login } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+  const from = location.state?.from || '/'
 
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
@@ -35,20 +37,20 @@ export default function LoginPage() {
       if (result?.otp_required) {
         navigate('/login/verify', {
           replace: true,
-          state: { challengeToken: result.challenge_token, email: identifier.trim() },
+          state: { challengeToken: result.challenge_token, email: identifier.trim(), from },
         })
         return
       }
       if (result?.two_factor_required) {
         navigate('/login/2fa', {
           replace: true,
-          state: { challengeToken: result.challenge_token },
+          state: { challengeToken: result.challenge_token, from },
         })
         return
       }
       const userName = result?.user?.name || identifier.trim()
       toast.success(t('Welcome back, {name}!', { name: userName }))
-      navigate('/', { replace: true })
+      navigate(from, { replace: true })
     } catch (err) {
       setErrors({ form: err.message })
     } finally {

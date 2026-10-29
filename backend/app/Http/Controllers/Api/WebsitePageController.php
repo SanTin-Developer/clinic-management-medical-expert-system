@@ -173,9 +173,12 @@ class WebsitePageController extends Controller
 
         return [
             'title' => [$presence, 'string', 'max:255'],
+            'title_km' => ['nullable', 'string', 'max:255'],
             'slug' => ['nullable', 'string', 'max:255'],
             'excerpt' => ['nullable', 'string'],
+            'excerpt_km' => ['nullable', 'string'],
             'body' => ['nullable', 'string'],
+            'body_km' => ['nullable', 'string'],
             // Policy text is rendered as text (not HTML) by the public page.
             'policy_content' => ['nullable', 'array'],
             'policy_content.en' => ['nullable', 'array'],
@@ -196,7 +199,9 @@ class WebsitePageController extends Controller
             'status' => ['sometimes', Rule::in(PublicPage::STATUSES)],
             'show_in_footer' => ['sometimes', 'boolean'],
             'seo_title' => ['nullable', 'string', 'max:255'],
+            'seo_title_km' => ['nullable', 'string', 'max:255'],
             'seo_description' => ['nullable', 'string'],
+            'seo_description_km' => ['nullable', 'string'],
         ];
     }
 }

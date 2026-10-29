@@ -53,17 +53,15 @@ export default function UsersPage() {
   const [deleting, setDeleting] = useState(null)
   const [viewing, setViewing] = useState(null)
 
-  const query = usePaginated(['users'], (params) => userApi.list(params), { page })
+  const query = usePaginated(['users'], (params) => userApi.list(params), {
+    page,
+    params: search ? { search } : {},
+  })
 
   const all = query.data?.data ?? []
   const stats = query.data?.stats ?? {}
-  const items = search
-    ? all.filter((u) =>
-        [u.name, u.username, u.email, ...(u.roles ?? []).map(roleName)]
-          .filter(Boolean)
-          .some((v) => String(v).toLowerCase().includes(search.toLowerCase())),
-      )
-    : all
+  // Search runs server-side so matches on later pages are kept.
+  const items = all
 
   const canManage = can('users.update')
 
@@ -139,7 +137,10 @@ export default function UsersPage() {
           <SearchInput
             placeholder="Search users…"
             className="w-full sm:w-80"
-            onDebounced={setSearch}
+            onDebounced={(value) => {
+              setSearch(value)
+              setPage(1)
+            }}
           />
         </div>
 

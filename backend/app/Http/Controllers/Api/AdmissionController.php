@@ -9,7 +9,6 @@ use App\Services\Nursing\AdmissionService;
 use App\Services\Nursing\PatientAccessService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 
 class AdmissionController extends Controller
 {
@@ -159,12 +158,8 @@ class AdmissionController extends Controller
             'reason' => ['sometimes', 'nullable', 'string'],
             'diagnosis_summary' => ['sometimes', 'nullable', 'string'],
             'notes' => ['sometimes', 'nullable', 'string'],
-            'status' => ['sometimes', Rule::in([
-                Admission::STATUS_ADMITTED,
-                Admission::STATUS_DISCHARGED,
-                Admission::STATUS_TRANSFERRED,
-                Admission::STATUS_CANCELLED,
-            ])],
+            // Status transitions must go through discharge/transfer/cancel so
+            // bed occupancy, nurse assignments, tasks and MAR stay in sync.
         ]);
 
         $admission->update($validated);

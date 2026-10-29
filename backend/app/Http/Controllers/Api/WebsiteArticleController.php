@@ -168,9 +168,12 @@ class WebsiteArticleController extends Controller
 
         return [
             'title' => [$presence, 'string', 'max:255'],
+            'title_km' => ['nullable', 'string', 'max:255'],
             'slug' => ['nullable', 'string', 'max:255'],
             'excerpt' => ['nullable', 'string'],
+            'excerpt_km' => ['nullable', 'string'],
             'body' => [$presence, 'string'],
+            'body_km' => ['nullable', 'string'],
             'cover' => $this->imageRules(),
             'remove_cover' => ['sometimes', 'boolean'],
             'category' => ['nullable', 'string', 'max:100'],

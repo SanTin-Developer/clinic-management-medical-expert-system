@@ -30,12 +30,12 @@ import { EmptyState, ErrorState } from '../components/ui/State.jsx'
 import { queueApi } from '../api/queue.js'
 import { usePaginated } from '../hooks/usePaginated.js'
 import { useAuth } from '../hooks/useAuth.js'
-import { formatDateTime, patientFullName } from '../utils/format.js'
+import { formatDateTime, patientFullName, toIsoDate } from '../utils/format.js'
 import { QUEUE_PRIORITY, QUEUE_PRIORITY_OPTIONS, QUEUE_STATUS, QUEUE_STATUS_OPTIONS, statusBadgeFor } from '../utils/status.js'
 import QueueEntryFormModal from '../components/queue/QueueEntryFormModal.jsx'
 import AppointmentPickerModal from '../components/queue/AppointmentPickerModal.jsx'
 
-const today = new Date().toISOString().slice(0, 10)
+const today = toIsoDate(new Date())
 
 export default function QueueListPage() {
   const { can } = useAuth()

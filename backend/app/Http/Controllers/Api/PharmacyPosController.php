@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Exceptions\Pharmacy\InsufficientStockException;
 use App\Http\Controllers\Controller;
 use App\Models\Invoice;
 use App\Models\Medicine;
@@ -105,6 +106,8 @@ class PharmacyPosController extends Controller
 
                 return $sale;
             });
+        } catch (InsufficientStockException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
         } catch (\Throwable $e) {
             return response()->json(['message' => $e->getMessage()], $e->getCode() === 422 ? 422 : 500);
         }

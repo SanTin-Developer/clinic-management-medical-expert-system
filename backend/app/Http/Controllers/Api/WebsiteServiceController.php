@@ -118,10 +118,13 @@ class WebsiteServiceController extends Controller
 
         return [
             'title' => [$presence, 'string', 'max:255'],
+            'title_km' => ['nullable', 'string', 'max:255'],
             'slug' => ['nullable', 'string', 'max:255'],
             'icon' => ['nullable', 'string', 'max:100'],
             'short_description' => ['nullable', 'string', 'max:500'],
+            'short_description_km' => ['nullable', 'string', 'max:500'],
             'description' => ['nullable', 'string'],
+            'description_km' => ['nullable', 'string'],
             'image' => $this->imageRules(),
             'remove_image' => ['sometimes', 'boolean'],
             'is_featured' => ['sometimes', 'boolean'],

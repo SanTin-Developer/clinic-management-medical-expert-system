@@ -109,8 +109,11 @@ class WebsiteTeamProfileController extends Controller
         return [
             'name' => [$presence, 'string', 'max:255'],
             'position' => [$presence, 'string', 'max:255'],
+            'position_km' => ['nullable', 'string', 'max:255'],
             'specialization' => ['nullable', 'string', 'max:255'],
+            'specialization_km' => ['nullable', 'string', 'max:255'],
             'bio' => ['nullable', 'string'],
+            'bio_km' => ['nullable', 'string'],
             'photo' => $this->imageRules(),
             'remove_photo' => ['sometimes', 'boolean'],
             'email' => ['nullable', 'email', 'max:255'],

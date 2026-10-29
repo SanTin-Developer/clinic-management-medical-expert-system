@@ -64,11 +64,15 @@ httpClient.interceptors.response.use(
       window.dispatchEvent(new CustomEvent(AUTH_EVENTS.unauthorized))
     }
     if (!(error instanceof ApiError)) {
-      error = new ApiError(
+      const apiError = new ApiError(
         extractMessage(error),
         error.response?.status ?? null,
         error.response?.data ?? null,
       )
+      // Preserve the original axios response for call sites that inspect
+      // err.response (headers, blob bodies, etc.).
+      apiError.response = error.response
+      error = apiError
     }
     return Promise.reject(error)
   },

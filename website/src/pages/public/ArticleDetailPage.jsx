@@ -1,14 +1,18 @@
 import { Link, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
+import DOMPurify from 'dompurify'
 import { ArrowLeft, CalendarDays, User } from 'lucide-react'
 import { publicWebsiteApi } from '../../api/website.js'
 import { Spinner } from '../../components/ui/Skeleton.jsx'
 import { ErrorState } from '../../components/ui/State.jsx'
 import { formatDate } from '../../utils/format.js'
+import { localized } from '../../utils/content.js'
+import { useLanguage } from '../../hooks/useLanguage.js'
 import { ArticleCard, BannerBackdrop, Section } from '../../components/public/PublicUI.jsx'
 
 export default function ArticleDetailPage() {
   const { slug } = useParams()
+  const { language, t } = useLanguage()
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['website', 'article', slug],
@@ -18,7 +22,7 @@ export default function ArticleDetailPage() {
   if (isLoading) {
     return (
       <div className="grid min-h-[60vh] place-items-center">
-        <Spinner label="Loading article…" />
+        <Spinner label={t('Loading article…')} />
       </div>
     )
   }
@@ -27,8 +31,12 @@ export default function ArticleDetailPage() {
     return (
       <Section className="py-16">
         <ErrorState
-          title={error?.status === 404 ? 'Article not found' : undefined}
-          message={error?.status === 404 ? 'This article is unavailable or has been removed.' : undefined}
+          title={error?.status === 404 ? t('Article not found') : undefined}
+          message={
+            error?.status === 404
+              ? t('This article is unavailable or has been removed.')
+              : undefined
+          }
           onRetry={error?.status === 404 ? undefined : refetch}
         />
       </Section>
@@ -37,6 +45,10 @@ export default function ArticleDetailPage() {
 
   const article = data?.data ?? {}
   const related = data?.related ?? []
+  const title = localized(article, 'title', language)
+  const category = localized(article, 'category', language)
+  const excerpt = localized(article, 'excerpt', language)
+  const body = localized(article, 'body', language)
 
   return (
     <>
@@ -49,15 +61,15 @@ export default function ArticleDetailPage() {
               className="inline-flex items-center gap-2 text-sm font-medium text-white/80 hover:text-white"
             >
               <ArrowLeft className="size-4" aria-hidden />
-              Back to news
+              {t('Back to news')}
             </Link>
 
-            {article.category ? (
+            {category ? (
               <span className="mt-6 block text-xs font-bold uppercase tracking-[0.2em] text-white/75">
-                {article.category}
+                {category}
               </span>
             ) : null}
-            <h1 className="mt-3 text-3xl font-bold tracking-tight text-white sm:text-4xl">{article.title}</h1>
+            <h1 className="mt-3 text-3xl font-bold tracking-tight text-white sm:text-4xl">{title}</h1>
 
             <div className="mt-4 flex flex-wrap items-center gap-4 text-xs text-white/80">
               <span className="inline-flex items-center gap-1.5">
@@ -80,18 +92,19 @@ export default function ArticleDetailPage() {
           {article.cover?.url ? (
             <img
               src={article.cover.url}
-              alt={article.title}
+              alt={title}
               className="mb-8 w-full rounded-3xl object-cover shadow-[var(--shadow-card)]"
             />
           ) : null}
 
-          {article.excerpt ? (
-            <p className="text-lg font-medium text-ink-muted">{article.excerpt}</p>
+          {excerpt ? (
+            <p className="text-lg font-medium text-ink-muted">{excerpt}</p>
           ) : null}
 
-          <div className="mt-6 whitespace-pre-line text-sm leading-relaxed text-ink sm:text-base">
-            {article.body}
-          </div>
+          <div
+            className="mt-6 whitespace-pre-line text-sm leading-relaxed text-ink sm:text-base"
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(body) }}
+          />
 
           {Array.isArray(article.tags) && article.tags.length > 0 ? (
             <div className="mt-8 flex flex-wrap gap-2">
@@ -109,14 +122,14 @@ export default function ArticleDetailPage() {
               className="inline-flex items-center gap-2 rounded-full bg-azure-500 px-6 py-3 text-sm font-semibold text-white shadow-[var(--shadow-card)] transition-colors hover:bg-azure-600"
             >
               <ArrowLeft className="size-4" aria-hidden />
-              Back to News &amp; Health
+              {t('Back to News & Health')}
             </Link>
           </div>
         </div>
 
         {related.length > 0 ? (
           <div className="mx-auto mt-16 max-w-5xl">
-            <h2 className="text-xl font-bold text-ink">Related articles</h2>
+            <h2 className="text-xl font-bold text-ink">{t('Related articles')}</h2>
             <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {related.map((item) => (
                 <ArticleCard key={item.id} article={item} />

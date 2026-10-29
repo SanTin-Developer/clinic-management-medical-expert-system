@@ -21,10 +21,13 @@ class Service extends Model
      */
     protected $fillable = [
         'title',
+        'title_km',
         'slug',
         'icon',
         'short_description',
+        'short_description_km',
         'description',
+        'description_km',
         'image_media_id',
         'is_featured',
         'is_published',

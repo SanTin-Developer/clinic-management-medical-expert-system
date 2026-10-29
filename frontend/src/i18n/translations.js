@@ -581,7 +581,7 @@ export const KM_TRANSLATIONS = {
   Pharmacist: "ឱសថការី",
 
   // Patients
-  Patients: "ជំងឺ",
+  Patients: "អ្នកជំងឺ",
   "Register and manage patient records.":
     "ចុះឈ្មោះ និងគ្រប់គ្រងកំណត់ត្រាអ្នកជំងឺ។",
   "New Patient": "អ្នកជំងឺថ្មី",
@@ -677,8 +677,10 @@ export const KM_TRANSLATIONS = {
   "Search alerts…": "ស្វែងរកការជូនដំណឹង…",
   "No matching alerts": "គ្មានការជូនដំណឹងដែលផ្គូផ្គង",
   "You're all caught up.": "អ្នកទាន់សម័យទាំងអស់។",
-  "Try clearing the filters to see every alert.": "សម្អាតតម្រងដើម្បីមើលការជូនដំណឹងទាំងអស់។",
-  "New operational alerts will appear here.": "ការជូនដំណឹងប្រតិបត្តិការថ្មីនឹងបង្ហាញនៅទីនេះ។",
+  "Try clearing the filters to see every alert.":
+    "សម្អាតតម្រងដើម្បីមើលការជូនដំណឹងទាំងអស់។",
+  "New operational alerts will appear here.":
+    "ការជូនដំណឹងប្រតិបត្តិការថ្មីនឹងបង្ហាញនៅទីនេះ។",
   "Clear filters": "សម្អាតតម្រង",
   "Filter by status": "តម្រងតាមស្ថានភាព",
   "Filter by severity": "តម្រងតាមកម្រិត",
@@ -690,6 +692,27 @@ export const KM_TRANSLATIONS = {
   "Alert marked as read.": "បានសម្គាល់ការជូនដំណឹងថាបានអាន។",
   "Alert acknowledged.": "បានទទួលស្គាល់ការជូនដំណឹង។",
   "Alert resolved.": "បានដោះស្រាយការជូនដំណឹង។",
-  "All visible alerts marked as read.": "បានសម្គាល់ការជូនដំណឹងដែលអាចមើលឃើញថាបានអាន។",
-  "We could not load your alerts. Please try again.": "យើងមិនអាចផ្ទុកការជូនដំណឹងរបស់អ្នកបានទេ។ សូមព្យាយាមម្តងទៀត។",
+  "All visible alerts marked as read.":
+    "បានសម្គាល់ការជូនដំណឹងដែលអាចមើលឃើញថាបានអាន។",
+  "We could not load your alerts. Please try again.":
+    "យើងមិនអាចផ្ទុកការជូនដំណឹងរបស់អ្នកបានទេ។ សូមព្យាយាមម្តងទៀត។",
+
+  // Website CMS — optional Khmer inputs on every editor
+  "Title (Khmer)": "ចំណងជើង (ខ្មែរ)",
+  "Excerpt (Khmer)": "សេចក្តីសង្ខេប (ខ្មែរ)",
+  "Body (Khmer)": "ខ្លឹមសារ (ខ្មែរ)",
+  "Short description (Khmer)": "ការពិពណ៌នាខ្លី (ខ្មែរ)",
+  "Description (Khmer)": "ការពិពណ៌នា (ខ្មែរ)",
+  "Position (Khmer)": "មុខតំណែង (ខ្មែរ)",
+  "Specialization (Khmer)": "ឯកទេស (ខ្មែរ)",
+  "Bio (Khmer)": "ប្រវត្តិរូបសង្ខេប (ខ្មែរ)",
+  "Caption (Khmer)": "ពាក្យពិពណ៌នារូបភាព (ខ្មែរ)",
+  "Category (Khmer)": "ប្រភេទ (ខ្មែរ)",
+  "Tagline (Khmer)": "ពាក្យស្លោក (ខ្មែរ)",
+  "Address (Khmer)": "អាសយដ្ឋាន (ខ្មែរ)",
+  "Business hours (Khmer)": "ម៉ោងបើកដំណើរការ (ខ្មែរ)",
+  "SEO title (Khmer)": "ចំណងជើង SEO (ខ្មែរ)",
+  "SEO description (Khmer)": "ការពិពណ៌នា SEO (ខ្មែរ)",
+  "Shown on the Khmer version of the website. Leave empty to reuse the English text.":
+    "បង្ហាញនៅលើគេហទំព័រជាភាសាខ្មែរ។ ទុកទំនេរដើម្បីប្រើអត្ថបទអង់គ្លេសវិញ។",
 };

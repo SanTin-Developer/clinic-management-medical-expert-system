@@ -57,7 +57,7 @@ class PublicArticleController extends Controller
         $article->increment('views');
 
         return response()->json([
-            'data' => $article->fresh('cover'),
+            'data' => $article->fresh(['cover', 'author:id,name']),
             'related' => Article::query()
                 ->published()
                 ->with('cover')

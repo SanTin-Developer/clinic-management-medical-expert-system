@@ -8,7 +8,25 @@ import Button from '../ui/Button.jsx'
 import ImageField from '../ui/ImageField.jsx'
 import { websiteAdminApi } from '../../api/websiteAdmin.js'
 
-const EMPTY = { name: '', position: '', specialization: '', bio: '', email: '', phone: '', is_featured: false, is_published: false, sort_order: 0 }
+const EMPTY = {
+  name: '',
+  position: '',
+  position_km: '',
+  specialization: '',
+  specialization_km: '',
+  bio: '',
+  bio_km: '',
+  email: '',
+  phone: '',
+  is_featured: false,
+  is_published: false,
+  sort_order: 0,
+}
+
+const KM_HINT = 'Shown on the Khmer version of the website. Leave empty to reuse the English text.'
+
+/** Blank Khmer fields are sent as null so the public site falls back to English. */
+const kmValue = (value) => value.trim() || null
 
 export default function TeamFormModal({ open, onClose, onSaved, profile }) {
   const editing = Boolean(profile)
@@ -28,8 +46,11 @@ export default function TeamFormModal({ open, onClose, onSaved, profile }) {
         ? {
             name: profile.name ?? '',
             position: profile.position ?? '',
+            position_km: profile.position_km ?? '',
             specialization: profile.specialization ?? '',
+            specialization_km: profile.specialization_km ?? '',
             bio: profile.bio ?? '',
+            bio_km: profile.bio_km ?? '',
             email: profile.email ?? '',
             phone: profile.phone ?? '',
             is_featured: Boolean(profile.is_featured),
@@ -52,7 +73,14 @@ export default function TeamFormModal({ open, onClose, onSaved, profile }) {
 
     setSaving(true)
     try {
-      const payload = { ...form, name: form.name.trim(), position: form.position.trim() }
+      const payload = {
+        ...form,
+        name: form.name.trim(),
+        position: form.position.trim(),
+        position_km: kmValue(form.position_km),
+        specialization_km: kmValue(form.specialization_km),
+        bio_km: kmValue(form.bio_km),
+      }
       if (photo) payload.photo = photo
       else if (removed) payload.remove_photo = true
 
@@ -96,8 +124,14 @@ export default function TeamFormModal({ open, onClose, onSaved, profile }) {
           <Field label="Position" htmlFor="team-position" required error={errors.position}>
             <Input id="team-position" value={form.position} onChange={(e) => set('position')(e.target.value)} invalid={Boolean(errors.position)} placeholder="e.g. Consultant Cardiologist" />
           </Field>
+          <Field label="Position (Khmer)" htmlFor="team-position-km" className="sm:col-span-2" hint={KM_HINT}>
+            <Input id="team-position-km" lang="km" value={form.position_km} onChange={(e) => set('position_km')(e.target.value)} />
+          </Field>
           <Field label="Specialization" htmlFor="team-spec" className="sm:col-span-2">
             <Input id="team-spec" value={form.specialization} onChange={(e) => set('specialization')(e.target.value)} />
+          </Field>
+          <Field label="Specialization (Khmer)" htmlFor="team-spec-km" className="sm:col-span-2" hint={KM_HINT}>
+            <Input id="team-spec-km" lang="km" value={form.specialization_km} onChange={(e) => set('specialization_km')(e.target.value)} />
           </Field>
           <Field label="Email" htmlFor="team-email">
             <Input id="team-email" type="email" value={form.email} onChange={(e) => set('email')(e.target.value)} />
@@ -108,6 +142,9 @@ export default function TeamFormModal({ open, onClose, onSaved, profile }) {
         </div>
         <Field label="Bio" htmlFor="team-bio">
           <Textarea id="team-bio" rows={4} value={form.bio} onChange={(e) => set('bio')(e.target.value)} />
+        </Field>
+        <Field label="Bio (Khmer)" htmlFor="team-bio-km" hint={KM_HINT}>
+          <Textarea id="team-bio-km" lang="km" rows={4} value={form.bio_km} onChange={(e) => set('bio_km')(e.target.value)} />
         </Field>
         <Field label="Photo" htmlFor="team-photo">
           <ImageField

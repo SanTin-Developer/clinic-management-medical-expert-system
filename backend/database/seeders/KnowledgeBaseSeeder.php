@@ -491,7 +491,7 @@ class KnowledgeBaseSeeder extends Seeder
                 'confidence_score' => 0.78,
                 'groups' => [
                     1 => [$this->present('SYM-SNEEZING'), $this->present('SYM-ITCHY-EYES'), $this->absent('SYM-FEVER')],
-                    2 => [$this->present('SYM-SNEEZING'), $this->present('SYM-ITCHY-NOSE'), $this->present('SYM-RUNNY-NOSE')],
+                    2 => [$this->present('SYM-SNEEZING'), $this->present('SYM-ITCHY-NOSE'), $this->present('SYM-RUNNY-NOSE'), $this->absent('SYM-FEVER')],
                 ],
             ],
             [
@@ -526,7 +526,7 @@ class KnowledgeBaseSeeder extends Seeder
                 'priority' => 4,
                 'confidence_score' => 0.65,
                 'groups' => [
-                    1 => [$this->present('SYM-BAND-HEADACHE'), $this->present('SYM-NECK-STIFFNESS')],
+                    1 => [$this->present('SYM-BAND-HEADACHE'), $this->present('SYM-NECK-STIFFNESS'), $this->absent('SYM-THROBBING-HEADACHE')],
                     2 => [$this->present('SYM-BAND-HEADACHE'), $this->absent('SYM-THROBBING-HEADACHE')],
                 ],
             ],

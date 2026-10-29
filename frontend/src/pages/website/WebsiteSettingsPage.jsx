@@ -27,23 +27,33 @@ import { cn } from '../../utils/cn.js'
 const EMPTY = {
   site_name: '',
   tagline: '',
+  tagline_km: '',
   primary_phone: '',
   secondary_phone: '',
   email: '',
   address: '',
+  address_km: '',
   map_embed_url: '',
   business_hours: '',
+  business_hours_km: '',
   facebook_url: '',
   twitter_url: '',
   instagram_url: '',
   linkedin_url: '',
   youtube_url: '',
   seo_title: '',
+  seo_title_km: '',
   seo_description: '',
+  seo_description_km: '',
   seo_keywords: '',
 }
 
 const TEXT_FIELDS = Object.keys(EMPTY)
+
+/** Optional Khmer columns; blank values are sent as null so the site falls back to English. */
+const KM_FIELDS = ['tagline_km', 'address_km', 'business_hours_km', 'seo_title_km', 'seo_description_km']
+
+const KM_HINT = 'Shown on the Khmer version of the website. Leave empty to reuse the English text.'
 
 const TABS = [
   { value: 'branding', label: 'Branding' },
@@ -67,7 +77,9 @@ const SOCIAL_FIELDS = [
  */
 const SEO_COUNTERS = {
   seo_title: { recommended: 60, max: 255, note: 'Aim for 50–60 characters.' },
+  seo_title_km: { recommended: 60, max: 255, note: 'Aim for 50–60 characters.' },
   seo_description: { recommended: 160, note: 'Aim for 140–160 characters.' },
+  seo_description_km: { recommended: 160, note: 'Aim for 140–160 characters.' },
   seo_keywords: { recommended: 250, max: 500, note: 'A short, focused list works best.' },
 }
 
@@ -276,6 +288,7 @@ export default function WebsiteSettingsPage() {
     setSaving(true)
     try {
       const payload = { ...form }
+      for (const key of KM_FIELDS) payload[key] = payload[key].trim() || null
       if (logo) payload.logo = logo
       else if (removed.logo) payload.remove_logo = true
       if (favicon) payload.favicon = favicon
@@ -374,6 +387,13 @@ export default function WebsiteSettingsPage() {
                   placeholder="Your Health, Our Priority"
                   value={form.tagline}
                   onChange={set('tagline')}
+                />
+                <TextField
+                  id="tagline_km"
+                  label="Tagline (Khmer)"
+                  hint={KM_HINT}
+                  value={form.tagline_km}
+                  onChange={set('tagline_km')}
                 />
               </div>
             </Card>
@@ -476,6 +496,14 @@ export default function WebsiteSettingsPage() {
                   className="sm:col-span-2"
                 />
                 <TextField
+                  id="address_km"
+                  label="Address (Khmer)"
+                  hint={KM_HINT}
+                  value={form.address_km}
+                  onChange={set('address_km')}
+                  className="sm:col-span-2"
+                />
+                <TextField
                   id="business_hours"
                   label="Business hours"
                   multiline
@@ -483,6 +511,15 @@ export default function WebsiteSettingsPage() {
                   hint="One line per entry, e.g. Mon–Fri: 8:00am – 6:00pm"
                   value={form.business_hours}
                   onChange={set('business_hours')}
+                />
+                <TextField
+                  id="business_hours_km"
+                  label="Business hours (Khmer)"
+                  multiline
+                  rows={3}
+                  hint={KM_HINT}
+                  value={form.business_hours_km}
+                  onChange={set('business_hours_km')}
                 />
                 <TextField
                   id="map_embed_url"
@@ -557,6 +594,13 @@ export default function WebsiteSettingsPage() {
                   onChange={set('seo_title')}
                 />
                 <TextField
+                  id="seo_title_km"
+                  label="SEO title (Khmer)"
+                  hint={KM_HINT}
+                  value={form.seo_title_km}
+                  onChange={set('seo_title_km')}
+                />
+                <TextField
                   id="seo_description"
                   label="SEO description"
                   multiline
@@ -564,6 +608,15 @@ export default function WebsiteSettingsPage() {
                   hint="The snippet under the headline in search results, and the social share text."
                   value={form.seo_description}
                   onChange={set('seo_description')}
+                />
+                <TextField
+                  id="seo_description_km"
+                  label="SEO description (Khmer)"
+                  multiline
+                  rows={3}
+                  hint={KM_HINT}
+                  value={form.seo_description_km}
+                  onChange={set('seo_description_km')}
                 />
                 <TextField
                   id="seo_keywords"

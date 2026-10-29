@@ -169,28 +169,31 @@ class PrescriptionController extends Controller
     {
         $this->authorize('dispense', $prescription);
 
-        if ($prescription->status === 'dispensed') {
-            return response()->json([
-                'message' => 'Prescription is already dispensed.',
-            ], 422);
-        }
-
-        if ($prescription->status === 'cancelled') {
-            return response()->json([
-                'message' => 'A cancelled prescription cannot be dispensed.',
-            ], 422);
-        }
-
         try {
             DB::transaction(function () use ($prescription, $request, $inventory) {
+                // Lock and re-check inside the transaction so two concurrent
+                // dispense requests cannot both allocate stock.
+                $locked = Prescription::query()
+                    ->whereKey($prescription->id)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                if ($locked->status === 'dispensed') {
+                    abort(422, 'Prescription is already dispensed.');
+                }
+
+                if ($locked->status === 'cancelled') {
+                    abort(422, 'A cancelled prescription cannot be dispensed.');
+                }
+
                 $inventory->allocateForItems(
-                    $prescription->load('items.medicine')->items,
+                    $locked->load('items.medicine')->items,
                     $request->user()->id,
                     'Prescription dispensed',
-                    $prescription->prescription_number,
+                    $locked->prescription_number,
                 );
 
-                $prescription->update([
+                $locked->update([
                     'status' => 'dispensed',
                     'dispensed_at' => now(),
                     'dispensed_by' => $request->user()->id,

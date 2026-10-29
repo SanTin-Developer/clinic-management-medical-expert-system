@@ -55,7 +55,9 @@ class WebsiteContentBlockController extends Controller
 
         $validated = $request->validate([
             'title' => ['nullable', 'string', 'max:255'],
+            'title_km' => ['nullable', 'string', 'max:255'],
             'body' => ['nullable', 'string'],
+            'body_km' => ['nullable', 'string'],
             'data' => ['nullable'],
             'image' => $this->imageRules(),
             'remove_image' => ['nullable', 'boolean'],
@@ -94,7 +96,9 @@ class WebsiteContentBlockController extends Controller
             'blocks.*.key' => ['required', 'string'],
             'blocks.*.group' => ['nullable', 'string', 'max:63'],
             'blocks.*.title' => ['nullable', 'string'],
+            'blocks.*.title_km' => ['nullable', 'string'],
             'blocks.*.body' => ['nullable', 'string'],
+            'blocks.*.body_km' => ['nullable', 'string'],
             'blocks.*.data' => ['nullable'],
         ]);
 
@@ -103,7 +107,7 @@ class WebsiteContentBlockController extends Controller
             // block keeps its text and a text block keeps its list.
             $attributes = ['updated_by' => $request->user()->id];
 
-            foreach (['title', 'body', 'data'] as $field) {
+            foreach (['title', 'title_km', 'body', 'body_km', 'data'] as $field) {
                 if (array_key_exists($field, $block)) {
                     $attributes[$field] = $block[$field];
                 }

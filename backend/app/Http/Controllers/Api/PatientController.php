@@ -21,17 +21,28 @@ class PatientController extends Controller
         // Frontline nurses only ever see patients they are assigned to.
         $access->scopePatientQuery($query, $request->user());
 
+        // Stats describe the whole accessible set, not the current search.
+        $statsQuery = clone $query;
+
+        if ($search = $request->query('search')) {
+            $query->where(function ($builder) use ($search) {
+                foreach (['first_name', 'last_name', 'patient_number', 'phone_number', 'email'] as $column) {
+                    $builder->orWhereLike($column, "%{$search}%", caseSensitive: false);
+                }
+            });
+        }
+
         $patients = $query->latest()->paginate(15);
 
         $stats = [
-            'total' => $patients->total(),
-            'new_this_month' => (clone $query)->whereMonth('created_at', now()->month)
+            'total' => $statsQuery->count(),
+            'new_this_month' => (clone $statsQuery)->whereMonth('created_at', now()->month)
                 ->whereYear('created_at', now()->year)
                 ->count(),
-            'male' => (clone $query)->where('gender', 'male')->count(),
-            'female' => (clone $query)->where('gender', 'female')->count(),
-            'other' => (clone $query)->where('gender', 'other')->count(),
-            'with_allergies' => (clone $query)->whereNotNull('allergies')
+            'male' => (clone $statsQuery)->where('gender', 'male')->count(),
+            'female' => (clone $statsQuery)->where('gender', 'female')->count(),
+            'other' => (clone $statsQuery)->where('gender', 'other')->count(),
+            'with_allergies' => (clone $statsQuery)->whereNotNull('allergies')
                 ->where('allergies', '!=', '')
                 ->count(),
         ];

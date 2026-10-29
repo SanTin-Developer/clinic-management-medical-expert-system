@@ -1,51 +1,58 @@
-const CURRENCY_FORMAT = new Intl.NumberFormat('en-US', {
-  style: 'currency',
-  currency: 'USD',
-  minimumFractionDigits: 2,
-})
+// Formatters follow the selected website language. The LanguageProvider calls
+// setFormatLocale whenever the visitor switches, so dates and numbers render
+// with the matching conventions.
+let activeLocale = 'en-US'
 
-const DATE_FORMAT = new Intl.DateTimeFormat('en-US', {
-  year: 'numeric',
-  month: 'short',
-  day: 'numeric',
-})
+function formatters(locale) {
+  return {
+    currency: new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+    }),
+    date: new Intl.DateTimeFormat(locale, { year: 'numeric', month: 'short', day: 'numeric' }),
+    dateTime: new Intl.DateTimeFormat(locale, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    }),
+    time: new Intl.DateTimeFormat(locale, { hour: 'numeric', minute: '2-digit' }),
+    relative: new Intl.RelativeTimeFormat(locale, { numeric: 'auto' }),
+  }
+}
 
-const DATE_TIME_FORMAT = new Intl.DateTimeFormat('en-US', {
-  year: 'numeric',
-  month: 'short',
-  day: 'numeric',
-  hour: 'numeric',
-  minute: '2-digit',
-})
+let activeFormatters = formatters(activeLocale)
 
-const TIME_FORMAT = new Intl.DateTimeFormat('en-US', {
-  hour: 'numeric',
-  minute: '2-digit',
-})
+export function setFormatLocale(locale) {
+  const next = String(locale ?? '').trim() || 'en-US'
+  if (next === activeLocale) return
+  activeLocale = next
+  activeFormatters = formatters(next)
+}
 
 export function formatCurrency(value) {
   const n = Number(value ?? 0)
-  return Number.isFinite(n) ? CURRENCY_FORMAT.format(n) : '—'
+  return Number.isFinite(n) ? activeFormatters.currency.format(n) : '—'
 }
 
 export function formatNumber(value) {
   const n = Number(value ?? 0)
-  return Number.isFinite(n) ? n.toLocaleString('en-US') : '—'
+  return Number.isFinite(n) ? n.toLocaleString(activeLocale) : '—'
 }
 
 export function formatDate(value) {
   const d = toDate(value)
   if (!d) return '—'
-  return DATE_FORMAT.format(d)
+  return activeFormatters.date.format(d)
 }
 
 export function formatDateTime(value) {
   const d = toDate(value)
   if (!d) return '—'
-  return DATE_TIME_FORMAT.format(d)
+  return activeFormatters.dateTime.format(d)
 }
-
-const RELATIVE_FORMAT = new Intl.RelativeTimeFormat('en', { numeric: 'auto' })
 
 const RELATIVE_DIVISIONS = [
   { amount: 60, unit: 'second' },
@@ -63,7 +70,7 @@ export function formatRelativeTime(value) {
   let duration = (d.getTime() - Date.now()) / 1000
   for (const division of RELATIVE_DIVISIONS) {
     if (Math.abs(duration) < division.amount) {
-      return RELATIVE_FORMAT.format(Math.round(duration), division.unit)
+      return activeFormatters.relative.format(Math.round(duration), division.unit)
     }
     duration /= division.amount
   }
@@ -76,7 +83,7 @@ export function formatTime(value) {
   if (parts.length < 2 || Number.isNaN(parts[0])) return String(value)
   const d = new Date()
   d.setHours(parts[0], parts[1] ?? 0, 0, 0)
-  return TIME_FORMAT.format(d)
+  return activeFormatters.time.format(d)
 }
 
 function toDate(value) {

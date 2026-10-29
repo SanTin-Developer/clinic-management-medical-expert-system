@@ -24,6 +24,10 @@ return Application::configure(basePath: dirname(__DIR__))
         ['middleware' => ['auth:sanctum']],
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // API-only app: never redirect unauthenticated requests to a web login
+        // route (none is defined), let the SPA handle 401 responses instead.
+        $middleware->redirectGuestsTo(null);
+
         $middleware->alias([
             'device.trust' => EnsureTrustedDevice::class,
             'account.active' => EnsureAccountIsActive::class,

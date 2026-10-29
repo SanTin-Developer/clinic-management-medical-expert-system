@@ -28,11 +28,16 @@ export default function InvoiceListPage() {
   const [formOpen, setFormOpen] = useState(false)
   const [deleting, setDeleting] = useState(null)
 
-  const query = usePaginated(['invoices'], (params) => invoiceApi.list(params), { page })
+  const query = usePaginated(['invoices'], (params) => invoiceApi.list(params), {
+    page,
+    params: status === 'all' ? {} : { status },
+  })
 
   const all = query.data?.data ?? []
   const stats = query.data?.stats ?? {}
-  const items = status === 'all' ? all : all.filter((i) => i.status === status)
+  // Filtering happens server-side so older invoices on later pages are not
+  // hidden by a client-side filter over the current page only.
+  const items = all
 
   const confirmDelete = async () => {
     if (!deleting) return
@@ -124,7 +129,7 @@ export default function InvoiceListPage() {
           </div>
         ) : query.isError ? (
           <p className="py-6 text-center text-sm text-red-600">{query.error.message}</p>
-        ) : all.length === 0 ? (
+        ) : items.length === 0 ? (
           <EmptyState
             title="No invoices yet"
             message="Create an invoice to start billing."

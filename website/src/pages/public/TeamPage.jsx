@@ -6,7 +6,8 @@ import { publicWebsiteApi } from '../../api/website.js'
 import { Spinner } from '../../components/ui/Skeleton.jsx'
 import { EmptyState, ErrorState } from '../../components/ui/State.jsx'
 import { cn } from '../../utils/cn.js'
-import { blockText, splitHeading, useContentBlocks } from '../../utils/content.js'
+import { blockText, localized, splitHeading, useContentBlocks } from '../../utils/content.js'
+import { useLanguage } from '../../hooks/useLanguage.js'
 import { Reveal } from '../../components/public/Reveal.jsx'
 import { BannerBackdrop, Section, SectionHeading } from '../../components/public/PublicUI.jsx'
 import TeamGrid from '../../components/public/TeamGrid.jsx'
@@ -67,24 +68,41 @@ export default function TeamPage() {
 
   const team = data?.data ?? []
 
-  // Admin-editable copy (Page Content → Team Page).
   const blocks = useContentBlocks()
-  const heading = splitHeading(blockText(blocks, 'team_heading', TEAM_HEADING))
+  const { language, t } = useLanguage()
+
+  // Admin-editable copy (Page Content → Team Page).
+  const heading = splitHeading(blockText(blocks, 'team_heading', t(TEAM_HEADING), language))
   const copy = {
-    eyebrow: blockText(blocks, 'team_eyebrow', TEAM_EYEBROW),
-    description: blockText(blocks, 'team_description', TEAM_DESCRIPTION),
-    peopleEyebrow: blockText(blocks, 'team_people_eyebrow', '01 — The People'),
-    peopleHeading: blockText(blocks, 'team_people_heading', PEOPLE_HEADING),
-    peopleText: blockText(blocks, 'team_people_text', PEOPLE_LEAD),
-    closingHeading: blockText(blocks, 'team_closing_heading', CLOSING.heading),
-    closingText: blockText(blocks, 'team_closing_text', CLOSING.text),
+    eyebrow: blockText(blocks, 'team_eyebrow', t(TEAM_EYEBROW), language),
+    description: blockText(blocks, 'team_description', t(TEAM_DESCRIPTION), language),
+    peopleEyebrow: blockText(
+      blocks,
+      'team_people_eyebrow',
+      t('01 — The People'),
+      language,
+    ),
+    peopleHeading: blockText(blocks, 'team_people_heading', t(PEOPLE_HEADING), language),
+    peopleText: blockText(blocks, 'team_people_text', t(PEOPLE_LEAD), language),
+    closingHeading: blockText(blocks, 'team_closing_heading', t(CLOSING.heading), language),
+    closingText: blockText(blocks, 'team_closing_text', t(CLOSING.text), language),
   }
 
-  // Live, CMS-derived values only — no invented counts.
-  const specializations = useMemo(
-    () => [...new Set(team.map((member) => member.specialization?.trim()).filter(Boolean))],
-    [team],
-  )
+  // Live, CMS-derived values only — no invented counts. The English
+  // specialization stays the filter identity; the chip label is localized.
+  const specializations = useMemo(() => {
+    const seen = new Map()
+    for (const member of team) {
+      const value = (member.specialization ?? '').trim()
+      if (!value || seen.has(value)) continue
+      seen.set(value, localized(member, 'specialization', language) || value)
+    }
+    return [...seen.entries()].map(([value, label]) => ({ value, label }))
+  }, [team, language])
+
+  const activeSpecializationLabel =
+    specializations.find((item) => item.value === specialization)?.label ?? specialization
+
   const photoMembers = useMemo(
     () => team.filter((member) => member.photo?.url).slice(0, 4),
     [team],
@@ -152,7 +170,7 @@ export default function TeamPage() {
                 ) : null}
                 <p className="text-sm text-white/70">
                   <span className="font-display font-bold text-white">{team.length}</span>{' '}
-                  {team.length === 1 ? 'team member' : 'team members'}
+                  {team.length === 1 ? t('team member') : t('team members')}
                 </p>
               </div>
             </Reveal>
@@ -160,14 +178,14 @@ export default function TeamPage() {
 
           <a
             href="#team"
-            aria-label="Scroll to team profiles"
+            aria-label={t('Scroll to team profiles')}
             className="mx-auto mt-10 hidden w-fit text-white/45 transition-colors hover:text-white sm:block"
           >
             <ChevronDown className="size-6 animate-bounce" aria-hidden />
           </a>
         </Section>
 
-        <SpecializationTicker items={specializations} />
+        <SpecializationTicker items={specializations.map((item) => item.label)} />
       </section>
 
       {/* Section 2 — The people: centered heading, live specialization
@@ -185,12 +203,19 @@ export default function TeamPage() {
 
           {isLoading ? (
             <div className="grid place-items-center py-16">
-              <Spinner label="Loading team…" />
+              <Spinner label={t('Loading team…')} />
             </div>
           ) : isError ? (
-            <ErrorState onRetry={refetch} />
+            <ErrorState
+              title={t('Something went wrong')}
+              message={t('Something went wrong while loading this content.')}
+              onRetry={refetch}
+            />
           ) : team.length === 0 ? (
-            <EmptyState title="No team members yet" message="Our team profiles are coming soon." />
+            <EmptyState
+              title={t('No team members yet')}
+              message={t('Our team profiles are coming soon.')}
+            />
           ) : (
             <>
               {specializations.length > 0 ? (
@@ -206,21 +231,23 @@ export default function TeamPage() {
                           : 'border-line bg-surface text-ink-muted hover:border-azure-300 hover:text-ink',
                       )}
                     >
-                      All
+                      {t('All')}
                     </button>
-                    {specializations.map((spec) => (
+                    {specializations.map((item) => (
                       <button
-                        key={spec}
+                        key={item.value}
                         type="button"
-                        onClick={() => setSpecialization(spec === specialization ? '' : spec)}
+                        onClick={() =>
+                          setSpecialization(item.value === specialization ? '' : item.value)
+                        }
                         className={cn(
                           'rounded-full border px-4 py-2 text-sm font-medium transition-colors',
-                          specialization === spec
+                          specialization === item.value
                             ? 'border-accent bg-accent text-accent-ink shadow-[0_12px_28px_-14px_rgba(76,175,80,0.8)]'
                             : 'border-line bg-surface text-ink-muted hover:border-azure-300 hover:text-ink',
                         )}
                       >
-                        {spec}
+                        {item.label}
                       </button>
                     ))}
                   </div>
@@ -230,8 +257,10 @@ export default function TeamPage() {
               <div className="mt-10 sm:mt-14">
                 {filtered.length === 0 ? (
                   <EmptyState
-                    title="No profiles in this area yet"
-                    message={`No team members are listed under “${specialization}” right now.`}
+                    title={t('No profiles in this area yet')}
+                    message={t('No team members are listed under “{specialization}” right now.', {
+                      specialization: activeSpecializationLabel,
+                    })}
                   />
                 ) : (
                   <TeamGrid members={filtered} />
@@ -258,7 +287,7 @@ export default function TeamPage() {
           <Section reveal={false} className="relative py-20 text-center sm:py-24">
             <Reveal className="mx-auto max-w-2xl text-white">
               <p className="text-xs font-bold uppercase tracking-[0.28em] text-white/60">
-                02 — Next Steps
+                {t('02 — Next Steps')}
               </p>
               <h2 className="mt-4 font-display text-3xl font-extrabold tracking-tight sm:text-4xl">
                 {copy.closingHeading}
@@ -271,14 +300,14 @@ export default function TeamPage() {
                   to="/contact"
                   className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-accent px-7 py-3.5 text-sm font-semibold text-accent-ink transition-colors hover:bg-accent-dark sm:w-auto"
                 >
-                  Book an Appointment
+                  {t('Book an Appointment')}
                   <ArrowRight className="size-4" aria-hidden />
                 </Link>
                 <Link
                   to="/services"
                   className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/30 bg-white/10 px-7 py-3.5 text-sm font-semibold text-white backdrop-blur transition-colors hover:bg-white/20 sm:w-auto"
                 >
-                  Browse Services
+                  {t('Browse Services')}
                 </Link>
               </div>
             </Reveal>

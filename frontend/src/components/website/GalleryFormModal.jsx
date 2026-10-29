@@ -8,7 +8,21 @@ import Button from '../ui/Button.jsx'
 import ImageField from '../ui/ImageField.jsx'
 import { websiteAdminApi } from '../../api/websiteAdmin.js'
 
-const EMPTY = { title: '', caption: '', category: '', is_published: false, sort_order: 0 }
+const EMPTY = {
+  title: '',
+  title_km: '',
+  caption: '',
+  caption_km: '',
+  category: '',
+  category_km: '',
+  is_published: false,
+  sort_order: 0,
+}
+
+const KM_HINT = 'Shown on the Khmer version of the website. Leave empty to reuse the English text.'
+
+/** Blank Khmer fields are sent as null so the public site falls back to English. */
+const kmValue = (value) => value.trim() || null
 
 export default function GalleryFormModal({ open, onClose, onSaved, item }) {
   const editing = Boolean(item)
@@ -27,8 +41,11 @@ export default function GalleryFormModal({ open, onClose, onSaved, item }) {
       item
         ? {
             title: item.title ?? '',
+            title_km: item.title_km ?? '',
             caption: item.caption ?? '',
+            caption_km: item.caption_km ?? '',
             category: item.category ?? '',
+            category_km: item.category_km ?? '',
             is_published: Boolean(item.is_published),
             sort_order: item.sort_order ?? 0,
           }
@@ -46,7 +63,12 @@ export default function GalleryFormModal({ open, onClose, onSaved, item }) {
     }
     setSaving(true)
     try {
-      const payload = { ...form }
+      const payload = {
+        ...form,
+        title_km: kmValue(form.title_km),
+        caption_km: kmValue(form.caption_km),
+        category_km: kmValue(form.category_km),
+      }
       if (image) payload.image = image
       else if (removed) payload.remove_image = true
 
@@ -94,12 +116,21 @@ export default function GalleryFormModal({ open, onClose, onSaved, item }) {
         <Field label="Title" htmlFor="gallery-title">
           <Input id="gallery-title" value={form.title} onChange={(e) => set('title')(e.target.value)} />
         </Field>
+        <Field label="Title (Khmer)" htmlFor="gallery-title-km" hint={KM_HINT}>
+          <Input id="gallery-title-km" lang="km" value={form.title_km} onChange={(e) => set('title_km')(e.target.value)} />
+        </Field>
         <Field label="Caption" htmlFor="gallery-caption">
           <Textarea id="gallery-caption" rows={2} value={form.caption} onChange={(e) => set('caption')(e.target.value)} />
+        </Field>
+        <Field label="Caption (Khmer)" htmlFor="gallery-caption-km" hint={KM_HINT}>
+          <Textarea id="gallery-caption-km" lang="km" rows={2} value={form.caption_km} onChange={(e) => set('caption_km')(e.target.value)} />
         </Field>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <Field label="Category" htmlFor="gallery-category" hint="e.g. Facilities">
             <Input id="gallery-category" value={form.category} onChange={(e) => set('category')(e.target.value)} />
+          </Field>
+          <Field label="Category (Khmer)" htmlFor="gallery-category-km" hint={KM_HINT}>
+            <Input id="gallery-category-km" lang="km" value={form.category_km} onChange={(e) => set('category_km')(e.target.value)} />
           </Field>
           <Field label="Sort order" htmlFor="gallery-order">
             <Input id="gallery-order" type="number" min="0" value={form.sort_order} onChange={(e) => set('sort_order')(Number(e.target.value))} />

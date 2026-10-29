@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import '@fontsource-variable/geist'
 import '@fontsource-variable/kantumruy-pro'
 import { router } from './router/index.jsx'
+import { LanguageProvider } from './context/LanguageProvider.jsx'
 import { installImageProtection } from './utils/imageProtection.js'
 import './styles/globals.css'
 
@@ -32,7 +33,9 @@ const queryClient = new QueryClient({
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
+      <LanguageProvider>
+        <RouterProvider router={router} />
+      </LanguageProvider>
     </QueryClientProvider>
   </StrictMode>,
 )

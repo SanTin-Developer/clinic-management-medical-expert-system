@@ -101,12 +101,15 @@ class WebsiteGalleryController extends Controller
     {
         return [
             'title' => ['nullable', 'string', 'max:255'],
+            'title_km' => ['nullable', 'string', 'max:255'],
             'caption' => ['nullable', 'string'],
+            'caption_km' => ['nullable', 'string'],
             'image' => $creating
                 ? ['required', 'image', 'mimes:jpg,jpeg,png,webp,gif', 'max:'.(int) config('documents.max_size_kb', 10240)]
                 : $this->imageRules(),
             'remove_image' => ['sometimes', 'boolean'],
             'category' => ['nullable', 'string', 'max:100'],
+            'category_km' => ['nullable', 'string', 'max:100'],
             'is_published' => ['sometimes', 'boolean'],
             'sort_order' => ['sometimes', 'integer', 'min:0'],
         ];

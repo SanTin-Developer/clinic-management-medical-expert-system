@@ -33,6 +33,10 @@ class AppointmentController extends Controller
             $query->whereDate('appointment_date', $date);
         }
 
+        if ($status = $request->query('status')) {
+            $query->where('status', $status);
+        }
+
         $appointments = $query->paginate(15);
 
         $today = now()->toDateString();

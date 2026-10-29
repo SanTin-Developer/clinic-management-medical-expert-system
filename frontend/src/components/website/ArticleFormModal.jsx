@@ -9,7 +9,24 @@ import Button from '../ui/Button.jsx'
 import ImageField from '../ui/ImageField.jsx'
 import { websiteAdminApi } from '../../api/websiteAdmin.js'
 
-const EMPTY = { title: '', slug: '', excerpt: '', body: '', category: '', tags: '', status: 'draft', is_featured: false }
+const EMPTY = {
+  title: '',
+  title_km: '',
+  slug: '',
+  excerpt: '',
+  excerpt_km: '',
+  body: '',
+  body_km: '',
+  category: '',
+  tags: '',
+  status: 'draft',
+  is_featured: false,
+}
+
+const KM_HINT = 'Shown on the Khmer version of the website. Leave empty to reuse the English text.'
+
+/** Blank Khmer fields are sent as null so the public site falls back to English. */
+const kmValue = (value) => value.trim() || null
 
 export default function ArticleFormModal({ open, onClose, onSaved, article, categories = [] }) {
   const editing = Boolean(article)
@@ -28,9 +45,12 @@ export default function ArticleFormModal({ open, onClose, onSaved, article, cate
       article
         ? {
             title: article.title ?? '',
+            title_km: article.title_km ?? '',
             slug: article.slug ?? '',
             excerpt: article.excerpt ?? '',
+            excerpt_km: article.excerpt_km ?? '',
             body: article.body ?? '',
+            body_km: article.body_km ?? '',
             category: article.category ?? '',
             tags: Array.isArray(article.tags) ? article.tags.join(', ') : '',
             status: article.status ?? 'draft',
@@ -54,9 +74,12 @@ export default function ArticleFormModal({ open, onClose, onSaved, article, cate
     try {
       const payload = {
         title: form.title.trim(),
+        title_km: kmValue(form.title_km),
         slug: form.slug,
         excerpt: form.excerpt,
+        excerpt_km: kmValue(form.excerpt_km),
         body: form.body,
+        body_km: kmValue(form.body_km),
         category: form.category,
         status: form.status,
         is_featured: form.is_featured,
@@ -101,14 +124,23 @@ export default function ArticleFormModal({ open, onClose, onSaved, article, cate
         <Field label="Title" htmlFor="article-title" required error={errors.title}>
           <Input id="article-title" value={form.title} onChange={(e) => set('title')(e.target.value)} invalid={Boolean(errors.title)} />
         </Field>
+        <Field label="Title (Khmer)" htmlFor="article-title-km" hint={KM_HINT}>
+          <Input id="article-title-km" lang="km" value={form.title_km} onChange={(e) => set('title_km')(e.target.value)} />
+        </Field>
         <Field label="Slug" htmlFor="article-slug" hint="Leave blank to generate from the title.">
           <Input id="article-slug" value={form.slug} onChange={(e) => set('slug')(e.target.value)} />
         </Field>
         <Field label="Excerpt" htmlFor="article-excerpt" hint="Short summary shown in listings.">
           <Textarea id="article-excerpt" rows={2} value={form.excerpt} onChange={(e) => set('excerpt')(e.target.value)} />
         </Field>
+        <Field label="Excerpt (Khmer)" htmlFor="article-excerpt-km" hint={KM_HINT}>
+          <Textarea id="article-excerpt-km" lang="km" rows={2} value={form.excerpt_km} onChange={(e) => set('excerpt_km')(e.target.value)} />
+        </Field>
         <Field label="Body" htmlFor="article-body" required error={errors.body}>
           <Textarea id="article-body" rows={8} value={form.body} onChange={(e) => set('body')(e.target.value)} invalid={Boolean(errors.body)} />
+        </Field>
+        <Field label="Body (Khmer)" htmlFor="article-body-km" hint={KM_HINT}>
+          <Textarea id="article-body-km" lang="km" rows={8} value={form.body_km} onChange={(e) => set('body_km')(e.target.value)} />
         </Field>
         <Field label="Cover image" htmlFor="article-cover">
           <ImageField

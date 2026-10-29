@@ -30,7 +30,7 @@ export default function PharmacyDashboardPage() {
     queryFn: () => pharmacyDashboardApi.get(),
   })
 
-  const data = query.data?.data ?? {}
+  const data = query.data ?? {}
   const inventory = data.inventory ?? {}
   const prescriptions = data.prescriptions ?? {}
   const lowStock = data.low_stock ?? []

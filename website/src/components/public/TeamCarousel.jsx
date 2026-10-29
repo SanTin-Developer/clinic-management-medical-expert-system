@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight, Mail, Phone } from 'lucide-react'
 import { cn } from '../../utils/cn.js'
+import { localized } from '../../utils/content.js'
+import { useLanguage } from '../../hooks/useLanguage.js'
 
 const AUTOPLAY_MS = 3000
 const SWIPE_THRESHOLD = 48
@@ -86,6 +88,7 @@ function placement(offset, config) {
 }
 
 export default function TeamCarousel({ members }) {
+  const { language, t } = useLanguage()
   const total = members.length
   const [active, setActive] = useState(0)
   const [tabHidden, setTabHidden] = useState(false)
@@ -205,8 +208,8 @@ export default function TeamCarousel({ members }) {
     <div
       className="relative select-none"
       role="group"
-      aria-roledescription="carousel"
-      aria-label="RoyalCare medical team"
+      aria-roledescription={t('carousel')}
+      aria-label={t('RoyalCare medical team')}
       onKeyDown={handleKeyDown}
     >
       <div
@@ -233,6 +236,11 @@ export default function TeamCarousel({ members }) {
             ? { ...baseStyle, opacity: 0, transition: 'none' }
             : baseStyle
 
+          const name = member.name ?? t('Team member')
+          const position = localized(member, 'position', language)
+          const specialization = localized(member, 'specialization', language)
+          const bio = localized(member, 'bio', language)
+
           return (
             <article
               key={member.id ?? index}
@@ -254,7 +262,11 @@ export default function TeamCarousel({ members }) {
                 type="button"
                 onClick={() => goTo(index)}
                 tabIndex={isVisible ? 0 : -1}
-                aria-label={isActive ? `${member.name} (current profile)` : `Show ${member.name}`}
+                aria-label={
+                  isActive
+                    ? t('{name} (current profile)', { name })
+                    : t('Show {name}', { name })
+                }
                 aria-current={isActive ? 'true' : undefined}
                 className={cn(
                   'group flex h-full w-full flex-col text-left outline-none',
@@ -265,7 +277,7 @@ export default function TeamCarousel({ members }) {
                   {member.photo?.url ? (
                     <img
                       src={member.photo.url}
-                      alt={member.name ?? 'Team member'}
+                      alt={name}
                       loading="lazy"
                       className="h-full w-full object-cover object-top transition-transform duration-[900ms] ease-out group-hover:scale-[1.05]"
                     />
@@ -292,7 +304,7 @@ export default function TeamCarousel({ members }) {
                   >
                     {member.name}
                   </h3>
-                  {member.position ? (
+                  {position ? (
                     <p
                       className={cn(
                         'text-sm font-semibold text-azure-700',
@@ -300,10 +312,10 @@ export default function TeamCarousel({ members }) {
                       )}
                       style={isActive ? { animationDelay: '0.08s' } : undefined}
                     >
-                      {member.position}
+                      {position}
                     </p>
                   ) : null}
-                  {member.specialization ? (
+                  {specialization ? (
                     <p
                       className={cn(
                         'mt-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-ink-muted',
@@ -311,15 +323,15 @@ export default function TeamCarousel({ members }) {
                       )}
                       style={isActive ? { animationDelay: '0.16s' } : undefined}
                     >
-                      {member.specialization}
+                      {specialization}
                     </p>
                   ) : null}
-                  {isActive && member.bio ? (
+                  {isActive && bio ? (
                     <p
                       className="mt-3 line-clamp-2 animate-fade-in-up text-sm leading-relaxed text-ink-muted lg:line-clamp-3"
                       style={{ animationDelay: '0.24s' }}
                     >
-                      {member.bio}
+                      {bio}
                     </p>
                   ) : null}
                   {isActive && (member.email || member.phone) ? (
@@ -333,7 +345,7 @@ export default function TeamCarousel({ members }) {
                           onClick={(event) => event.stopPropagation()}
                           className="inline-flex items-center gap-1.5 rounded-full bg-azure-50 px-3 py-1.5 text-xs font-semibold text-azure-700 transition-colors hover:bg-azure-100"
                         >
-                          <Mail className="size-3.5" aria-hidden /> Email
+                          <Mail className="size-3.5" aria-hidden /> {t('Email')}
                         </a>
                       ) : null}
                       {member.phone ? (
@@ -342,7 +354,7 @@ export default function TeamCarousel({ members }) {
                           onClick={(event) => event.stopPropagation()}
                           className="inline-flex items-center gap-1.5 rounded-full bg-azure-50 px-3 py-1.5 text-xs font-semibold text-azure-700 transition-colors hover:bg-azure-100"
                         >
-                          <Phone className="size-3.5" aria-hidden /> Call
+                          <Phone className="size-3.5" aria-hidden /> {t('Call')}
                         </a>
                       ) : null}
                     </div>
@@ -359,7 +371,7 @@ export default function TeamCarousel({ members }) {
           <button
             type="button"
             onClick={prev}
-            aria-label="Show previous team member"
+            aria-label={t('Show previous team member')}
             className="absolute left-0 top-1/2 z-50 grid size-11 -translate-y-1/2 place-items-center rounded-full border border-white/70 bg-white/90 text-azure-700 shadow-[0_18px_36px_-16px_rgba(11,74,143,0.45)] backdrop-blur transition-all duration-300 hover:scale-105 hover:bg-white hover:text-azure-600 active:scale-95 sm:left-2"
           >
             <ChevronLeft className="size-5" aria-hidden />
@@ -367,7 +379,7 @@ export default function TeamCarousel({ members }) {
           <button
             type="button"
             onClick={next}
-            aria-label="Show next team member"
+            aria-label={t('Show next team member')}
             className="absolute right-0 top-1/2 z-50 grid size-11 -translate-y-1/2 place-items-center rounded-full border border-white/70 bg-white/90 text-azure-700 shadow-[0_18px_36px_-16px_rgba(11,74,143,0.45)] backdrop-blur transition-all duration-300 hover:scale-105 hover:bg-white hover:text-azure-600 active:scale-95 sm:right-2"
           >
             <ChevronRight className="size-5" aria-hidden />
@@ -376,13 +388,17 @@ export default function TeamCarousel({ members }) {
       ) : null}
 
       {total > 1 ? (
-        <div className="mt-7 flex items-center justify-center gap-2" role="group" aria-label="Choose a team member">
+        <div
+          className="mt-7 flex items-center justify-center gap-2"
+          role="group"
+          aria-label={t('Choose a team member')}
+        >
           {members.map((member, index) => (
             <button
               key={member.id ?? index}
               type="button"
               onClick={() => goTo(index)}
-              aria-label={`Show ${member.name}`}
+              aria-label={t('Show {name}', { name: member.name ?? t('Team member') })}
               aria-current={index === active ? 'true' : undefined}
               className={cn(
                 'h-2 rounded-full transition-all duration-300',

@@ -8,7 +8,6 @@ import {
   Edit3,
   Eye,
   FileText,
-  Image as ImageIcon,
   MessagesSquare,
   MoreVertical,
   Paperclip,
@@ -18,7 +17,6 @@ import {
   Trash2,
   UserPlus,
   Users,
-  Video as VideoIcon,
   X,
 } from 'lucide-react'
 import PageHeader from '../components/ui/PageHeader.jsx'
@@ -585,6 +583,14 @@ export default function ChatPage() {
     const channel = echo.private(`conversation.${activeId}`)
     channel.listen(BROADCAST_EVENT, (payload) => {
       const message = normalizeMessage(payload)
+      // Broadcasts are serialized in the queue worker, which has no
+      // authenticated user, so derive per-user flags from the sender id.
+      if (user?.id != null) {
+        const isOwn = Number(message.sender.id) === Number(user.id)
+        message.can_edit = isOwn && !message.attachment
+        message.can_delete_everyone = isOwn
+        message.can_delete_me = true
+      }
       setMessages((prev) => {
         if (prev.some((m) => m.id === message.id)) return prev
         const pending = prev.findIndex(
@@ -612,7 +618,7 @@ export default function ChatPage() {
     return () => {
       echo.leave(`conversation.${activeId}`)
     }
-  }, [activeId, queryClient])
+  }, [activeId, queryClient, user?.id])
 
   const newestId = messages.length ? messages[messages.length - 1].id : null
 

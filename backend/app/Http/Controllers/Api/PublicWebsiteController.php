@@ -29,11 +29,11 @@ class PublicWebsiteController extends Controller
                 ->published()
                 ->where('show_in_footer', true)
                 ->orderBy('title')
-                ->get(['id', 'title', 'slug']),
+                ->get(['id', 'title', 'title_km', 'slug']),
             'services' => Service::query()
                 ->published()
                 ->ordered()
-                ->get(['id', 'title', 'slug']),
+                ->get(['id', 'title', 'title_km', 'slug']),
             'content_blocks' => ContentBlock::query()
                 ->with('image')
                 ->orderBy('group')

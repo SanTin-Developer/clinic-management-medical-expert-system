@@ -1,23 +1,23 @@
 import { Toaster } from 'sonner'
 import { useTheme } from '../../hooks/useTheme.js'
 
+/**
+ * Global toast host. The visual treatment (severity rail, icon chip,
+ * typography, close control) lives in styles/globals.css under
+ * "Toast notifications" — call sites keep using toast.success(),
+ * toast.error() and toast.info() unchanged.
+ */
 export default function ThemedToaster() {
   const { isDark } = useTheme()
 
   return (
     <Toaster
       position="top-center"
-      richColors
+      gap={14}
+      visibleToasts={4}
       closeButton
       theme={isDark ? 'dark' : 'light'}
-      toastOptions={{
-        className: '!rounded-xl !border !border-line/80 !bg-surface !text-ink !shadow-xl !backdrop-blur-sm',
-        style: {
-          borderRadius: '0.75rem',
-          gap: '0.5rem',
-          padding: '0.875rem 1rem',
-        },
-      }}
+      toastOptions={{ className: 'toast-card' }}
     />
   )
 }

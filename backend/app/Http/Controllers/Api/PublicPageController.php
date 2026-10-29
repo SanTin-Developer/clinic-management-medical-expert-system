@@ -17,7 +17,7 @@ class PublicPageController extends Controller
             'data' => PublicPage::query()
                 ->published()
                 ->orderBy('title')
-                ->get(['id', 'title', 'slug', 'excerpt', 'show_in_footer']),
+                ->get(['id', 'title', 'title_km', 'slug', 'excerpt', 'excerpt_km', 'show_in_footer']),
         ]);
     }
 

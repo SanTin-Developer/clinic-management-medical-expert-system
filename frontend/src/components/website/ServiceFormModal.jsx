@@ -8,7 +8,24 @@ import Button from '../ui/Button.jsx'
 import ImageField from '../ui/ImageField.jsx'
 import { websiteAdminApi } from '../../api/websiteAdmin.js'
 
-const EMPTY = { title: '', slug: '', icon: '', short_description: '', description: '', is_featured: false, is_published: false, sort_order: 0 }
+const EMPTY = {
+  title: '',
+  title_km: '',
+  slug: '',
+  icon: '',
+  short_description: '',
+  short_description_km: '',
+  description: '',
+  description_km: '',
+  is_featured: false,
+  is_published: false,
+  sort_order: 0,
+}
+
+const KM_HINT = 'Shown on the Khmer version of the website. Leave empty to reuse the English text.'
+
+/** Blank Khmer fields are sent as null so the public site falls back to English. */
+const kmValue = (value) => value.trim() || null
 
 export default function ServiceFormModal({ open, onClose, onSaved, service }) {
   const editing = Boolean(service)
@@ -27,10 +44,13 @@ export default function ServiceFormModal({ open, onClose, onSaved, service }) {
       service
         ? {
             title: service.title ?? '',
+            title_km: service.title_km ?? '',
             slug: service.slug ?? '',
             icon: service.icon ?? '',
             short_description: service.short_description ?? '',
+            short_description_km: service.short_description_km ?? '',
             description: service.description ?? '',
+            description_km: service.description_km ?? '',
             is_featured: Boolean(service.is_featured),
             is_published: Boolean(service.is_published),
             sort_order: service.sort_order ?? 0,
@@ -49,7 +69,13 @@ export default function ServiceFormModal({ open, onClose, onSaved, service }) {
     }
     setSaving(true)
     try {
-      const payload = { ...form, title: form.title.trim() }
+      const payload = {
+        ...form,
+        title: form.title.trim(),
+        title_km: kmValue(form.title_km),
+        short_description_km: kmValue(form.short_description_km),
+        description_km: kmValue(form.description_km),
+      }
       if (image) payload.image = image
       else if (removed) payload.remove_image = true
 
@@ -89,6 +115,9 @@ export default function ServiceFormModal({ open, onClose, onSaved, service }) {
         <Field label="Title" htmlFor="service-title" required error={errors.title}>
           <Input id="service-title" value={form.title} onChange={(e) => set('title')(e.target.value)} invalid={Boolean(errors.title)} />
         </Field>
+        <Field label="Title (Khmer)" htmlFor="service-title-km" hint={KM_HINT}>
+          <Input id="service-title-km" lang="km" value={form.title_km} onChange={(e) => set('title_km')(e.target.value)} />
+        </Field>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Slug" htmlFor="service-slug" hint="Optional.">
             <Input id="service-slug" value={form.slug} onChange={(e) => set('slug')(e.target.value)} />
@@ -100,8 +129,14 @@ export default function ServiceFormModal({ open, onClose, onSaved, service }) {
         <Field label="Short description" htmlFor="service-short">
           <Textarea id="service-short" rows={2} value={form.short_description} onChange={(e) => set('short_description')(e.target.value)} />
         </Field>
+        <Field label="Short description (Khmer)" htmlFor="service-short-km" hint={KM_HINT}>
+          <Textarea id="service-short-km" lang="km" rows={2} value={form.short_description_km} onChange={(e) => set('short_description_km')(e.target.value)} />
+        </Field>
         <Field label="Description" htmlFor="service-desc">
           <Textarea id="service-desc" rows={6} value={form.description} onChange={(e) => set('description')(e.target.value)} />
+        </Field>
+        <Field label="Description (Khmer)" htmlFor="service-desc-km" hint={KM_HINT}>
+          <Textarea id="service-desc-km" lang="km" rows={6} value={form.description_km} onChange={(e) => set('description_km')(e.target.value)} />
         </Field>
         <Field label="Image" htmlFor="service-image">
           <ImageField

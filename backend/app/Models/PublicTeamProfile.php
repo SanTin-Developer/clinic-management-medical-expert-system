@@ -23,8 +23,11 @@ class PublicTeamProfile extends Model
     protected $fillable = [
         'name',
         'position',
+        'position_km',
         'specialization',
+        'specialization_km',
         'bio',
+        'bio_km',
         'photo_media_id',
         'email',
         'phone',

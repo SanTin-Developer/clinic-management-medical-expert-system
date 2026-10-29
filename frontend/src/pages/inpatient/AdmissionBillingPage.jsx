@@ -12,7 +12,7 @@ import Input from '../../components/ui/Input.jsx'
 import Select from '../../components/ui/Select.jsx'
 import { Shimmer, LoadingBar, LoadingPill } from '../../components/ui/Skeleton.jsx'
 import { cn } from '../../utils/cn.js'
-import { formatCurrency, formatDate } from '../../utils/format.js'
+import { formatCurrency, formatDate, toIsoDate } from '../../utils/format.js'
 import { inpatientBillingApi } from '../../api/inpatientBilling.js'
 
 const statusTone = (status) => {
@@ -34,7 +34,7 @@ export default function AdmissionBillingPage() {
     category: 'service',
     quantity: 1,
     unit_price: '',
-    charge_date: new Date().toISOString().split('T')[0],
+    charge_date: toIsoDate(new Date()),
     discount_amount: 0,
   })
   const [paymentForm, setPaymentForm] = useState({
@@ -76,7 +76,7 @@ export default function AdmissionBillingPage() {
     onSuccess: () => {
       toast.success('Charge added')
       setShowAddCharge(false)
-      setChargeForm({ description: '', category: 'service', quantity: 1, unit_price: '', charge_date: new Date().toISOString().split('T')[0], discount_amount: 0 })
+      setChargeForm({ description: '', category: 'service', quantity: 1, unit_price: '', charge_date: toIsoDate(new Date()), discount_amount: 0 })
       queryClient.invalidateQueries({ queryKey: ['admission-billing', id] })
     },
     onError: (err) => toast.error(err?.response?.data?.message || Object.values(err?.response?.data?.errors || {})?.[0]?.[0] || 'Failed to add charge'),

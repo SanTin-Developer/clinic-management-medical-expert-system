@@ -14,7 +14,13 @@ import {
   SectionHeading,
 } from '../../components/public/PublicUI.jsx'
 import { cn } from '../../utils/cn.js'
-import { blockText, splitHeading, useContentBlocks } from '../../utils/content.js'
+import { useLanguage } from '../../hooks/useLanguage.js'
+import {
+  blockText,
+  localized,
+  splitHeading,
+  useContentBlocks,
+} from '../../utils/content.js'
 
 /**
  * Services positioning copy — the design defaults shown whenever the matching
@@ -66,6 +72,7 @@ function plainText(html) {
  * hidden from assistive tech (the full catalogue follows below).
  */
 function ServicesTicker({ services }) {
+  const { language } = useLanguage()
   if (services.length === 0) return null
 
   return (
@@ -80,7 +87,7 @@ function ServicesTicker({ services }) {
             className="flex items-center gap-3 whitespace-nowrap text-sm font-semibold uppercase tracking-[0.16em] text-white/50"
           >
             <Plus className="size-3.5 shrink-0 text-accent" aria-hidden />
-            {service.title}
+            {localized(service, 'title', language)}
           </span>
         ))}
       </div>
@@ -94,8 +101,12 @@ function ServicesTicker({ services }) {
  * compact cards. Missing photos fall back to a branded gradient panel.
  */
 function FeaturedServiceCard({ service, wide = false }) {
+  const { language, t } = useLanguage()
   const Icon = resolveIcon(service.icon)
-  const text = service.short_description || plainText(service.description)
+  const title = localized(service, 'title', language)
+  const text =
+    localized(service, 'short_description', language) ||
+    plainText(localized(service, 'description', language))
 
   return (
     <article
@@ -113,7 +124,7 @@ function FeaturedServiceCard({ service, wide = false }) {
         {service.image?.url ? (
           <img
             src={service.image.url}
-            alt={service.title}
+            alt={title}
             loading="lazy"
             className={cn(
               'w-full object-cover transition-transform duration-700 group-hover:scale-105',
@@ -158,7 +169,7 @@ function FeaturedServiceCard({ service, wide = false }) {
             wide ? 'text-white' : 'text-ink',
           )}
         >
-          {service.title}
+          {title}
         </h3>
         {text ? (
           <p
@@ -179,7 +190,7 @@ function FeaturedServiceCard({ service, wide = false }) {
               : 'border border-line text-azure-700 hover:border-azure-400 hover:bg-azure-50',
           )}
         >
-          Ask about this service
+          {t('Ask about this service')}
           <ArrowRight className="size-4" aria-hidden />
         </Link>
       </div>
@@ -193,6 +204,7 @@ export default function ServicesPage() {
     queryFn: publicWebsiteApi.listServices,
   })
   const { settings } = useOutletContext() ?? {}
+  const { language, t } = useLanguage()
 
   /** Row id of the open catalogue entry (single-open accordion). */
   const [openServiceId, setOpenServiceId] = useState(null)
@@ -209,18 +221,55 @@ export default function ServicesPage() {
 
   // Admin-editable copy (Page Content → Services Page).
   const blocks = useContentBlocks()
-  const heading = splitHeading(blockText(blocks, 'services_heading', SERVICES_HEADING))
+  const heading = splitHeading(
+    blockText(blocks, 'services_heading', t(SERVICES_HEADING), language),
+  )
   const copy = {
-    eyebrow: blockText(blocks, 'services_eyebrow', SERVICES_EYEBROW),
-    intro: blockText(blocks, 'services_intro', SERVICES_INTRO),
-    featuredEyebrow: blockText(blocks, 'services_featured_eyebrow', '01 — Spotlight'),
-    featuredHeading: blockText(blocks, 'services_featured_heading', FEATURED_HEADING),
-    featuredText: blockText(blocks, 'services_featured_text', FEATURED_DESCRIPTION),
-    catalogueEyebrow: blockText(blocks, 'services_catalogue_eyebrow', '02 — Full Catalogue'),
-    catalogueHeading: blockText(blocks, 'services_catalogue_heading', CATALOGUE_HEADING),
-    catalogueText: blockText(blocks, 'services_catalogue_text', CATALOGUE_DESCRIPTION),
-    closingHeading: blockText(blocks, 'services_closing_heading', CLOSING.heading),
-    closingText: blockText(blocks, 'services_closing_text', CLOSING.text),
+    eyebrow: blockText(blocks, 'services_eyebrow', t(SERVICES_EYEBROW), language),
+    intro: blockText(blocks, 'services_intro', t(SERVICES_INTRO), language),
+    featuredEyebrow: blockText(
+      blocks,
+      'services_featured_eyebrow',
+      t('01 — Spotlight'),
+      language,
+    ),
+    featuredHeading: blockText(
+      blocks,
+      'services_featured_heading',
+      t(FEATURED_HEADING),
+      language,
+    ),
+    featuredText: blockText(
+      blocks,
+      'services_featured_text',
+      t(FEATURED_DESCRIPTION),
+      language,
+    ),
+    catalogueEyebrow: blockText(
+      blocks,
+      'services_catalogue_eyebrow',
+      t('02 — Full Catalogue'),
+      language,
+    ),
+    catalogueHeading: blockText(
+      blocks,
+      'services_catalogue_heading',
+      t(CATALOGUE_HEADING),
+      language,
+    ),
+    catalogueText: blockText(
+      blocks,
+      'services_catalogue_text',
+      t(CATALOGUE_DESCRIPTION),
+      language,
+    ),
+    closingHeading: blockText(
+      blocks,
+      'services_closing_heading',
+      t(CLOSING.heading),
+      language,
+    ),
+    closingText: blockText(blocks, 'services_closing_text', t(CLOSING.text), language),
   }
 
   return (
@@ -269,14 +318,14 @@ export default function ServicesPage() {
                     to="/contact"
                     className="inline-flex items-center gap-2 rounded-full bg-accent px-7 py-3.5 text-sm font-semibold text-accent-ink shadow-[0_16px_34px_-14px_rgb(76_175_80_/_0.75)] transition-transform hover:-translate-y-0.5 hover:bg-accent-dark"
                   >
-                    Book an Appointment
+                    {t('Book an Appointment')}
                     <ArrowRight className="size-4" aria-hidden />
                   </Link>
                   <a
                     href="#catalogue"
                     className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/10 px-7 py-3.5 text-sm font-semibold text-white backdrop-blur transition-colors hover:bg-white/20"
                   >
-                    Browse Services
+                    {t('Browse Services')}
                   </a>
                 </div>
               </Reveal>
@@ -286,7 +335,7 @@ export default function ServicesPage() {
               <Reveal delay={320} className="hidden lg:block">
                 <div className="rounded-[28px] border border-white/15 bg-white/10 p-6 shadow-[0_28px_64px_-24px_rgba(0,0,0,0.5)] backdrop-blur-xl">
                   <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-white/55">
-                    Quick look
+                    {t('Quick look')}
                   </p>
                   <ul className="mt-5 space-y-3.5">
                     {services.slice(0, 5).map((service) => {
@@ -297,7 +346,7 @@ export default function ServicesPage() {
                             <Icon className="size-4" aria-hidden />
                           </span>
                           <span className="min-w-0 flex-1 truncate text-sm font-medium text-white/85">
-                            {service.title}
+                            {localized(service, 'title', language)}
                           </span>
                         </li>
                       )
@@ -307,7 +356,7 @@ export default function ServicesPage() {
                     href="#catalogue"
                     className="mt-6 inline-flex items-center gap-2 rounded-full bg-white/10 px-5 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-white/20"
                   >
-                    Browse all {services.length} services
+                    {t('Browse all {count} services', { count: services.length })}
                     <ArrowRight className="size-3.5" aria-hidden />
                   </a>
                 </div>
@@ -317,7 +366,7 @@ export default function ServicesPage() {
 
           <a
             href={featured.length > 0 ? '#featured' : '#catalogue'}
-            aria-label="Scroll to featured services"
+            aria-label={t('Scroll to featured services')}
             className="mx-auto mt-12 hidden w-fit text-white/45 transition-colors hover:text-white sm:block"
           >
             <ChevronDown className="size-6 animate-bounce" aria-hidden />
@@ -330,22 +379,22 @@ export default function ServicesPage() {
       {isLoading ? (
         <Section className="py-16">
           <div className="grid place-items-center py-8">
-            <Spinner label="Loading services…" />
+            <Spinner label={t('Loading services…')} />
           </div>
         </Section>
       ) : isError ? (
         <Section className="py-16">
           <ErrorState
-            title="Services unavailable"
-            message="We couldn't load our services right now. Please try again in a moment."
+            title={t('Services unavailable')}
+            message={t("We couldn't load our services right now. Please try again in a moment.")}
             onRetry={refetch}
           />
         </Section>
       ) : services.length === 0 ? (
         <Section className="py-16">
           <EmptyState
-            title="No services yet"
-            message="Our service catalogue is being updated. Please check back soon."
+            title={t('No services yet')}
+            message={t('Our service catalogue is being updated. Please check back soon.')}
           />
         </Section>
       ) : (
@@ -392,14 +441,17 @@ export default function ServicesPage() {
                   description={copy.catalogueText}
                 />
                 <span className="rounded-full border border-line bg-surface px-4 py-2 text-xs font-bold text-azure-700 shadow-sm">
-                  {services.length} {services.length === 1 ? 'service' : 'services'}
+                  {services.length} {services.length === 1 ? t('service') : t('services')}
                 </span>
               </Reveal>
 
               <div className="mt-8 overflow-hidden rounded-[28px] border border-line bg-surface shadow-[var(--shadow-card)]">
                 {services.map((service, index) => {
                   const Icon = resolveIcon(service.icon)
-                  const detail = plainText(service.description) || service.short_description
+                  const title = localized(service, 'title', language)
+                  const shortDescription = localized(service, 'short_description', language)
+                  const detail =
+                    plainText(localized(service, 'description', language)) || shortDescription
                   const isExpandable = Boolean(detail) || Boolean(service.image?.url)
                   const isOpen = openServiceId === service.id
 
@@ -441,17 +493,17 @@ export default function ServicesPage() {
                         <span className="min-w-0 flex-1">
                           <span className="flex flex-wrap items-center gap-2">
                             <span className="font-display text-sm font-bold text-ink sm:text-base">
-                              {service.title}
+                              {title}
                             </span>
                             {service.is_featured ? (
                               <span className="rounded-full bg-accent/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-accent-dark">
-                                Featured
+                                {t('Featured')}
                               </span>
                             ) : null}
                           </span>
-                          {service.short_description ? (
+                          {shortDescription ? (
                             <span className="mt-0.5 line-clamp-1 text-sm text-ink-muted">
-                              {service.short_description}
+                              {shortDescription}
                             </span>
                           ) : null}
                         </span>
@@ -483,7 +535,7 @@ export default function ServicesPage() {
                               {service.image?.url ? (
                                 <img
                                   src={service.image.url}
-                                  alt={service.title}
+                                  alt={title}
                                   loading="lazy"
                                   className="h-44 w-full shrink-0 rounded-2xl border border-line object-cover md:w-72 lg:w-80"
                                 />
@@ -510,7 +562,7 @@ export default function ServicesPage() {
             >
               <Reveal>
                 <p className="text-xs font-bold uppercase tracking-[0.28em] text-white/60">
-                  03 — Next Steps
+                  {t('03 — Next Steps')}
                 </p>
                 <h2 className="mt-4 font-display text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
                   {copy.closingHeading}
@@ -523,14 +575,14 @@ export default function ServicesPage() {
                     to="/contact"
                     className="inline-flex items-center justify-center gap-2 rounded-full bg-accent px-7 py-3.5 text-sm font-semibold text-accent-ink transition-colors hover:bg-accent-dark"
                   >
-                    Book an Appointment
+                    {t('Book an Appointment')}
                     <ArrowRight className="size-4" aria-hidden />
                   </Link>
                   <Link
                     to="/team"
                     className="inline-flex items-center justify-center gap-2 rounded-full border border-white/30 bg-white/10 px-7 py-3.5 text-sm font-semibold text-white backdrop-blur transition-colors hover:bg-white/20"
                   >
-                    Meet Our Team
+                    {t('Meet Our Team')}
                   </Link>
                 </div>
               </Reveal>
@@ -538,7 +590,7 @@ export default function ServicesPage() {
               <Reveal delay={110}>
                 <div className="rounded-[28px] border border-white/15 bg-white/10 p-6 backdrop-blur-xl sm:p-7">
                   <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-white/55">
-                    Reach us directly
+                    {t('Reach us directly')}
                   </p>
                   <ul className="mt-5 space-y-4">
                     {phone ? (
@@ -573,17 +625,17 @@ export default function ServicesPage() {
                           <MapPin className="size-4" aria-hidden />
                         </span>
                         <span className="text-sm font-medium leading-relaxed text-white/85">
-                          {settings.address}
+                          {localized(settings, 'address', language)}
                         </span>
                       </li>
                     ) : null}
                     {!phone && !settings?.email && !settings?.address ? (
                       <li className="text-sm text-white/75">
-                        Open the{' '}
+                        {t('Open the')}{' '}
                         <Link to="/contact" className="font-semibold text-white underline">
-                          contact page
+                          {t('contact page')}
                         </Link>{' '}
-                        to reach our team.
+                        {t('to reach our team.')}
                       </li>
                     ) : null}
                   </ul>

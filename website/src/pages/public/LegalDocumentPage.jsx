@@ -6,17 +6,19 @@ import { publicWebsiteApi } from "../../api/website.js";
 import { Spinner } from "../../components/ui/Skeleton.jsx";
 import { ErrorState } from "../../components/ui/State.jsx";
 import { Section } from "../../components/public/PublicUI.jsx";
+import { useLanguage } from "../../hooks/useLanguage.js";
+import { localized } from "../../utils/content.js";
 
 const instructionPattern =
   /^Edit this page from the Website Management section/i;
 
 const sectionId = (slug, index) => `${slug}-section-${index + 1}`;
 
-function formatUpdated(value) {
+function formatUpdated(value, locale) {
   if (!value) return null;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return null;
-  return new Intl.DateTimeFormat("en-US", { dateStyle: "long" }).format(date);
+  return new Intl.DateTimeFormat(locale, { dateStyle: "long" }).format(date);
 }
 
 function isPublicSection(section) {
@@ -75,13 +77,17 @@ function sectionsFromBody(html, fallbackHeading) {
   return sections;
 }
 
-/** Shared public presentation for CMS-managed legal documents. */
+/**
+ * Shared public presentation for CMS-managed legal documents.
+ * `documentName` and `fallbackIntroduction` are supplied already localized.
+ */
 export default function LegalDocumentPage({
   slug,
   documentName,
   fallbackIntroduction,
   useStructuredPolicyContent = false,
 }) {
+  const { language, locale, t } = useLanguage();
   const [activeSection, setActiveSection] = useState("");
   const query = useQuery({
     queryKey: ["website", "page", slug],
@@ -89,8 +95,11 @@ export default function LegalDocumentPage({
   });
   const page = query.data?.data;
   const structuredContent = useStructuredPolicyContent
-    ? page?.policy_content?.en
+    ? (page?.policy_content?.[language] ?? page?.policy_content?.en ?? null)
     : null;
+
+  const body = localized(page, "body", language);
+  const introductionHeading = t("Introduction");
 
   const sections = useMemo(() => {
     const saved = (structuredContent?.sections ?? [])
@@ -102,8 +111,8 @@ export default function LegalDocumentPage({
       }))
       .sort((a, b) => a.order - b.order);
     if (saved.length) return saved;
-    return sectionsFromBody(page?.body, "Introduction");
-  }, [page?.body, structuredContent?.sections]);
+    return sectionsFromBody(body, introductionHeading);
+  }, [body, introductionHeading, structuredContent?.sections]);
 
   const hasNavigation = sections.length > 1;
 
@@ -126,7 +135,11 @@ export default function LegalDocumentPage({
   if (query.isLoading) {
     return (
       <div className="grid min-h-[60vh] place-items-center">
-        <Spinner label={`Loading ${documentName.toLowerCase()}…`} />
+        <Spinner
+          label={t("Loading {document}…", {
+            document: documentName.toLowerCase(),
+          })}
+        />
       </div>
     );
   }
@@ -138,25 +151,28 @@ export default function LegalDocumentPage({
     );
   }
 
-  const title = structuredContent?.title?.trim() || page.title || documentName;
+  const title =
+    structuredContent?.title?.trim() ||
+    localized(page, "title", language) ||
+    documentName;
   const introduction =
     structuredContent?.introduction?.trim() ||
-    page.excerpt?.trim() ||
+    localized(page, "excerpt", language).trim() ||
     fallbackIntroduction;
-  const updated = formatUpdated(page.updated_at);
+  const updated = formatUpdated(page.updated_at, locale);
 
   return (
     <main className="animate-fade-in bg-canvas pb-16 pt-28 sm:pt-32">
       <Section reveal={false} className="max-w-6xl px-4 sm:px-6">
         <nav
-          aria-label="Breadcrumb"
+          aria-label={t("Breadcrumb")}
           className="flex items-center gap-1.5 text-sm text-ink-muted"
         >
           <Link
             to="/"
             className="rounded focus:outline-none focus:ring-2 focus:ring-brand/30 hover:text-azure-700"
           >
-            Home
+            {t("Home")}
           </Link>
           <ChevronRight className="size-4" aria-hidden />
           <span aria-current="page">{documentName}</span>
@@ -176,7 +192,7 @@ export default function LegalDocumentPage({
             {updated ? (
               <p className="mt-5 inline-flex items-center gap-2 text-sm text-ink-muted">
                 <Clock3 className="size-4" aria-hidden />
-                Last updated: {updated}
+                {t("Last updated: {date}", { date: updated })}
               </p>
             ) : null}
           </div>
@@ -188,11 +204,13 @@ export default function LegalDocumentPage({
           {hasNavigation ? (
             <aside className="min-w-0 lg:sticky lg:top-24">
               <nav
-                aria-label={`${documentName} table of contents`}
+                aria-label={t("{document} table of contents", {
+                  document: documentName,
+                })}
                 className="border-l-2 border-azure-100 pl-5"
               >
                 <h2 className="text-sm font-bold uppercase tracking-[0.14em] text-ink">
-                  On this page
+                  {t("On this page")}
                 </h2>
                 <ol className="mt-4 space-y-1.5 text-sm">
                   {sections.map((section, index) => {
@@ -239,8 +257,9 @@ export default function LegalDocumentPage({
                 role="status"
                 className="rounded-2xl border border-dashed border-line bg-surface px-6 py-10 text-center text-base leading-7 text-ink-muted"
               >
-                This {documentName.toLowerCase()} is being updated. Please check
-                back soon.
+                {t("This {document} is being updated. Please check back soon.", {
+                  document: documentName.toLowerCase(),
+                })}
               </div>
             )}
           </article>

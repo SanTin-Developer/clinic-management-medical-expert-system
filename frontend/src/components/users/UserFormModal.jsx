@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import Modal from '../ui/Modal.jsx'
 import Button from '../ui/Button.jsx'
@@ -11,16 +11,27 @@ import { ROLES } from '../../utils/status.js'
 
 export default function UserFormModal({ open, onClose, initial, onSaved }) {
   const { hasRole } = useAuth()
-  const [form, setForm] = useState(
-    {
+  const [form, setForm] = useState({
+    name: '',
+    username: '',
+    email: '',
+    role: '',
+  })
+  const [errors, setErrors] = useState({})
+  const [saving, setSaving] = useState(false)
+
+  // The modal stays mounted between openings, so initialise the form whenever
+  // it opens or a different user is selected.
+  useEffect(() => {
+    if (!open) return
+    setForm({
       name: initial?.name ?? '',
       username: initial?.username ?? '',
       email: initial?.email ?? '',
-      role: (initial?.roles?.[0]?.name ?? initial?.roles?.[0] ?? ''),
-    },
-  )
-  const [errors, setErrors] = useState({})
-  const [saving, setSaving] = useState(false)
+      role: initial?.roles?.[0]?.name ?? initial?.roles?.[0] ?? '',
+    })
+    setErrors({})
+  }, [open, initial?.id])
 
   const set = (key) => (value) => setForm((f) => ({ ...f, [key]: value }))
 

@@ -561,4 +561,83 @@ class WebsiteManagementTest extends TestCase
             ContentBlock::where('key', 'header_cta_label')->value('body')
         );
     }
+
+    public function test_admin_can_store_khmer_translations_for_cms_content(): void
+    {
+        Sanctum::actingAs($this->userWithRole('Admin'));
+
+        $pageId = $this->postJson('/api/v1/website/admin/pages', [
+            'title' => 'Our History',
+            'title_km' => 'ប្រវត្តិរបស់យើង',
+            'body' => '<p>Founded in 2001.</p>',
+            'body_km' => '<p>បង្កើតឡើងក្នុងឆ្នាំ 2001។</p>',
+            'status' => 'published',
+        ])->assertCreated()
+            ->assertJsonPath('data.title_km', 'ប្រវត្តិរបស់យើង')
+            ->json('data.id');
+
+        $serviceId = $this->postJson('/api/v1/website/admin/services', [
+            'title' => 'Pediatrics',
+            'title_km' => 'កុមារវិទ្យា',
+            'short_description' => 'Care for children.',
+            'short_description_km' => 'ការថែទាំកុមារ។',
+            'is_published' => true,
+        ])->assertCreated()->json('data.id');
+
+        $this->postJson('/api/v1/website/admin/gallery', [
+            'title' => 'Reception',
+            'title_km' => 'បន្ទប់ទទួលភ្ញៀវ',
+            'image' => $this->fakePng('reception.png'),
+        ])->assertCreated()->assertJsonPath('data.title_km', 'បន្ទប់ទទួលភ្ញៀវ');
+
+        $this->postJson('/api/v1/website/admin/team', [
+            'name' => 'Dr. Sokha',
+            'position' => 'Cardiologist',
+            'position_km' => 'វេជ្ជបណ្ឌិតជំងឺបេះដូង',
+        ])->assertCreated()->assertJsonPath('data.position_km', 'វេជ្ជបណ្ឌិតជំងឺបេះដូង');
+
+        $this->postJson('/api/v1/website/admin/articles', [
+            'title' => 'Staying Hydrated',
+            'title_km' => 'ការផឹកទឹកឱ្យបានគ្រប់គ្រាន់',
+            'body' => '<p>Drink water.</p>',
+            'body_km' => '<p>ផឹកទឹក។</p>',
+        ])->assertCreated()->assertJsonPath('data.title_km', 'ការផឹកទឹកឱ្យបានគ្រប់គ្រាន់');
+
+        $this->postJson('/api/v1/website/admin/content-blocks/bulk', [
+            'blocks' => [[
+                'key' => 'home_hero_title',
+                'group' => 'home',
+                'body' => 'World-class care',
+                'body_km' => 'ការថែទាំកម្រិតពិភពលោក',
+            ]],
+        ])->assertOk();
+
+        $this->putJson('/api/v1/website/admin/settings', [
+            'site_name' => 'RoyalCare Clinic',
+            'tagline' => 'Care you can trust',
+            'tagline_km' => 'ការថែទាំដែលអ្នកអាចទុកចិត្ត',
+            'address_km' => 'ភ្នំពេញ កម្ពុជា',
+        ])->assertOk()
+            ->assertJsonPath('data.tagline_km', 'ការថែទាំដែលអ្នកអាចទុកចិត្ត');
+
+        $this->assertDatabaseHas('public_pages', ['id' => $pageId, 'title_km' => 'ប្រវត្តិរបស់យើង']);
+        $this->assertDatabaseHas('services', ['id' => $serviceId, 'title_km' => 'កុមារវិទ្យា']);
+        $this->assertDatabaseHas('content_blocks', [
+            'key' => 'home_hero_title',
+            'body_km' => 'ការថែទាំកម្រិតពិភពលោក',
+        ]);
+        $this->assertSame('ភ្នំពេញ កម្ពុជា', WebsiteSetting::current()->address_km);
+    }
+
+    public function test_khmer_fields_are_optional_and_do_not_break_english_only_content(): void
+    {
+        Sanctum::actingAs($this->userWithRole('Admin'));
+
+        $this->postJson('/api/v1/website/admin/services', [
+            'title' => 'Dermatology',
+            'is_published' => true,
+        ])->assertCreated()
+            ->assertJsonPath('data.title', 'Dermatology')
+            ->assertJsonPath('data.title_km', null);
+    }
 }

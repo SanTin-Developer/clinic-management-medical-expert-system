@@ -2,6 +2,19 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/*
+ * Khmer script needs its own metrics: Kantumruy Pro is the only Khmer-capable
+ * family in both stacks, and it reads better with a little more line height.
+ */
+html[data-language="km"] body {
+  font-family: "Kantumruy Pro Variable", "Geist Variable", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.7;
+}
+
+html[data-language="km"] .font-display {
+  font-family: "Kantumruy Pro Variable", "Plus Jakarta Sans Variable", system-ui, sans-serif;
+}
+
 @theme {
   /* Primary palette per target spec */
   --color-primary: #1e88c8;

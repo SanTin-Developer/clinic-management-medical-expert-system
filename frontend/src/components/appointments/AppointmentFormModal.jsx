@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import Modal from '../ui/Modal.jsx'
 import Button from '../ui/Button.jsx'
@@ -10,7 +10,28 @@ import { patientApi } from '../../api/patients.js'
 import { userApi } from '../../api/users.js'
 import { appointmentApi } from '../../api/appointments.js'
 import { useAll } from '../../hooks/usePaginated.js'
-import { patientFullName } from '../../utils/format.js'
+import { patientFullName, toIsoDate } from '../../utils/format.js'
+
+const BASE_FORM = {
+  patient_id: '',
+  doctor_id: '',
+  appointment_date: '',
+  appointment_time: '',
+  reason: '',
+  note: '',
+}
+
+function formFromRecord(record) {
+  if (!record) return BASE_FORM
+  return {
+    patient_id: record.patient_id ?? '',
+    doctor_id: record.doctor_id ?? '',
+    appointment_date: record.appointment_date ? String(record.appointment_date).slice(0, 10) : '',
+    appointment_time: record.appointment_time ? String(record.appointment_time).slice(0, 5) : '',
+    reason: record.reason ?? '',
+    note: record.note ?? '',
+  }
+}
 
 export default function AppointmentFormModal({ open, onClose, initial, onSaved }) {
   const editing = Boolean(initial?.id)
@@ -22,27 +43,17 @@ export default function AppointmentFormModal({ open, onClose, initial, onSaved }
     (u.roles ?? []).some((r) => String(r.name ?? r).includes('Doctor')),
   )
 
-  const [form, setForm] = useState(
-    initial
-      ? {
-          patient_id: initial.patient_id ?? '',
-          doctor_id: initial.doctor_id ?? '',
-          appointment_date: initial.appointment_date ?? '',
-          appointment_time: initial.appointment_time ?? '',
-          reason: initial.reason ?? '',
-          note: initial.note ?? '',
-        }
-      : {
-          patient_id: '',
-          doctor_id: '',
-          appointment_date: '',
-          appointment_time: '',
-          reason: '',
-          note: '',
-        },
-  )
+  const [form, setForm] = useState(BASE_FORM)
   const [errors, setErrors] = useState({})
   const [saving, setSaving] = useState(false)
+
+  // The modal stays mounted between openings, so initialise the form whenever
+  // it opens or a different record is selected.
+  useEffect(() => {
+    if (!open) return
+    setForm(formFromRecord(initial))
+    setErrors({})
+  }, [open, initial?.id])
 
   const set = (key) => (value) => setForm((f) => ({ ...f, [key]: value }))
 
@@ -79,7 +90,7 @@ export default function AppointmentFormModal({ open, onClose, initial, onSaved }
     }
   }
 
-  const today = new Date().toISOString().slice(0, 10)
+  const today = toIsoDate(new Date())
 
   return (
     <Modal
