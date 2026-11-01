@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChevronDown, LogOut, Menu, PanelLeft, UserRound } from 'lucide-react'
+import { ChevronDown, LogOut, PanelLeft, UserRound } from 'lucide-react'
 import Dropdown, { DropdownItem } from '../ui/Dropdown.jsx'
 import NotificationBell from '../communication/NotificationBell.jsx'
 import GlobalSearch from '../search/GlobalSearch.jsx'
@@ -22,7 +22,7 @@ function initials(name = '') {
     .join('')
 }
 
-export default function Header({ onMenu, onToggleSidebar }) {
+export default function Header({ onToggleSidebar }) {
   const { user, logout } = useAuth()
   const { t } = useLanguage()
   const navigate = useNavigate()
@@ -52,14 +52,19 @@ export default function Header({ onMenu, onToggleSidebar }) {
       ) : null}
       <header className="flex h-16 shrink-0 items-center gap-3 border-b border-line bg-surface px-4 print:hidden sm:px-6">
         <div className="flex min-w-0 flex-1 items-center gap-2">
-          <button
-            type="button"
-            onClick={onMenu}
-            aria-label={t('Open navigation')}
-            className="grid size-10 shrink-0 place-items-center rounded-lg text-ink-muted transition-colors hover:bg-canvas md:hidden"
+          {/* Phones show the clinic logo here instead of a menu button — the
+              bottom bar's "More" tab opens the same navigation drawer. */}
+          <span
+            className="grid size-10 shrink-0 select-none place-items-center rounded-xl bg-white shadow-md ring-1 ring-line md:hidden"
+            aria-hidden
           >
-            <Menu className="size-5" aria-hidden />
-          </button>
+            <img
+              src="/royalcare-logo.png"
+              alt=""
+              draggable={false}
+              className="pointer-events-none size-9 object-contain"
+            />
+          </span>
           <button
             type="button"
             onClick={onToggleSidebar}

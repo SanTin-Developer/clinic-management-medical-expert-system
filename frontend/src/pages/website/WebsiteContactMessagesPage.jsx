@@ -137,7 +137,7 @@ export default function WebsiteContactMessagesPage() {
               <TBody>
                 {rows.map((row) => (
                   <Tr key={row.id} onClick={() => setSelected(row)}>
-                    <Td>
+                    <Td primary>
                       <div className="flex items-center gap-2">
                         {!row.read_at ? (
                           <span aria-label="Unread" className="size-2 shrink-0 rounded-full bg-brand" />
@@ -152,8 +152,8 @@ export default function WebsiteContactMessagesPage() {
                       <div className="font-medium text-ink">{row.subject || <span className="text-ink-muted">(No subject)</span>}</div>
                       <div className="max-w-[46ch] truncate text-xs text-ink-muted">{row.message}</div>
                     </Td>
-                    <Td className="whitespace-nowrap text-ink-muted">{formatDateTime(row.created_at)}</Td>
-                    <Td>
+                    <Td leading className="whitespace-nowrap text-ink-muted">{formatDateTime(row.created_at)}</Td>
+                    <Td trailing>
                       <Badge tone={row.read_at ? 'gray' : 'amber'}>{row.read_at ? 'read' : 'unread'}</Badge>
                     </Td>
                     <Td onClick={(event) => event.stopPropagation()}>

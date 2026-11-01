@@ -13,6 +13,7 @@ import Tabs from '../components/ui/Tabs.jsx'
 import Input from '../components/ui/Input.jsx'
 import Field from '../components/ui/Field.jsx'
 import StatCard from '../components/ui/StatCard.jsx'
+import Table, { THead, TBody, Tr, Th, Td } from '../components/ui/Table.jsx'
 import { CardSkeleton } from '../components/ui/Skeleton.jsx'
 import { ErrorState } from '../components/ui/State.jsx'
 import {
@@ -251,28 +252,26 @@ export default function ReportsPage() {
                 {inventoryReport.data.low_stock.length === 0 ? (
                   <p className="text-sm text-ink-muted">All medicines are above their reorder level.</p>
                 ) : (
-                  <div className="overflow-x-auto rounded-xl border border-line">
-                    <table className="w-full min-w-[480px] text-left text-sm">
-                      <thead className="bg-canvas text-xs uppercase tracking-wide text-ink-muted">
-                        <tr>
-                          <th className="px-4 py-3 font-semibold">Medicine</th>
-                          <th className="px-4 py-3 font-semibold">Code</th>
-                          <th className="px-4 py-3 font-semibold text-right">In stock</th>
-                          <th className="px-4 py-3 font-semibold text-right">Reorder level</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-line">
-                        {inventoryReport.data.low_stock.map((m) => (
-                          <tr key={m.id}>
-                            <td className="px-4 py-3 font-medium text-ink">{m.name}</td>
-                            <td className="px-4 py-3 font-mono text-xs text-ink-muted">{m.code}</td>
-                            <td className="px-4 py-3 text-right text-amber-600">{m.stock}</td>
-                            <td className="px-4 py-3 text-right text-ink-muted">{m.reorder_level}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                  <Table minWidth="min-w-[480px]">
+                    <THead>
+                      <Tr>
+                        <Th>Medicine</Th>
+                        <Th>Code</Th>
+                        <Th className="text-right">In stock</Th>
+                        <Th className="text-right">Reorder level</Th>
+                      </Tr>
+                    </THead>
+                    <TBody>
+                      {inventoryReport.data.low_stock.map((m) => (
+                        <Tr key={m.id}>
+                          <Td primary className="font-medium text-ink">{m.name}</Td>
+                          <Td leading className="font-mono text-xs text-ink-muted">{m.code}</Td>
+                          <Td className="text-right text-amber-600">{m.stock}</Td>
+                          <Td className="text-right text-ink-muted">{m.reorder_level}</Td>
+                        </Tr>
+                      ))}
+                    </TBody>
+                  </Table>
                 )}
               </section>
               <section>

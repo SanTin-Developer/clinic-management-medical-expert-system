@@ -106,7 +106,7 @@ export default function WebsiteServicesPage() {
               <TBody>
                 {rows.map((row) => (
                   <Tr key={row.id} onClick={() => navigate(`/website/services/${row.id}`)}>
-                    <Td>
+                    <Td primary>
                       <div className="flex items-center gap-3">
                         {row.image?.url ? (
                           <img src={row.image.url} alt="" className="size-10 rounded-lg bg-canvas object-contain" />
@@ -122,7 +122,7 @@ export default function WebsiteServicesPage() {
                       </div>
                     </Td>
                     <Td>{row.is_featured ? <Badge tone="brand"><Sparkles className="size-3" aria-hidden />Featured</Badge> : '—'}</Td>
-                    <Td><Badge tone={row.is_published ? 'green' : 'gray'}>{row.is_published ? 'published' : 'draft'}</Badge></Td>
+                    <Td trailing><Badge tone={row.is_published ? 'green' : 'gray'}>{row.is_published ? 'published' : 'draft'}</Badge></Td>
                     <Td onClick={(event) => event.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1">
                         {can('website.services.manage') ? (

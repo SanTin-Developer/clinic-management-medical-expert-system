@@ -106,7 +106,7 @@ export default function QueueListPage() {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         <StatCard label="Waiting" value={stats.waiting ?? 0} icon={Clock} tone="amber" loading={query.isLoading} />
         <StatCard label="Called" value={stats.called ?? 0} icon={BellRing} tone="brand" loading={query.isLoading} />
         <StatCard label="Serving" value={stats.serving ?? 0} icon={Stethoscope} tone="navy" loading={query.isLoading} />
@@ -175,11 +175,11 @@ export default function QueueListPage() {
                   const priorityMeta = statusBadgeFor(QUEUE_PRIORITY, entry.priority)
                   return (
                     <Tr key={entry.id} onClick={() => setViewing(entry)}>
-                      <Td className="font-mono font-medium text-ink">{entry.ticket_number}</Td>
-                      <Td className="font-medium text-ink">{patientFullName(entry.patient)}</Td>
+                      <Td leading className="font-mono font-medium text-ink">{entry.ticket_number}</Td>
+                      <Td primary className="font-medium text-ink">{patientFullName(entry.patient)}</Td>
                       <Td className="text-ink-muted">{entry.doctor?.name ?? '—'}</Td>
                       <Td><Badge tone={priorityMeta.tone}>{priorityMeta.label}</Badge></Td>
-                      <Td><Badge tone={statusMeta.tone}>{statusMeta.label}</Badge></Td>
+                      <Td trailing><Badge tone={statusMeta.tone}>{statusMeta.label}</Badge></Td>
                       <Td className="whitespace-nowrap text-ink-muted">{formatDateTime(entry.created_at)}</Td>
                       <Td onClick={(e) => e.stopPropagation()}>
                         <div className="flex justify-end gap-1">

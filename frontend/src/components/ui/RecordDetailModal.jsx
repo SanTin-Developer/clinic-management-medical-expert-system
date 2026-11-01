@@ -31,9 +31,14 @@ export default function RecordDetailModal({
         {visibleFields.length ? (
           <dl className="divide-y divide-line">
             {visibleFields.map((field) => (
-              <div key={field.label} className="grid grid-cols-3 gap-3 py-2.5">
+              <div
+                key={field.label}
+                className="grid grid-cols-[minmax(0,6rem)_1fr] gap-3 py-2.5 sm:grid-cols-3"
+              >
                 <dt className="text-sm font-medium text-ink-muted">{field.label}</dt>
-                <dd className="col-span-2 break-words text-sm text-ink">{field.value ?? '—'}</dd>
+                <dd className="break-words text-sm text-ink sm:col-span-2">
+                  {field.value ?? '—'}
+                </dd>
               </div>
             ))}
           </dl>

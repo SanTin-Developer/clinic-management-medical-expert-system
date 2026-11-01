@@ -14,7 +14,7 @@ export default function AdminFooter() {
   const { t } = useLanguage()
 
   return (
-    <footer className="shrink-0 border-t border-line bg-surface px-4 py-4 print:hidden sm:px-6">
+    <footer className="hidden shrink-0 border-t border-line bg-surface px-4 py-4 print:hidden sm:px-6 md:block">
       <div className="flex flex-col items-center justify-between gap-3 text-center sm:flex-row sm:text-left">
         <p className="text-xs text-ink-muted">
           {t('© {year} RoyalCare Clinic. All rights reserved.', { year: CURRENT_YEAR })}

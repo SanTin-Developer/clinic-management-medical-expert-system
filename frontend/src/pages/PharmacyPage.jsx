@@ -125,7 +125,7 @@ export default function PharmacyPage({ initialTab = 'medicines', inventoryOnly =
         ) : null}
       />
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <div className="stagger-children grid grid-cols-2 gap-4 xl:grid-cols-5">
         {tab === 'medicines' ? (
           <>
             <StatCard
@@ -329,8 +329,8 @@ export default function PharmacyPage({ initialTab = 'medicines', inventoryOnly =
               <TBody>
                 {medicineRows.map((m) => (
                   <Tr key={m.id} onClick={() => setViewing({ kind: 'medicine', row: m })}>
-                    <Td className="font-mono text-xs text-ink-muted">{m.code}</Td>
-                    <Td>
+                    <Td leading className="font-mono text-xs text-ink-muted">{m.code}</Td>
+                    <Td primary>
                       <p className="font-medium text-ink">{m.name}</p>
                       {m.generic_name ? <p className="text-xs text-ink-muted">{m.generic_name}</p> : null}
                     </Td>
@@ -339,7 +339,7 @@ export default function PharmacyPage({ initialTab = 'medicines', inventoryOnly =
                       {[m.strength, m.form].filter(Boolean).join(' · ') || '—'}
                     </Td>
                     <Td className="font-medium text-ink">{formatCurrency(m.price)}</Td>
-                    <Td>{m.is_active ? <Badge tone="green">Active</Badge> : <Badge tone="gray">Inactive</Badge>}</Td>
+                    <Td trailing>{m.is_active ? <Badge tone="green">Active</Badge> : <Badge tone="gray">Inactive</Badge>}</Td>
                     <Td onClick={(e) => e.stopPropagation()}>
                       <div className="flex justify-end gap-1">
                         {canManageMedicines ? (
@@ -390,15 +390,15 @@ export default function PharmacyPage({ initialTab = 'medicines', inventoryOnly =
                   const low = item.quantity <= (item.medicine?.reorder_level ?? 0)
                   return (
                     <Tr key={item.id} onClick={() => setViewing({ kind: 'inventory', row: item })}>
-                      <Td className="font-medium text-ink">{item.medicine?.name ?? `Medicine #${item.medicine_id}`}</Td>
+                      <Td primary className="font-medium text-ink">{item.medicine?.name ?? `Medicine #${item.medicine_id}`}</Td>
                       <Td className="font-mono text-xs text-ink-muted">{item.batch_number || '—'}</Td>
                       <Td>
                         <Badge tone={low ? 'amber' : 'green'}>{item.quantity}</Badge>
                       </Td>
-                      <Td className="text-ink-muted">{formatDate(item.expiration_date)}</Td>
+                      <Td leading className="text-ink-muted">{formatDate(item.expiration_date)}</Td>
                       <Td className="text-ink-muted">{formatDate(item.received_date)}</Td>
                       <Td>{item.location ?? '—'}</Td>
-                      <Td onClick={(e) => e.stopPropagation()}>
+                      <Td actions onClick={(e) => e.stopPropagation()}>
                         <div className="flex justify-end gap-1">
                           {canManageInventory ? (
                             <button
@@ -449,14 +449,14 @@ export default function PharmacyPage({ initialTab = 'medicines', inventoryOnly =
                 const type = statusBadgeFor(STOCK_MOVEMENT_TYPE, m.type)
                 return (
                   <Tr key={m.id} onClick={() => setViewing({ kind: 'movement', row: m })}>
-                    <Td className="font-medium text-ink">{m.medicine?.name ?? `Medicine #${m.medicine_id}`}</Td>
+                    <Td primary className="font-medium text-ink">{m.medicine?.name ?? `Medicine #${m.medicine_id}`}</Td>
                     <Td className="font-mono text-xs text-ink-muted">{m.inventory_item?.batch_number ?? '—'}</Td>
-                    <Td><Badge tone={type.tone}>{type.label}</Badge></Td>
+                    <Td trailing><Badge tone={type.tone}>{type.label}</Badge></Td>
                     <Td>{m.quantity}</Td>
                     <Td className="font-mono text-xs text-ink-muted">{m.reference || '—'}</Td>
                     <Td className="max-w-56 truncate text-ink-muted">{m.reason || '—'}</Td>
                     <Td>{m.user?.name ?? '—'}</Td>
-                    <Td className="text-ink-muted">{formatDate(m.created_at)}</Td>
+                    <Td leading className="text-ink-muted">{formatDate(m.created_at)}</Td>
                   </Tr>
                 )
               })}

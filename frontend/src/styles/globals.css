@@ -221,6 +221,64 @@ input[type="search"]::-webkit-search-decoration {
   animation: fade-in-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+/* Page entrance. The layout keys <main> on the pathname, so this plays once
+   per navigation and gives every route the same gentle settle. */
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.animate-page-enter {
+  animation: page-enter 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Cascade a grid's children in top-to-bottom so a page reads in order instead
+   of everything appearing at once. `backwards` (not `both`) keeps each card
+   hidden until its delay elapses but releases the transform afterwards, so a
+   card's hover lift still works once the entrance has finished. */
+.stagger-children > * {
+  animation: fade-in-up 0.45s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+.stagger-children > *:nth-child(1) { animation-delay: 0ms; }
+.stagger-children > *:nth-child(2) { animation-delay: 60ms; }
+.stagger-children > *:nth-child(3) { animation-delay: 120ms; }
+.stagger-children > *:nth-child(4) { animation-delay: 180ms; }
+.stagger-children > *:nth-child(5) { animation-delay: 240ms; }
+.stagger-children > *:nth-child(6) { animation-delay: 300ms; }
+.stagger-children > *:nth-child(7) { animation-delay: 360ms; }
+.stagger-children > *:nth-child(8) { animation-delay: 420ms; }
+
+/* Tab underline grows from the centre when a tab becomes active, so switching
+   sections reads as one continuous gesture rather than a jump. */
+.tab-trigger {
+  position: relative;
+}
+
+.tab-trigger::after {
+  content: "";
+  position: absolute;
+  left: 0.75rem;
+  right: 0.75rem;
+  bottom: -2px;
+  height: 2px;
+  border-radius: 9999px;
+  background: var(--color-brand);
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.tab-trigger[data-active="true"]::after {
+  transform: scaleX(1);
+}
+
 @keyframes float {
   0%,
   100% {

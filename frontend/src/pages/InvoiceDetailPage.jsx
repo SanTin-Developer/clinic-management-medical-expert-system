@@ -9,6 +9,7 @@ import PageHeader from '../components/ui/PageHeader.jsx'
 import Button from '../components/ui/Button.jsx'
 import Card from '../components/ui/Card.jsx'
 import Badge from '../components/ui/Badge.jsx'
+import Table, { THead, TBody, Tr, Th, Td } from '../components/ui/Table.jsx'
 import ConfirmDialog from '../components/ui/ConfirmDialog.jsx'
 import InvoiceFormModal from '../components/billing/InvoiceFormModal.jsx'
 import PaymentFormModal from '../components/billing/PaymentFormModal.jsx'
@@ -186,28 +187,26 @@ export default function InvoiceDetailPage() {
           </div>
 
           <Card title="Line items" className="print-break print:border-0">
-            <div className="overflow-x-auto rounded-xl border border-line">
-              <table className="w-full min-w-[560px] text-left text-sm">
-                <thead className="bg-canvas text-xs uppercase tracking-wide text-ink-muted">
-                  <tr>
-                    <th className="px-4 py-3 font-semibold">Description</th>
-                    <th className="px-4 py-3 font-semibold text-right">Qty</th>
-                    <th className="px-4 py-3 font-semibold text-right">Unit price</th>
-                    <th className="px-4 py-3 font-semibold text-right">Amount</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-line">
-                  {(inv.items ?? []).map((item) => (
-                    <tr key={item.id}>
-                      <td className="px-4 py-3 font-medium text-ink">{item.description}</td>
-                      <td className="px-4 py-3 text-right text-ink-muted">{item.quantity}</td>
-                      <td className="px-4 py-3 text-right text-ink-muted">{formatCurrency(item.unit_price)}</td>
-                      <td className="px-4 py-3 text-right font-medium text-ink">{formatCurrency(item.amount)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <Table minWidth="min-w-[560px]">
+              <THead>
+                <Tr>
+                  <Th>Description</Th>
+                  <Th className="text-right">Qty</Th>
+                  <Th className="text-right">Unit price</Th>
+                  <Th className="text-right">Amount</Th>
+                </Tr>
+              </THead>
+              <TBody>
+                {(inv.items ?? []).map((item) => (
+                  <Tr key={item.id}>
+                    <Td primary className="font-medium text-ink">{item.description}</Td>
+                    <Td className="text-right text-ink-muted">{item.quantity}</Td>
+                    <Td className="text-right text-ink-muted">{formatCurrency(item.unit_price)}</Td>
+                    <Td className="text-right font-medium text-ink">{formatCurrency(item.amount)}</Td>
+                  </Tr>
+                ))}
+              </TBody>
+            </Table>
           </Card>
 
           <Card title="Payments" className="print-break print:border-0">

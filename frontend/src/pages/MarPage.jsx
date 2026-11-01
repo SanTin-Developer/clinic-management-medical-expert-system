@@ -67,7 +67,7 @@ export default function MarPage() {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="stagger-children grid grid-cols-2 gap-4 xl:grid-cols-5">
         <StatCard label="Total Doses" value={stats.total ?? 0} icon={Pill} tone="brand" loading={query.isLoading} />
         <StatCard label="Scheduled" value={stats.scheduled ?? 0} icon={CalendarClock} tone="amber" loading={query.isLoading} />
         <StatCard label="Administered" value={stats.administered ?? 0} icon={CheckCircle2} tone="green" loading={query.isLoading} />
@@ -120,7 +120,7 @@ export default function MarPage() {
                   const actionable = record.status === 'scheduled'
                   return (
                     <Tr key={record.id} onClick={() => setViewing(record)}>
-                      <Td className="font-medium text-ink">{patientFullName(record.patient)}</Td>
+                      <Td primary className="font-medium text-ink">{patientFullName(record.patient)}</Td>
                       <Td>
                         <div className="text-ink">{record.medicine?.name ?? '—'}</div>
                         {record.dose ? <div className="text-xs text-ink-muted">{record.dose}</div> : null}
@@ -128,7 +128,7 @@ export default function MarPage() {
                       <Td>
                         {record.route ? <Badge tone={routeMeta.tone}>{routeMeta.label}</Badge> : '—'}
                       </Td>
-                      <Td className="text-ink-muted">{formatDateTime(record.scheduled_at)}</Td>
+                      <Td leading className="text-ink-muted">{formatDateTime(record.scheduled_at)}</Td>
                       <Td className="text-ink-muted">
                         {record.administered_at ? (
                           <>
@@ -141,7 +141,7 @@ export default function MarPage() {
                           '—'
                         )}
                       </Td>
-                      <Td><Badge tone={statusMeta.tone}>{statusMeta.label}</Badge></Td>
+                      <Td trailing><Badge tone={statusMeta.tone}>{statusMeta.label}</Badge></Td>
                       <Td onClick={(e) => e.stopPropagation()}>
                         <div className="flex justify-end gap-2">
                           {actionable && canRecord ? (

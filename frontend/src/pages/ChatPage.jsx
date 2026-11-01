@@ -1047,7 +1047,7 @@ export default function ChatPage() {
   const cancelEditEvent = useEvent(cancelEdit)
 
   return (
-    <div className="flex h-[calc(100vh-9rem)] flex-col">
+    <div className="flex h-[calc(100dvh-12.5rem)] flex-col md:h-[calc(100dvh-9rem)]">
       <PageHeader
         title="Team Chat"
         description="Secure direct and group messaging for clinic staff."

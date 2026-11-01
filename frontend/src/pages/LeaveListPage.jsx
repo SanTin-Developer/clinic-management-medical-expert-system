@@ -109,7 +109,7 @@ export default function LeaveListPage() {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         <StatCard label="Total" value={stats.total ?? 0} icon={CalendarDays} tone="brand" loading={query.isLoading} />
         <StatCard label="Pending" value={stats.pending ?? 0} icon={Clock} tone="amber" loading={query.isLoading} />
         <StatCard label="Approved" value={stats.approved ?? 0} icon={CheckCircle2} tone="green" loading={query.isLoading} />
@@ -183,13 +183,13 @@ export default function LeaveListPage() {
                   const isPending = request.status === 'pending'
                   return (
                     <Tr key={request.id} onClick={() => setViewing(request)}>
-                      <Td className="font-medium text-ink">{request.user?.name ?? '—'}</Td>
+                      <Td primary className="font-medium text-ink">{request.user?.name ?? '—'}</Td>
                       <Td><Badge tone={typeMeta.tone}>{typeMeta.label}</Badge></Td>
-                      <Td className="whitespace-nowrap text-ink-muted">
+                      <Td leading className="whitespace-nowrap text-ink-muted">
                         {formatDate(request.start_date)} → {formatDate(request.end_date)}
                       </Td>
                       <Td>{request.days}</Td>
-                      <Td><Badge tone={statusMeta.tone}>{statusMeta.label}</Badge></Td>
+                      <Td trailing><Badge tone={statusMeta.tone}>{statusMeta.label}</Badge></Td>
                       <Td className="text-ink-muted">{request.reviewer?.name ?? '—'}</Td>
                       <Td onClick={(e) => e.stopPropagation()}>
                         <div className="flex justify-end gap-1">

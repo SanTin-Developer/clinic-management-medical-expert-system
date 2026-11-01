@@ -79,7 +79,7 @@ export default function AdmissionListPage() {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         <StatCard label="Admissions" value={stats.total ?? 0} icon={BedDouble} tone="brand" loading={query.isLoading} />
         <StatCard label="Admitted" value={stats.admitted ?? 0} icon={UserCheck} tone="blue" loading={query.isLoading} />
         <StatCard label="Discharged" value={stats.discharged ?? 0} icon={ClipboardCheck} tone="green" loading={query.isLoading} />
@@ -125,14 +125,14 @@ export default function AdmissionListPage() {
                   const meta = statusBadgeFor(ADMISSION_STATUS, a.status)
                   return (
                     <Tr key={a.id} onClick={() => setViewing(a)}>
-                      <Td className="font-medium text-ink">{patientFullName(a.patient)}</Td>
+                      <Td primary className="font-medium text-ink">{patientFullName(a.patient)}</Td>
                       <Td>
                         {a.ward?.name ?? '—'}
                         {a.bed?.label ? ` · Bed ${a.bed.label}` : ''}
                       </Td>
                       <Td>{a.attending_doctor?.name ?? '—'}</Td>
-                      <Td className="text-ink-muted">{formatDateTime(a.admitted_at)}</Td>
-                      <Td><Badge tone={meta.tone}>{meta.label}</Badge></Td>
+                      <Td leading className="text-ink-muted">{formatDateTime(a.admitted_at)}</Td>
+                      <Td trailing><Badge tone={meta.tone}>{meta.label}</Badge></Td>
                       <Td onClick={(e) => e.stopPropagation()}>
                         <div className="flex justify-end gap-2">
                           <Button size="sm" variant="ghost" onClick={() => navigate(`/admissions/${a.id}/billing`)}>

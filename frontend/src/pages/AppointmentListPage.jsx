@@ -27,6 +27,7 @@ import Pagination from "../components/ui/Pagination.jsx";
 import { RowSkeleton } from "../components/ui/Skeleton.jsx";
 import { EmptyState } from "../components/ui/State.jsx";
 import AppointmentFormModal from "../components/appointments/AppointmentFormModal.jsx";
+import AppointmentMobileCard from "../components/appointments/AppointmentMobileCard.jsx";
 import Field from "../components/ui/Field.jsx";
 import Input from "../components/ui/Input.jsx";
 import { formatDate, formatTime, patientFullName } from "../utils/format.js";
@@ -44,6 +45,8 @@ export default function AppointmentListPage() {
   const [deleting, setDeleting] = useState(null);
 
   const date = searchParams.get("date") ?? "";
+  const canUpdate = can("appointments.update");
+  const canDelete = can("appointments.delete");
 
   const query = usePaginated(
     ["appointments"],
@@ -106,13 +109,14 @@ export default function AppointmentListPage() {
                 setFormOpen(true);
               }}
             >
-              <CalendarPlus className="size-4" aria-hidden /> New appointment
+              <CalendarPlus className="size-4" aria-hidden />{" "}
+              {t("New Appointment")}
             </Button>
           ) : null
         }
       />
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <div className="stagger-children grid grid-cols-2 gap-4 xl:grid-cols-5">
         <StatCard
           label={t("Total Appointments")}
           value={stats.total ?? query.data?.total ?? 0}
@@ -172,7 +176,8 @@ export default function AppointmentListPage() {
                 onClick={() => updateDate("")}
                 className="mb-0.5 inline-flex h-10 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-ink-muted transition-colors hover:bg-canvas hover:text-ink"
               >
-                <X className="size-4" aria-hidden /> Clear date
+                <X className="size-4" aria-hidden />
+                {t("Clear date")}
               </button>
             ) : null}
           </div>
@@ -184,7 +189,7 @@ export default function AppointmentListPage() {
             }}
             className="mt-3 border-b-0"
             tabs={[
-              { value: "all", label: "All", count: counts.all },
+              { value: "all", label: t("All"), count: counts.all },
               {
                 value: "scheduled",
                 label: "Scheduled",
@@ -220,7 +225,7 @@ export default function AppointmentListPage() {
         ) : all.length === 0 ? (
           <EmptyState
             title={
-              date ? "No appointments on this date" : "No appointments yet"
+              date ? t("No appointment on this date") : t("No appointment yet")
             }
             message={
               date
@@ -255,73 +260,122 @@ export default function AppointmentListPage() {
             message="No appointments match the selected status."
           />
         ) : (
-          <Table minWidth="min-w-[820px]">
-            <THead>
-              <Tr>
-                <Th>Appointment</Th>
-                <Th>Patient</Th>
-                <Th>Doctor</Th>
-                <Th>When</Th>
-                <Th>Status</Th>
-                <Th>
-                  <span className="sr-only">Actions</span>
-                </Th>
-              </Tr>
-            </THead>
-            <TBody>
+          <>
+            <div className="hidden lg:block">
+              <Table minWidth="min-w-[820px]">
+                <THead>
+                  <Tr>
+                    <Th>Appointment</Th>
+                    <Th>Patient</Th>
+                    <Th>Doctor</Th>
+                    <Th>When</Th>
+                    <Th>Status</Th>
+                    <Th>
+                      <span className="sr-only">Actions</span>
+                    </Th>
+                  </Tr>
+                </THead>
+                <TBody>
+                  {items.map((apt) => {
+                    const status = statusBadgeFor(APPOINTMENT_STATUS, apt.status);
+                    return (
+                      <Tr
+                        key={apt.id}
+                        onClick={() => navigate(`/appointments/${apt.id}`)}
+                      >
+                        <Td leading className="font-mono text-xs text-ink-muted">
+                          {apt.appointment_number}
+                        </Td>
+                        <Td primary className="font-medium text-ink">
+                          {patientFullName(apt.patient)}
+                        </Td>
+                        <Td>{apt.doctor?.name ?? "—"}</Td>
+                        <Td className="text-ink-muted">
+                          {formatDate(apt.appointment_date)} ·{" "}
+                          {formatTime(apt.appointment_time)}
+                        </Td>
+                        <Td trailing>
+                          <Badge tone={status.tone}>{status.label}</Badge>
+                        </Td>
+                        <Td onClick={(e) => e.stopPropagation()}>
+                          <div className="flex justify-end gap-1">
+                            {can("appointments.update") ? (
+                              <button
+                                type="button"
+                                aria-label={`Edit appointment ${apt.appointment_number}`}
+                                className="rounded-lg p-1.5 text-ink-muted transition-colors hover:bg-canvas hover:text-ink"
+                                onClick={() => {
+                                  setEditing(apt);
+                                  setFormOpen(true);
+                                }}
+                              >
+                                <Pencil className="size-4" aria-hidden />
+                              </button>
+                            ) : null}
+                            {can("appointments.delete") ? (
+                              <button
+                                type="button"
+                                aria-label={`Delete appointment ${apt.appointment_number}`}
+                                className="rounded-lg p-1.5 text-ink-muted transition-colors hover:bg-red-50 hover:text-red-600"
+                                onClick={() => setDeleting(apt)}
+                              >
+                                <Trash2 className="size-4" aria-hidden />
+                              </button>
+                            ) : null}
+                          </div>
+                        </Td>
+                      </Tr>
+                    );
+                  })}
+                </TBody>
+              </Table>
+            </div>
+
+            <div className="space-y-2.5 lg:hidden">
               {items.map((apt) => {
                 const status = statusBadgeFor(APPOINTMENT_STATUS, apt.status);
                 return (
-                  <Tr
+                  <AppointmentMobileCard
                     key={apt.id}
-                    onClick={() => navigate(`/appointments/${apt.id}`)}
-                  >
-                    <Td className="font-mono text-xs text-ink-muted">
-                      {apt.appointment_number}
-                    </Td>
-                    <Td className="font-medium text-ink">
-                      {patientFullName(apt.patient)}
-                    </Td>
-                    <Td>{apt.doctor?.name ?? "—"}</Td>
-                    <Td className="text-ink-muted">
-                      {formatDate(apt.appointment_date)} ·{" "}
-                      {formatTime(apt.appointment_time)}
-                    </Td>
-                    <Td>
-                      <Badge tone={status.tone}>{status.label}</Badge>
-                    </Td>
-                    <Td onClick={(e) => e.stopPropagation()}>
-                      <div className="flex justify-end gap-1">
-                        {can("appointments.update") ? (
-                          <button
-                            type="button"
-                            aria-label={`Edit appointment ${apt.appointment_number}`}
-                            className="rounded-lg p-1.5 text-ink-muted transition-colors hover:bg-canvas hover:text-ink"
-                            onClick={() => {
-                              setEditing(apt);
-                              setFormOpen(true);
-                            }}
-                          >
-                            <Pencil className="size-4" aria-hidden />
-                          </button>
-                        ) : null}
-                        {can("appointments.delete") ? (
-                          <button
-                            type="button"
-                            aria-label={`Delete appointment ${apt.appointment_number}`}
-                            className="rounded-lg p-1.5 text-ink-muted transition-colors hover:bg-red-50 hover:text-red-600"
-                            onClick={() => setDeleting(apt)}
-                          >
-                            <Trash2 className="size-4" aria-hidden />
-                          </button>
-                        ) : null}
-                      </div>
-                    </Td>
-                  </Tr>
+                    patientName={patientFullName(apt.patient)}
+                    doctorName={apt.doctor?.name ?? "—"}
+                    dateLabel={`${formatDate(apt.appointment_date)} · ${formatTime(apt.appointment_time)}`}
+                    status={status}
+                    onOpen={() => navigate(`/appointments/${apt.id}`)}
+                    actions={
+                      canUpdate || canDelete ? (
+                        <>
+                          {canUpdate ? (
+                            <button
+                              type="button"
+                              aria-label={`Edit appointment ${apt.appointment_number}`}
+                              className="rounded-lg p-1.5 text-ink-muted transition-colors hover:bg-canvas hover:text-ink"
+                              onClick={() => {
+                                setEditing(apt);
+                                setFormOpen(true);
+                              }}
+                            >
+                              <Pencil className="size-4" aria-hidden />
+                            </button>
+                          ) : null}
+                          {canDelete ? (
+                            <button
+                              type="button"
+                              aria-label={`Delete appointment ${apt.appointment_number}`}
+                              className="rounded-lg p-1.5 text-ink-muted transition-colors hover:bg-red-50 hover:text-red-600"
+                              onClick={() => setDeleting(apt)}
+                            >
+                              <Trash2 className="size-4" aria-hidden />
+                            </button>
+                          ) : null}
+                        </>
+                      ) : null
+                    }
+                  />
                 );
               })}
-            </TBody>
-          </Table>
+            </div>
+          </>
         )}
 
         <Pagination

@@ -86,8 +86,8 @@ export default function MedicalRecordsPage() {
   const renderRow = {
     records: (row) => (
       <>
-        <Td className="font-medium text-ink">{patientFullName(row.patient)}</Td>
-        <Td className="text-ink-muted">{row.appointment?.appointment_number ?? '—'}</Td>
+        <Td primary className="font-medium text-ink">{patientFullName(row.patient)}</Td>
+        <Td leading className="text-ink-muted">{row.appointment?.appointment_number ?? '—'}</Td>
         <Td>{row.doctor?.name ?? '—'}</Td>
         <Td className="max-w-56 truncate text-ink-muted">{truncate(row.treatment_plan, 50)}</Td>
         <Td className="text-ink-muted">{formatDateTime(row.created_at)}</Td>
@@ -95,21 +95,21 @@ export default function MedicalRecordsPage() {
     ),
     consultations: (row) => (
       <>
-        <Td className="font-medium text-ink">{patientFullName(row.patient)}</Td>
+        <Td primary className="font-medium text-ink">{patientFullName(row.patient)}</Td>
         <Td className="max-w-56 truncate text-ink-muted">{row.chief_complaint || '—'}</Td>
         <Td>{row.doctor?.name ?? '—'}</Td>
         <Td className="max-w-56 truncate text-ink-muted">{row.assessment || '—'}</Td>
-        <Td className="text-ink-muted">{formatDateTime(row.created_at)}</Td>
+        <Td leading className="text-ink-muted">{formatDateTime(row.created_at)}</Td>
       </>
     ),
     diagnoses: (row) => {
       const severity = row.severity ? DISEASE_SEVERITY[row.severity] : null
       return (
         <>
-          <Td className="font-medium text-ink">{patientFullName(row.patient)}</Td>
+          <Td primary className="font-medium text-ink">{patientFullName(row.patient)}</Td>
           <Td>{row.diagnosis_name}</Td>
           <Td>{row.doctor?.name ?? '—'}</Td>
-          <Td>
+          <Td trailing>
             {row.is_confirmed ? (
               <Badge tone="green">Confirmed</Badge>
             ) : (
@@ -128,7 +128,7 @@ export default function MedicalRecordsPage() {
     },
     vitals: (row) => (
       <>
-        <Td className="font-medium text-ink">{patientFullName(row.patient)}</Td>
+        <Td primary className="font-medium text-ink">{patientFullName(row.patient)}</Td>
         <Td>{row.temperature != null ? `${row.temperature}°C` : '—'}</Td>
         <Td>
           {row.blood_pressure_systolic || row.blood_pressure_diastolic
@@ -238,7 +238,7 @@ export default function MedicalRecordsPage() {
         }
       />
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <div className="stagger-children grid grid-cols-2 gap-4 xl:grid-cols-5">
         {tab === 'records' ? (
           <>
             <StatCard

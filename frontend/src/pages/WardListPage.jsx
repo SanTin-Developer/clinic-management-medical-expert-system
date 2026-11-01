@@ -62,7 +62,7 @@ export default function WardListPage() {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         <StatCard label="Total Wards" value={stats.total ?? 0} icon={Building2} tone="brand" loading={query.isLoading} />
         <StatCard label="Active Wards" value={stats.active ?? 0} icon={DoorOpen} tone="green" loading={query.isLoading} />
         <StatCard label="Inactive" value={stats.inactive ?? 0} icon={XCircle} tone="navy" loading={query.isLoading} />
@@ -114,8 +114,8 @@ export default function WardListPage() {
                   const typeMeta = statusBadgeFor(WARD_TYPES, ward.ward_type)
                   return (
                     <Tr key={ward.id} onClick={() => setDetailId(ward.id)}>
-                      <Td className="font-medium text-ink">{ward.name}</Td>
-                      <Td className="font-mono text-xs text-ink-muted">{ward.code}</Td>
+                      <Td primary className="font-medium text-ink">{ward.name}</Td>
+                      <Td leading className="font-mono text-xs text-ink-muted">{ward.code}</Td>
                       <Td>{ward.floor ?? '—'}</Td>
                       <Td><Badge tone={typeMeta.tone}>{typeMeta.label}</Badge></Td>
                       <Td>{ward.rooms_count ?? 0}</Td>
@@ -125,7 +125,7 @@ export default function WardListPage() {
                           {ward.active_admissions_count ?? 0}
                         </span>
                       </Td>
-                      <Td>
+                      <Td trailing>
                         <Badge tone={ward.is_active ? 'green' : 'gray'}>
                           {ward.is_active ? 'Active' : 'Inactive'}
                         </Badge>

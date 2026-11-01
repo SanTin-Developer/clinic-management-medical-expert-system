@@ -94,7 +94,7 @@ export default function UsersPage() {
         }
       />
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <div className="stagger-children grid grid-cols-2 gap-4 xl:grid-cols-5">
         <StatCard
           label="Total Users"
           value={stats.total ?? query.data?.total ?? 0}
@@ -186,8 +186,8 @@ export default function UsersPage() {
                 const verified = Boolean(u.email_verified_at)
                 return (
                   <Tr key={u.id} onClick={() => setViewing(u)}>
-                    <Td className="font-medium text-ink">{u.name}</Td>
-                    <Td>
+                    <Td primary className="font-medium text-ink">{u.name}</Td>
+                    <Td leading>
                       {u.staff_id ? (
                         <Badge tone="blue">{u.staff_id}</Badge>
                       ) : (
@@ -206,20 +206,20 @@ export default function UsersPage() {
                         {roles.length === 0 ? <span className="text-ink-muted">—</span> : null}
                       </span>
                     </Td>
-                    <Td>
+                    <Td trailing>
                       {(() => {
                         const meta = STATUS_META[u.account_status] ?? STATUS_META.active
                         return <Badge tone={meta.tone}>{meta.label}</Badge>
                       })()}
                     </Td>
-                    <Td>
+                    <Td mobile={false}>
                       {u.two_factor_enabled ? (
                         <Badge tone="green">On</Badge>
                       ) : (
                         <Badge tone="gray">Off</Badge>
                       )}
                     </Td>
-                    <Td>
+                    <Td mobile={false}>
                       {verified ? (
                         <Badge tone="green">Verified</Badge>
                       ) : (

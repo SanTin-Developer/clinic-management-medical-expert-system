@@ -11,6 +11,7 @@ import Tabs from '../components/ui/Tabs.jsx'
 import Badge from '../components/ui/Badge.jsx'
 import SearchInput from '../components/ui/SearchInput.jsx'
 import Pagination from '../components/ui/Pagination.jsx'
+import Table, { THead, TBody, Tr, Th, Td } from '../components/ui/Table.jsx'
 import ConfirmDialog from '../components/ui/ConfirmDialog.jsx'
 import { RowSkeleton, CardSkeleton } from '../components/ui/Skeleton.jsx'
 import { EmptyState, ErrorState } from '../components/ui/State.jsx'
@@ -425,94 +426,92 @@ function KnowledgeBaseTab({ canView, canManage }) {
       ) : items.length === 0 ? (
         <EmptyState title="No matches" message="Nothing matches your search." />
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-line">
-          <table className="w-full min-w-[720px] text-left text-sm">
-            <thead className="bg-canvas text-xs uppercase tracking-wide text-ink-muted">
-              <tr>
+        <Table minWidth="min-w-[720px]">
+          <THead>
+            <Tr>
+              {kind === 'rules' ? (
+                <>
+                  <Th>Code</Th>
+                  <Th>Name</Th>
+                  <Th>Khmer name</Th>
+                  <Th>Disease</Th>
+                  <Th>Priority</Th>
+                  <Th>Confidence</Th>
+                  <Th>Status</Th>
+                  <Th><span className="sr-only">Actions</span></Th>
+                </>
+              ) : (
+                <>
+                  <Th>Code</Th>
+                  <Th>Name</Th>
+                  <Th>Khmer name</Th>
+                  {kind === 'diseases' ? <Th>Category</Th> : null}
+                  <Th>Severity</Th>
+                  <Th>Status</Th>
+                  <Th>Linked</Th>
+                  <Th><span className="sr-only">Actions</span></Th>
+                </>
+              )}
+            </Tr>
+          </THead>
+          <TBody>
+            {items.map((it) => (
+              <Tr key={it.id}>
+                <Td leading className="font-mono text-xs text-ink-muted">{it.code}</Td>
+                <Td primary className="font-medium text-ink">{it.name}</Td>
                 {kind === 'rules' ? (
                   <>
-                    <th className="px-4 py-3 font-semibold">Code</th>
-                    <th className="px-4 py-3 font-semibold">Name</th>
-                    <th className="px-4 py-3 font-semibold">Khmer name</th>
-                    <th className="px-4 py-3 font-semibold">Disease</th>
-                    <th className="px-4 py-3 font-semibold">Priority</th>
-                    <th className="px-4 py-3 font-semibold">Confidence</th>
-                    <th className="px-4 py-3 font-semibold">Status</th>
-                    <th><span className="sr-only">Actions</span></th>
+                    <Td className="text-ink-muted">{it.name_km || '—'}</Td>
+                    <Td className="text-ink-muted">
+                      {it.disease?.name_km && it.disease?.name
+                        ? `${it.disease.name_km} (${it.disease.name})`
+                        : it.disease?.name_km || it.disease?.name || `#${it.disease_id}`}
+                    </Td>
+                    <Td className="text-ink-muted">{it.priority}</Td>
+                    <Td className="text-ink-muted">{Number(it.confidence_score) * 100}%</Td>
                   </>
                 ) : (
                   <>
-                    <th className="px-4 py-3 font-semibold">Code</th>
-                    <th className="px-4 py-3 font-semibold">Name</th>
-                    <th className="px-4 py-3 font-semibold">Khmer name</th>
-                    {kind === 'diseases' ? <th className="px-4 py-3 font-semibold">Category</th> : null}
-                    <th className="px-4 py-3 font-semibold">Severity</th>
-                    <th className="px-4 py-3 font-semibold">Status</th>
-                    <th className="px-4 py-3 font-semibold">Linked</th>
-                    <th><span className="sr-only">Actions</span></th>
+                    <Td className="text-ink-muted">{it.name_km || '—'}</Td>
+                    {kind === 'diseases' ? (
+                      <Td className="text-ink-muted">{it.category || '—'}</Td>
+                    ) : null}
+                    <Td>
+                      <Badge tone={DISEASE_SEVERITY[it.severity_level]?.tone ?? 'gray'}>
+                        {(DISEASE_SEVERITY[it.severity_level]?.label ?? it.severity_level) ?? 'Not set'}
+                      </Badge>
+                    </Td>
+                    <Td trailing>
+                      {it.is_active ? <Badge tone="green">Active</Badge> : <Badge tone="gray">Inactive</Badge>}
+                    </Td>
+                    <Td className="text-ink-muted">
+                      {kind === 'diseases' ? (it.symptoms?.length ?? 0) : (it.diseases?.length ?? 0)} linked
+                    </Td>
                   </>
                 )}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line">
-              {items.map((it) => (
-                <tr key={it.id}>
-                  <td className="px-4 py-3 font-mono text-xs text-ink-muted">{it.code}</td>
-                  <td className="px-4 py-3 font-medium text-ink">{it.name}</td>
-                  {kind === 'rules' ? (
-                    <>
-                      <td className="px-4 py-3 text-ink-muted">{it.name_km || '—'}</td>
-                      <td className="px-4 py-3 text-ink-muted">
-                        {it.disease?.name_km && it.disease?.name
-                          ? `${it.disease.name_km} (${it.disease.name})`
-                          : it.disease?.name_km || it.disease?.name || `#${it.disease_id}`}
-                      </td>
-                      <td className="px-4 py-3 text-ink-muted">{it.priority}</td>
-                      <td className="px-4 py-3 text-ink-muted">{Number(it.confidence_score) * 100}%</td>
-                    </>
-                  ) : (
-                    <>
-                      <td className="px-4 py-3 text-ink-muted">{it.name_km || '—'}</td>
-                      {kind === 'diseases' ? (
-                        <td className="px-4 py-3 text-ink-muted">{it.category || '—'}</td>
-                      ) : null}
-                      <td className="px-4 py-3">
-                        <Badge tone={DISEASE_SEVERITY[it.severity_level]?.tone ?? 'gray'}>
-                          {(DISEASE_SEVERITY[it.severity_level]?.label ?? it.severity_level) ?? 'Not set'}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3">
-                        {it.is_active ? <Badge tone="green">Active</Badge> : <Badge tone="gray">Inactive</Badge>}
-                      </td>
-                      <td className="px-4 py-3 text-ink-muted">
-                        {kind === 'diseases' ? (it.symptoms?.length ?? 0) : (it.diseases?.length ?? 0)} linked
-                      </td>
-                    </>
-                  )}
-                  {kind === 'rules' ? (
-                    <td className="px-4 py-3">
-                      {it.is_active ? <Badge tone="green">Active</Badge> : <Badge tone="gray">Inactive</Badge>}
-                    </td>
-                  ) : null}
-                  <td className="px-4 py-3">
-                    <div className="flex justify-end gap-1">
-                      {canManage ? (
-                        <>
-                          <button type="button" aria-label={`Edit ${it.name}`} className="rounded-lg p-1.5 text-ink-muted transition-colors hover:bg-canvas hover:text-ink" onClick={() => { setEditing(it); setOpen(true) }}>
-                            <Pencil className="size-4" aria-hidden />
-                          </button>
-                          <button type="button" aria-label={`Delete ${it.name}`} className="rounded-lg p-1.5 text-ink-muted transition-colors hover:bg-red-50 hover:text-red-600" onClick={() => setDeleting(it)}>
-                            <Trash2 className="size-4" aria-hidden />
-                          </button>
-                        </>
-                      ) : null}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                {kind === 'rules' ? (
+                  <Td trailing>
+                    {it.is_active ? <Badge tone="green">Active</Badge> : <Badge tone="gray">Inactive</Badge>}
+                  </Td>
+                ) : null}
+                <Td actions>
+                  <div className="flex justify-end gap-1">
+                    {canManage ? (
+                      <>
+                        <button type="button" aria-label={`Edit ${it.name}`} className="rounded-lg p-1.5 text-ink-muted transition-colors hover:bg-canvas hover:text-ink" onClick={() => { setEditing(it); setOpen(true) }}>
+                          <Pencil className="size-4" aria-hidden />
+                        </button>
+                        <button type="button" aria-label={`Delete ${it.name}`} className="rounded-lg p-1.5 text-ink-muted transition-colors hover:bg-red-50 hover:text-red-600" onClick={() => setDeleting(it)}>
+                          <Trash2 className="size-4" aria-hidden />
+                        </button>
+                      </>
+                    ) : null}
+                  </div>
+                </Td>
+              </Tr>
+            ))}
+          </TBody>
+        </Table>
       )}
 
       <Pagination page={query.data?.current_page ?? 1} lastPage={query.data?.last_page ?? 1} total={query.data?.total} onChange={setPage} />
@@ -569,38 +568,36 @@ function AuditTab({ canView }) {
       ) : query.data?.data.length === 0 ? (
         <EmptyState icon={CalendarDays} title="No evaluations recorded" message="Audit trail is empty. Enable EXPERT_AUDIT_ENABLED in the expert system to start recording." />
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-line">
-          <table className="w-full min-w-[640px] text-left text-sm">
-            <thead className="bg-canvas text-xs uppercase tracking-wide text-ink-muted">
-              <tr>
-                <th className="px-4 py-3 font-semibold">When</th>
-                <th className="px-4 py-3 font-semibold">Matches</th>
-                <th className="px-4 py-3 font-semibold">Rule codes</th>
-                <th className="px-4 py-3 font-semibold">Engine</th>
-                <th className="px-4 py-3 font-semibold">Flag</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line">
-              {query.data.data.map((log) => (
-                <tr key={log.id}>
-                  <td className="px-4 py-3 text-ink-muted">{formatDateTime(log.created_at)}</td>
-                  <td className="px-4 py-3 font-semibold text-ink">{log.matched_rule_count}</td>
-                  <td className="px-4 py-3">
-                    <span className="line-clamp-2 max-w-xs font-mono text-xs text-ink-muted">
-                      {Array.isArray(log.matched_rule_codes)
-                        ? log.matched_rule_codes.join(', ') || '—'
-                        : log.matched_rule_codes ?? '—'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 font-mono text-xs text-ink-muted">{log.engine_version ?? '—'}</td>
-                  <td className="px-4 py-3">
-                    {log.is_clinically_validated ? <Badge tone="green">Validated</Badge> : <Badge tone="gray">—</Badge>}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <Table minWidth="min-w-[640px]">
+          <THead>
+            <Tr>
+              <Th>When</Th>
+              <Th>Matches</Th>
+              <Th>Rule codes</Th>
+              <Th>Engine</Th>
+              <Th>Flag</Th>
+            </Tr>
+          </THead>
+          <TBody>
+            {query.data.data.map((log) => (
+              <Tr key={log.id}>
+                <Td leading className="text-ink-muted">{formatDateTime(log.created_at)}</Td>
+                <Td className="font-semibold text-ink">{log.matched_rule_count}</Td>
+                <Td primary>
+                  <span className="line-clamp-2 max-w-xs font-mono text-xs text-ink-muted">
+                    {Array.isArray(log.matched_rule_codes)
+                      ? log.matched_rule_codes.join(', ') || '—'
+                      : log.matched_rule_codes ?? '—'}
+                  </span>
+                </Td>
+                <Td className="font-mono text-xs text-ink-muted">{log.engine_version ?? '—'}</Td>
+                <Td trailing>
+                  {log.is_clinically_validated ? <Badge tone="green">Validated</Badge> : <Badge tone="gray">—</Badge>}
+                </Td>
+              </Tr>
+            ))}
+          </TBody>
+        </Table>
       )}
       <Pagination page={query.data?.current_page ?? 1} lastPage={query.data?.last_page ?? 1} total={query.data?.total} onChange={setPage} />
     </Card>

@@ -125,7 +125,7 @@ export default function AuditLogListPage() {
         breadcrumb={[{ label: 'Audit Logs' }]}
       />
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         <StatCard
           label="Total activity"
           value={stats.total ?? query.data?.total ?? 0}
@@ -268,7 +268,7 @@ export default function AuditLogListPage() {
 
                 return (
                   <Tr key={log.id} onClick={() => setDetailId(log.id)}>
-                    <Td className="whitespace-nowrap text-ink-muted">
+                    <Td leading className="whitespace-nowrap text-ink-muted">
                       {formatDateTime(log.created_at)}
                     </Td>
                     <Td>
@@ -279,12 +279,12 @@ export default function AuditLogListPage() {
                         ) : null}
                       </div>
                     </Td>
-                    <Td>
+                    <Td trailing>
                       <Badge tone={meta.tone}>{meta.label}</Badge>
                     </Td>
-                    <Td className="text-ink">{log.description}</Td>
+                    <Td primary className="text-ink">{log.description}</Td>
                     <Td className="text-ink-muted">{subject || '—'}</Td>
-                    <Td className="font-mono text-xs text-ink-muted">{log.ip_address || '—'}</Td>
+                    <Td mobile={false} className="font-mono text-xs text-ink-muted">{log.ip_address || '—'}</Td>
                     <Td onClick={(e) => e.stopPropagation()}>
                       <div className="flex justify-end">
                         <button

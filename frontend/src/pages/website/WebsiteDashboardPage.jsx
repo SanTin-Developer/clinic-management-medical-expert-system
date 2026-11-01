@@ -68,7 +68,7 @@ export default function WebsiteDashboardPage() {
         <ErrorState onRetry={refetch} />
       ) : (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
             <StatCard label="Pages" value={stats.pages ?? 0} sub={`${stats.pages_published ?? 0} published`} icon={FileText} tone="brand" loading={isLoading} />
             <StatCard label="Services" value={stats.services ?? 0} sub={`${stats.services_published ?? 0} published`} icon={Stethoscope} tone="green" loading={isLoading} />
             <StatCard label="Team" value={stats.team ?? 0} sub={`${stats.team_published ?? 0} published`} icon={Users} tone="blue" loading={isLoading} />
@@ -106,13 +106,13 @@ export default function WebsiteDashboardPage() {
                     <TBody>
                       {articles.map((article) => (
                         <Tr key={article.id} onClick={() => navigate(`/website/articles/${article.id}`)}>
-                          <Td className="font-medium text-ink">{article.title}</Td>
-                          <Td>
+                          <Td primary className="font-medium text-ink">{article.title}</Td>
+                          <Td trailing>
                             <Badge tone={article.status === 'published' ? 'green' : 'gray'}>
                               {article.status}
                             </Badge>
                           </Td>
-                          <Td className="text-ink-muted">{article.published_at ? formatDate(article.published_at) : '—'}</Td>
+                          <Td leading className="text-ink-muted">{article.published_at ? formatDate(article.published_at) : '—'}</Td>
                         </Tr>
                       ))}
                     </TBody>

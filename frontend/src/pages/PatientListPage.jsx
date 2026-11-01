@@ -79,7 +79,7 @@ export default function PatientListPage() {
         }
       />
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <div className="stagger-children grid grid-cols-2 gap-4 xl:grid-cols-5">
         <StatCard
           label={t("Total Patients")}
           value={stats.total ?? query.data?.total ?? items.length}
@@ -179,10 +179,10 @@ export default function PatientListPage() {
                 const age = ageFromDateOfBirth(p.date_of_birth);
                 return (
                   <Tr key={p.id} onClick={() => navigate(`/patients/${p.id}`)}>
-                    <Td className="font-mono text-xs text-ink-muted">
+                    <Td leading className="font-mono text-xs text-ink-muted">
                       {p.patient_number}
                     </Td>
-                    <Td className="font-medium text-ink">
+                    <Td primary className="font-medium text-ink">
                       {patientFullName(p)}
                     </Td>
                     <Td className="text-ink-muted">

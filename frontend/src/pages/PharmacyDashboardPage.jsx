@@ -51,7 +51,7 @@ export default function PharmacyDashboardPage() {
         </p>
       ) : null}
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         <StatCard
           label="Pending Prescriptions"
           value={prescriptions.pending ?? 0}
@@ -104,11 +104,11 @@ export default function PharmacyDashboardPage() {
               <TBody>
                 {lowStock.map((row) => (
                   <Tr key={row.id} onClick={() => setViewing({ kind: 'lowStock', row })}>
-                    <Td>
+                    <Td primary>
                       <div className="font-medium text-ink">{row.name}</div>
                       <div className="text-xs text-ink-muted">{row.code}</div>
                     </Td>
-                    <Td>
+                    <Td leading>
                       <Badge tone={row.stock <= 0 ? 'red' : 'amber'}>{row.stock}</Badge>
                     </Td>
                     <Td className="text-ink-muted">{row.reorder_level}</Td>
@@ -137,10 +137,10 @@ export default function PharmacyDashboardPage() {
               <TBody>
                 {expiringSoon.map((row) => (
                   <Tr key={row.id} onClick={() => setViewing({ kind: 'expiring', row })}>
-                    <Td className="font-medium text-ink">{row.medicine ?? '—'}</Td>
+                    <Td primary className="font-medium text-ink">{row.medicine ?? '—'}</Td>
                     <Td className="text-ink-muted">{row.batch_number ?? '—'}</Td>
                     <Td>{row.quantity}</Td>
-                    <Td className="text-ink-muted">{formatDate(row.expiration_date)}</Td>
+                    <Td leading className="text-ink-muted">{formatDate(row.expiration_date)}</Td>
                   </Tr>
                 ))}
               </TBody>
@@ -171,12 +171,12 @@ export default function PharmacyDashboardPage() {
                 const meta = statusBadgeFor(STOCK_MOVEMENT_TYPE, row.type)
                 return (
                   <Tr key={row.id} onClick={() => setViewing({ kind: 'movement', row })}>
-                    <Td className="font-medium text-ink">{row.medicine?.name ?? '—'}</Td>
-                    <Td><Badge tone={meta.tone}>{meta.label}</Badge></Td>
+                    <Td primary className="font-medium text-ink">{row.medicine?.name ?? '—'}</Td>
+                    <Td trailing><Badge tone={meta.tone}>{meta.label}</Badge></Td>
                     <Td>{row.quantity}</Td>
                     <Td className="text-ink-muted">{row.reason ?? '—'}</Td>
                     <Td className="text-ink-muted">{row.user?.name ?? '—'}</Td>
-                    <Td className="text-ink-muted">{formatDateTime(row.created_at)}</Td>
+                    <Td leading className="text-ink-muted">{formatDateTime(row.created_at)}</Td>
                   </Tr>
                 )
               })}
@@ -203,10 +203,10 @@ export default function PharmacyDashboardPage() {
             <TBody>
               {recentDispensed.map((row) => (
                 <Tr key={row.id} onClick={() => navigate(`/prescriptions/${row.id}`)}>
-                  <Td className="font-medium text-ink">{row.prescription_number}</Td>
+                  <Td primary className="font-medium text-ink">{row.prescription_number}</Td>
                   <Td>{patientFullName(row.patient)}</Td>
                   <Td className="text-ink-muted">{row.dispensed_by?.name ?? '—'}</Td>
-                  <Td className="text-ink-muted">{formatDateTime(row.dispensed_at)}</Td>
+                  <Td leading className="text-ink-muted">{formatDateTime(row.dispensed_at)}</Td>
                 </Tr>
               ))}
             </TBody>

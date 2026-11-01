@@ -85,7 +85,7 @@ export default function AssignmentListPage() {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         <StatCard label="Total Assignments" value={stats.total ?? 0} icon={UserCog} tone="brand" loading={query.isLoading} />
         <StatCard label="Active now" value={stats.active ?? 0} icon={CheckCircle2} tone="green" loading={query.isLoading} />
         <StatCard label="Upcoming" value={stats.upcoming ?? 0} icon={Clock} tone="amber" loading={query.isLoading} />
@@ -143,7 +143,7 @@ export default function AssignmentListPage() {
                   const meta = statusBadgeFor(ASSIGNMENT_STATUS, a.status)
                   return (
                     <Tr key={a.id} onClick={() => setViewing(a)}>
-                      <Td className="font-medium text-ink">{a.nurse?.name ?? '—'}</Td>
+                      <Td primary className="font-medium text-ink">{a.nurse?.name ?? '—'}</Td>
                       <Td>
                         {a.patient ? (
                           <span className="inline-flex items-center gap-1.5"><Users className="size-3.5 text-ink-muted" aria-hidden />{patientFullName(a.patient)}</span>
@@ -154,11 +154,11 @@ export default function AssignmentListPage() {
                         )}
                       </Td>
                       <Td>{a.shift ?? '—'}</Td>
-                      <Td className="text-ink-muted">
+                      <Td leading className="text-ink-muted">
                         <span className="inline-flex items-center gap-1"><Clock className="size-3.5" aria-hidden />{formatDateTime(a.starts_at)}</span>
                       </Td>
                       <Td className="text-ink-muted">{a.ends_at ? formatDateTime(a.ends_at) : '—'}</Td>
-                      <Td><Badge tone={meta.tone}>{meta.label}</Badge></Td>
+                      <Td trailing><Badge tone={meta.tone}>{meta.label}</Badge></Td>
                       <Td onClick={(e) => e.stopPropagation()}>
                         <div className="flex justify-end gap-2">
                           {a.status === 'active' && canManage ? (

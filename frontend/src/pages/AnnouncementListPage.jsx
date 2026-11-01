@@ -215,7 +215,7 @@ export default function AnnouncementListPage() {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-6">
         <StatCard label="Total" value={stats.total ?? 0} icon={Megaphone} tone="brand" loading={query.isLoading} />
         <StatCard label="Published" value={stats.published ?? 0} icon={Send} tone="green" loading={query.isLoading} />
         <StatCard label="Drafts" value={stats.draft ?? 0} icon={FilePen} tone="navy" loading={query.isLoading} />
@@ -320,7 +320,7 @@ export default function AnnouncementListPage() {
                   const statusMeta = announcementStatus(announcement)
                   return (
                     <Tr key={announcement.id} onClick={() => setViewing(announcement)}>
-                      <Td>
+                      <Td primary>
                         <div className="flex items-center gap-3">
                           {announcement.poster_url ? (
                             <img
@@ -342,11 +342,11 @@ export default function AnnouncementListPage() {
                           : <span className="text-ink-muted">—</span>}
                       </Td>
                       <Td><Badge tone={priorityMeta.tone}>{priorityMeta.label}</Badge></Td>
-                      <Td><Badge tone={statusMeta.tone}>{statusMeta.label}</Badge></Td>
-                      <Td className="whitespace-nowrap text-ink-muted">
+                      <Td trailing><Badge tone={statusMeta.tone}>{statusMeta.label}</Badge></Td>
+                      <Td mobile={false} className="whitespace-nowrap text-ink-muted">
                         {announcement.reads_count ?? 0}
                       </Td>
-                      <Td className="whitespace-nowrap text-ink-muted">
+                      <Td leading className="whitespace-nowrap text-ink-muted">
                         {announcement.published_at ? formatDate(announcement.published_at) : '—'}
                       </Td>
                       <Td onClick={(e) => e.stopPropagation()}>

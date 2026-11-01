@@ -1,6 +1,8 @@
 import { useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { ChevronLeft, ChevronRight, Download, ExternalLink, X } from 'lucide-react'
 import { cn } from '../../utils/cn.js'
+import { useScrollLock } from '../../hooks/useScrollLock.js'
 
 /**
  * Full-screen image preview overlay.
@@ -26,6 +28,8 @@ export default function Lightbox({
   onPrev,
   onNext,
 }) {
+  useScrollLock(open)
+
   useEffect(() => {
     if (!open) return undefined
 
@@ -40,18 +44,17 @@ export default function Lightbox({
     }
 
     document.addEventListener('keydown', onKey)
-    const previous = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
 
     return () => {
       document.removeEventListener('keydown', onKey)
-      document.body.style.overflow = previous
     }
   }, [open, onClose, hasPrev, hasNext, onPrev, onNext])
 
   if (!open) return null
 
-  return (
+  // Portalled for the same reason as Modal: page containers animate with a
+  // filled `transform`, which would otherwise capture this `fixed` overlay.
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
@@ -143,6 +146,7 @@ export default function Lightbox({
         className="absolute inset-0 -z-10 cursor-default"
         tabIndex={-1}
       />
-    </div>
+    </div>,
+    document.body,
   )
 }

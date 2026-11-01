@@ -65,7 +65,7 @@ export default function PrescriptionListPage() {
         }
       />
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <div className="stagger-children grid grid-cols-2 gap-4 xl:grid-cols-5">
         <StatCard
           label="Total Prescriptions"
           value={stats.total ?? query.data?.total ?? 0}
@@ -158,11 +158,11 @@ export default function PrescriptionListPage() {
                 const statusMeta = statusBadgeFor(PRESCRIPTION_STATUS, rx.status)
                 return (
                   <Tr key={rx.id} onClick={() => navigate(`/prescriptions/${rx.id}`)}>
-                    <Td className="font-mono text-xs text-ink-muted">{rx.prescription_number}</Td>
-                    <Td className="font-medium text-ink">{patientFullName(rx.patient)}</Td>
+                    <Td leading className="font-mono text-xs text-ink-muted">{rx.prescription_number}</Td>
+                    <Td primary className="font-medium text-ink">{patientFullName(rx.patient)}</Td>
                     <Td>{rx.doctor?.name ?? '—'}</Td>
                     <Td>{rx.items?.length ?? 0}</Td>
-                    <Td>
+                    <Td trailing>
                       <Badge tone={statusMeta.tone}>{statusMeta.label}</Badge>
                     </Td>
                     <Td onClick={(e) => e.stopPropagation()}>

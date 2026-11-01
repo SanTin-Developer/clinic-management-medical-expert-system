@@ -21,10 +21,10 @@ export default function Pagination({ page, lastPage, total, onChange }) {
 
   return (
     <nav
-      className="flex items-center justify-between gap-3 border-t border-line px-5 py-3"
+      className="flex flex-col items-center gap-2 border-t border-line px-1 pt-3 sm:flex-row sm:justify-between sm:gap-3 sm:px-5 sm:py-3"
       aria-label={t('Pagination')}
     >
-      <p className="text-sm text-ink-muted">
+      <p className="text-xs text-ink-muted sm:text-sm">
         {total !== undefined ? t('{count} records', { count: total }) : t('Page')} ·{' '}
         {t('page {page} of {lastPage}', { page, lastPage })}
       </p>
@@ -34,7 +34,7 @@ export default function Pagination({ page, lastPage, total, onChange }) {
           onClick={() => onChange(page - 1)}
           disabled={page <= 1}
           aria-label={t('Previous page')}
-          className="grid size-8 place-items-center rounded-lg border border-line bg-surface text-ink-muted transition-colors hover:bg-canvas disabled:opacity-40"
+          className="grid size-10 place-items-center rounded-lg border border-line bg-surface text-ink-muted transition-colors hover:bg-canvas disabled:opacity-40 sm:size-8"
         >
           <ChevronLeft className="size-4" aria-hidden />
         </button>
@@ -48,8 +48,9 @@ export default function Pagination({ page, lastPage, total, onChange }) {
                 type="button"
                 onClick={() => onChange(p)}
                 aria-current={active ? 'page' : undefined}
+                aria-label={t('Page {page}', { page: p })}
                 className={cn(
-                  'grid size-8 place-items-center rounded-lg text-sm font-medium transition-colors',
+                  'grid size-10 place-items-center rounded-lg text-sm font-medium transition-colors sm:size-8',
                   active
                     ? 'bg-brand text-white'
                     : 'border border-line bg-surface text-ink-muted hover:bg-canvas',
@@ -65,7 +66,7 @@ export default function Pagination({ page, lastPage, total, onChange }) {
           onClick={() => onChange(page + 1)}
           disabled={page >= lastPage}
           aria-label={t('Next page')}
-          className="grid size-8 place-items-center rounded-lg border border-line bg-surface text-ink-muted transition-colors hover:bg-canvas disabled:opacity-40"
+          className="grid size-10 place-items-center rounded-lg border border-line bg-surface text-ink-muted transition-colors hover:bg-canvas disabled:opacity-40 sm:size-8"
         >
           <ChevronRight className="size-4" aria-hidden />
         </button>

@@ -639,6 +639,13 @@ export const KM_TRANSLATIONS = {
   Scheduled: "បានកំណត់ពេលរួច",
   Completed: "បានបញ្ចប់",
   Date: "កាលបរិច្ឆេទ",
+  "New Appointment": "ការណាត់ជួបថ្មី",
+  "Clear date": "លុបកាលបរិច្ឆេទ",
+  All: "ទាំងអស់",
+  "No appointment on this date": "គ្មានការណាត់ជួបនៅកាលបរិច្ឆេទមួយនេះ",
+  "Np appointment yet": "គ្មានការណាត់ជួននៅឡើយ",
+  "Nothing is scheduled for ${formatDate(date)}": "",
+  "No appointment yet": "",
 
   // System alerts & notification centre
   Unread: "មិនបានអាន",

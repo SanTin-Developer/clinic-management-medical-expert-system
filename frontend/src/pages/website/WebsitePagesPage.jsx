@@ -133,11 +133,11 @@ export default function WebsitePagesPage() {
               <TBody>
                 {rows.map((row) => (
                   <Tr key={row.id} onClick={() => navigate(`/website/pages/${row.id}`)}>
-                    <Td>
+                    <Td primary>
                       <div className="font-medium text-ink">{row.title}</div>
                       <div className="text-xs text-ink-muted">/{row.slug}{row.is_system ? ' · system' : ''}</div>
                     </Td>
-                    <Td>
+                    <Td trailing>
                       <Badge tone={row.status === 'published' ? 'green' : 'gray'}>{row.status}</Badge>
                     </Td>
                     <Td className="text-ink-muted">{row.show_in_footer ? 'Yes' : '—'}</Td>

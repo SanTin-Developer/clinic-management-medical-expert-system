@@ -66,7 +66,7 @@ export default function InvoiceListPage() {
         }
       />
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <div className="stagger-children grid grid-cols-2 gap-4 xl:grid-cols-5">
         <StatCard
           label="Total Invoices"
           value={stats.total ?? query.data?.total ?? 0}
@@ -161,14 +161,14 @@ export default function InvoiceListPage() {
                 const meta = statusBadgeFor(INVOICE_STATUS, inv.status)
                 return (
                   <Tr key={inv.id} onClick={() => navigate(`/billing/${inv.id}`)}>
-                    <Td className="font-mono text-xs text-ink-muted">{inv.invoice_number}</Td>
-                    <Td className="font-medium text-ink">{patientFullName(inv.patient)}</Td>
+                    <Td leading className="font-mono text-xs text-ink-muted">{inv.invoice_number}</Td>
+                    <Td primary className="font-medium text-ink">{patientFullName(inv.patient)}</Td>
                     <Td className="text-ink-muted">{formatDate(inv.issued_at)}</Td>
                     <Td className="font-medium text-ink">{formatCurrency(inv.total)}</Td>
                     <Td className={Number(inv.balance) > 0 ? 'font-medium text-red-600' : 'text-ink-muted'}>
                       {formatCurrency(inv.balance)}
                     </Td>
-                    <Td><Badge tone={meta.tone}>{meta.label}</Badge></Td>
+                    <Td trailing><Badge tone={meta.tone}>{meta.label}</Badge></Td>
                     <Td onClick={(e) => e.stopPropagation()}>
                       <div className="flex justify-end">
                         {can('billing.delete') ? (

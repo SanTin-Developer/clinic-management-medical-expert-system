@@ -146,7 +146,7 @@ export default function WebsiteArticlesPage() {
               <TBody>
                 {rows.map((row) => (
                   <Tr key={row.id} onClick={() => navigate(`/website/articles/${row.id}`)}>
-                    <Td>
+                    <Td primary>
                       <div className="flex items-center gap-3">
                         {row.cover?.url ? (
                           <img src={row.cover.url} alt="" className="size-10 rounded-lg object-cover" />
@@ -164,8 +164,8 @@ export default function WebsiteArticlesPage() {
                         </div>
                       </div>
                     </Td>
-                    <Td className="text-ink-muted">{row.category || '—'}</Td>
-                    <Td><Badge tone={row.status === 'published' ? 'green' : 'gray'}>{row.status}</Badge></Td>
+                    <Td leading className="text-ink-muted">{row.category || '—'}</Td>
+                    <Td trailing><Badge tone={row.status === 'published' ? 'green' : 'gray'}>{row.status}</Badge></Td>
                     <Td className="text-ink-muted">{row.views ?? 0}</Td>
                     <Td onClick={(event) => event.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1">

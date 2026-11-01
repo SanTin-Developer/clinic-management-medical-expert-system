@@ -219,7 +219,7 @@ export default function DashboardPage() {
       </div>
 
       {can('reports.view') ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="stagger-children grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <StatCard
             label={t('Patients')}
             value={
@@ -421,14 +421,14 @@ export default function DashboardPage() {
                           key={apt.id}
                           onClick={() => navigate(`/appointments/${apt.id}`)}
                         >
-                          <Td className="font-medium text-ink">
+                          <Td primary className="font-medium text-ink">
                             {patientFullName(apt.patient)}
                           </Td>
                           <Td>{apt.doctor?.name ?? '—'}</Td>
-                          <Td className="text-ink-muted">
+                          <Td leading className="text-ink-muted">
                             {formatDate(apt.appointment_date)} · {formatTime(apt.appointment_time)}
                           </Td>
-                          <Td>
+                          <Td trailing>
                             <Badge tone={status.tone}>{t(status.label)}</Badge>
                           </Td>
                         </Tr>

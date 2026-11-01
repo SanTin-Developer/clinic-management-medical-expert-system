@@ -37,14 +37,18 @@ export default function StatCard({
         {loading ? (
           <Shimmer className="mt-2 h-7 w-16" />
         ) : (
-          <p className="mt-1 truncate text-2xl font-bold text-ink">{value}</p>
+          <p className="mt-1 truncate text-xl font-bold text-ink sm:text-2xl">
+            {value}
+          </p>
         )}
         {sub ? <p className="mt-1 text-xs text-ink-muted">{sub}</p> : null}
       </div>
       {Icon ? (
         <span
           className={cn(
-            'grid size-10 shrink-0 place-items-center rounded-xl transition-transform duration-200',
+            // Two stat cards share a phone row, so the icon would squeeze the
+            // label; it returns from sm upwards.
+            'hidden size-10 shrink-0 place-items-center rounded-xl transition-transform duration-200 sm:grid',
             TONES[tone],
             to && 'group-hover:scale-105 group-focus-visible:scale-105',
           )}
@@ -56,7 +60,7 @@ export default function StatCard({
   )
 
   const className = cn(
-    'rounded-2xl border border-line bg-surface p-5 shadow-[var(--shadow-card)]',
+    'rounded-2xl border border-line bg-surface p-4 shadow-[var(--shadow-card)] sm:p-5',
     to &&
       'group block h-full cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-[var(--shadow-card-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30',
   )

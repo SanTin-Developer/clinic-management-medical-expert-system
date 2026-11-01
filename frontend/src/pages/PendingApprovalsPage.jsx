@@ -44,7 +44,7 @@ export default function PendingApprovalsPage() {
         description="Review staff registrations before they can access the application."
       />
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <div className="stagger-children grid grid-cols-2 gap-4 xl:grid-cols-5">
         <StatCard
           label="Pending Approvals"
           value={stats.total ?? total}
@@ -104,21 +104,21 @@ export default function PendingApprovalsPage() {
             <TBody>
               {items.map((user) => (
                 <Tr key={user.id} onClick={() => setViewing(user)}>
-                  <Td className="font-medium text-ink">
+                  <Td primary className="font-medium text-ink">
                     {user.name}
                     {user.username ? (
                       <span className="block text-xs font-normal text-ink-muted">@{user.username}</span>
                     ) : null}
                   </Td>
                   <Td className="text-ink-muted">{user.email}</Td>
-                  <Td>
+                  <Td trailing>
                     <div className="flex flex-wrap gap-1">
                       {(user.roles ?? []).map((role) => (
                         <Badge key={roleName(role)} tone="brand">{roleName(role)}</Badge>
                       ))}
                     </div>
                   </Td>
-                  <Td className="text-ink-muted">{formatDateTime(user.created_at)}</Td>
+                  <Td leading className="text-ink-muted">{formatDateTime(user.created_at)}</Td>
                   <Td onClick={(e) => e.stopPropagation()}>
                     <StaffApprovalActions user={user} onChanged={() => query.refetch()} />
                   </Td>

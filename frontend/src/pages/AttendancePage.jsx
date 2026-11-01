@@ -212,7 +212,7 @@ export default function AttendancePage() {
         </Card>
       ) : null}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-5">
         <StatCard label="Records" value={stats.total ?? 0} icon={CalendarCheck} tone="brand" loading={query.isLoading} />
         <StatCard label="Present" value={stats.present ?? 0} icon={Clock} tone="green" loading={query.isLoading} />
         <StatCard label="Late" value={stats.late ?? 0} icon={Clock} tone="amber" loading={query.isLoading} />
@@ -275,12 +275,12 @@ export default function AttendancePage() {
                   const statusMeta = statusBadgeFor(ATTENDANCE_STATUS, record.status)
                   return (
                     <Tr key={record.id} onClick={() => setViewing(record)}>
-                      <Td className="font-medium text-ink">{record.user?.name ?? '—'}</Td>
-                      <Td className="whitespace-nowrap text-ink-muted">{formatDateTime(record.work_date)}</Td>
+                      <Td primary className="font-medium text-ink">{record.user?.name ?? '—'}</Td>
+                      <Td leading className="whitespace-nowrap text-ink-muted">{formatDateTime(record.work_date)}</Td>
                       <Td className="whitespace-nowrap text-ink-muted">{record.clock_in ? formatDateTime(record.clock_in) : '—'}</Td>
                       <Td className="whitespace-nowrap text-ink-muted">{record.clock_out ? formatDateTime(record.clock_out) : '—'}</Td>
                       <Td className="text-ink-muted">{record.hours_worked != null ? record.hours_worked.toFixed(2) : '—'}</Td>
-                      <Td>
+                      <Td trailing>
                         <div className="flex items-center gap-2">
                           <Badge tone={statusMeta.tone}>{statusMeta.label}</Badge>
                           {record.approved_at ? <Badge tone="green">Approved</Badge> : null}

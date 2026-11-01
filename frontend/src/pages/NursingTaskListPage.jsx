@@ -49,7 +49,7 @@ export default function NursingTaskListPage() {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         <StatCard label="Total Tasks" value={stats.total ?? 0} icon={ClipboardList} tone="brand" loading={query.isLoading} />
         <StatCard label="Pending" value={stats.pending ?? 0} icon={Clock} tone="amber" loading={query.isLoading} />
         <StatCard label="Completed" value={stats.completed ?? 0} icon={CircleCheckBig} tone="green" loading={query.isLoading} />
@@ -99,15 +99,15 @@ export default function NursingTaskListPage() {
                   const priorityMeta = statusBadgeFor(TASK_PRIORITY, task.priority)
                   return (
                     <Tr key={task.id} onClick={() => setViewing(task)}>
-                      <Td>
+                      <Td primary>
                         <div className="font-medium text-ink">{task.title}</div>
                         <Badge tone={typeMeta.tone} className="mt-1">{typeMeta.label}</Badge>
                       </Td>
                       <Td className="text-ink">{patientFullName(task.patient)}</Td>
                       <Td>{task.assigned_nurse?.name ?? '—'}</Td>
-                      <Td className="text-ink-muted">{formatDateTime(task.scheduled_at)}</Td>
+                      <Td leading className="text-ink-muted">{formatDateTime(task.scheduled_at)}</Td>
                       <Td><Badge tone={priorityMeta.tone}>{priorityMeta.label}</Badge></Td>
-                      <Td><Badge tone={statusMeta.tone}>{statusMeta.label}</Badge></Td>
+                      <Td trailing><Badge tone={statusMeta.tone}>{statusMeta.label}</Badge></Td>
                       <Td onClick={(e) => e.stopPropagation()}>
                         <div className="flex justify-end">
                           {task.status !== 'completed' && task.status !== 'cancelled' && can('nursing-tasks.complete') ? (

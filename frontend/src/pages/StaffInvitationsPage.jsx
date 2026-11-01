@@ -81,7 +81,7 @@ export default function StaffInvitationsPage() {
         }
       />
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <div className="stagger-children grid grid-cols-2 gap-4 xl:grid-cols-5">
         <StatCard
           label="Total Invitations"
           value={stats.total ?? query.data?.total ?? 0}
@@ -171,7 +171,7 @@ export default function StaffInvitationsPage() {
                 const canRevoke = status === 'pending'
                 return (
                   <Tr key={invitation.id} onClick={() => setViewing(invitation)}>
-                    <Td className="font-medium text-ink">{invitation.name}</Td>
+                    <Td primary className="font-medium text-ink">{invitation.name}</Td>
                     <Td>
                       {invitation.staff ? (
                         <span className="inline-flex items-center gap-1.5">
@@ -188,10 +188,10 @@ export default function StaffInvitationsPage() {
                     <Td>
                       <Badge tone="brand">{invitation.role}</Badge>
                     </Td>
-                    <Td>
+                    <Td trailing>
                       <Badge tone={meta.tone}>{meta.label}</Badge>
                     </Td>
-                    <Td className="text-ink-muted">{formatDateTime(invitation.expires_at)}</Td>
+                    <Td leading className="text-ink-muted">{formatDateTime(invitation.expires_at)}</Td>
                     <Td className="text-ink-muted">{invitation.inviter?.name ?? '—'}</Td>
                     <Td onClick={(e) => e.stopPropagation()}>
                       <div className="flex justify-end gap-1">

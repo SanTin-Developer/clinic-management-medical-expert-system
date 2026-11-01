@@ -64,8 +64,9 @@ export default function BackToTop({ scrollRef }) {
       aria-hidden={!visible}
       tabIndex={visible ? 0 : -1}
       className={cn(
-        'fixed z-40 grid size-11 place-items-center rounded-full bg-brand text-white shadow-[0_14px_30px_-10px_rgba(37,99,235,0.75)] transition duration-300 hover:bg-brand-dark active:scale-90 focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:outline-none sm:size-12',
-        'right-[max(1rem,env(safe-area-inset-right))] bottom-[max(1rem,env(safe-area-inset-bottom))] sm:right-6 sm:bottom-6',
+        'fixed z-30 grid size-11 place-items-center rounded-full bg-brand text-white shadow-[0_14px_30px_-10px_rgba(37,99,235,0.75)] transition duration-300 hover:bg-brand-dark active:scale-90 focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:outline-none sm:size-12',
+        // Sit above the phone tab bar instead of behind it.
+        'right-[max(1rem,env(safe-area-inset-right))] bottom-[calc(4.5rem+env(safe-area-inset-bottom))] sm:right-6 sm:bottom-6',
         visible ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-3 opacity-0',
       )}
     >

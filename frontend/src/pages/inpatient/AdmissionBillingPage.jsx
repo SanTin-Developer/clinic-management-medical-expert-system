@@ -190,7 +190,7 @@ export default function AdmissionBillingPage() {
         }
       />
 
-      <div className="grid gap-4 md:grid-cols-5">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
         <Card className="p-4"><div className="text-sm text-muted-foreground">Unbilled</div><div className="text-xl font-semibold">{formatCurrency(summary.unbilled_total)}</div></Card>
         <Card className="p-4"><div className="text-sm text-muted-foreground">Total Invoiced</div><div className="text-xl font-semibold">{formatCurrency(summary.total_invoiced)}</div></Card>
         <Card className="p-4"><div className="text-sm text-muted-foreground">Total Paid</div><div className="text-xl font-semibold text-green-600">{formatCurrency(summary.total_paid)}</div></Card>
@@ -303,15 +303,15 @@ export default function AdmissionBillingPage() {
             {charges.length === 0 && <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground">No charges yet</TableCell></TableRow>}
             {charges.map((c) => (
               <TableRow key={c.id}>
-                <TableCell>{formatDate(c.charge_date)}</TableCell>
+                <TableCell leading>{formatDate(c.charge_date)}</TableCell>
                 <TableCell className="capitalize">{c.category}</TableCell>
-                <TableCell>{c.description}</TableCell>
+                <TableCell primary>{c.description}</TableCell>
                 <TableCell>{c.quantity}</TableCell>
                 <TableCell>{formatCurrency(c.unit_price)}</TableCell>
                 <TableCell>{c.discount_amount > 0 ? formatCurrency(c.discount_amount) : '-'}</TableCell>
                 <TableCell>{formatCurrency(c.total)}</TableCell>
-                <TableCell><Badge tone={statusTone(c.status)}>{c.status}</Badge></TableCell>
-                <TableCell>
+                <TableCell trailing><Badge tone={statusTone(c.status)}>{c.status}</Badge></TableCell>
+                <TableCell actions>
                   {c.status === 'unbilled' && (
                     <Button size="sm" variant="ghost" onClick={() => handleVoidCharge(c)}>
                       <XCircle className="h-4 w-4 mr-1" /> Void
@@ -342,13 +342,13 @@ export default function AdmissionBillingPage() {
             {invoices.length === 0 && <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground">No invoices yet</TableCell></TableRow>}
             {invoices.map((inv) => (
               <TableRow key={inv.id}>
-                <TableCell>{inv.invoice_number}</TableCell>
-                <TableCell className="capitalize">{inv.invoice_type?.replace('_', ' ')}</TableCell>
+                <TableCell leading>{inv.invoice_number}</TableCell>
+                <TableCell primary className="capitalize">{inv.invoice_type?.replace('_', ' ')}</TableCell>
                 <TableCell>{formatDate(inv.issued_at)}</TableCell>
                 <TableCell>{formatCurrency(inv.total)}</TableCell>
                 <TableCell>{formatCurrency(inv.amount_paid)}</TableCell>
                 <TableCell>{formatCurrency(inv.balance)}</TableCell>
-                <TableCell><Badge tone={statusTone(inv.status)}>{inv.status}</Badge></TableCell>
+                <TableCell trailing><Badge tone={statusTone(inv.status)}>{inv.status}</Badge></TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -372,12 +372,12 @@ export default function AdmissionBillingPage() {
             {deposits.length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">No deposits</TableCell></TableRow>}
             {deposits.map((d) => (
               <TableRow key={d.id}>
-                <TableCell>{formatDate(d.received_at)}</TableCell>
+                <TableCell leading>{formatDate(d.received_at)}</TableCell>
                 <TableCell className="capitalize">{d.type}</TableCell>
                 <TableCell className="capitalize">{d.method}</TableCell>
-                <TableCell>{formatCurrency(d.amount)}</TableCell>
+                <TableCell primary>{formatCurrency(d.amount)}</TableCell>
                 <TableCell>{formatCurrency(d.balance)}</TableCell>
-                <TableCell><Badge tone={statusTone(d.status)}>{d.status}</Badge></TableCell>
+                <TableCell trailing><Badge tone={statusTone(d.status)}>{d.status}</Badge></TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -417,7 +417,7 @@ function AdmissionBillingLoading({ onBack }) {
 
       <LoadingBar className="-mt-3" />
 
-      <div className="grid gap-4 md:grid-cols-5">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
         {LOADING_STATS.map((stat, index) => {
           const Icon = stat.icon
 

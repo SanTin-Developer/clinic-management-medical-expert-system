@@ -172,7 +172,7 @@ export default function StaffListPage() {
         }
       />
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <div className="stagger-children grid grid-cols-2 gap-4 xl:grid-cols-5">
         <StatCard
           label="Total Staff"
           value={stats.total ?? query.data?.total ?? 0}
@@ -349,10 +349,10 @@ export default function StaffListPage() {
 
                 return (
                   <Tr key={s.id} onClick={() => navigate(`/staff/${s.id}`)}>
-                    <Td className="font-mono text-xs font-semibold text-brand">
+                    <Td leading className="font-mono text-xs font-semibold text-brand">
                       {s.staff_number}
                     </Td>
-                    <Td>
+                    <Td primary>
                       <div className="font-medium text-ink">
                         {s.full_name || `${s.first_name} ${s.last_name}`}
                       </div>
@@ -367,10 +367,10 @@ export default function StaffListPage() {
                     <Td>
                       <Badge tone={typeMeta.tone}>{typeMeta.label}</Badge>
                     </Td>
-                    <Td>
+                    <Td trailing>
                       <Badge tone={statusMeta.tone}>{statusMeta.label}</Badge>
                     </Td>
-                    <Td>
+                    <Td mobile={false}>
                       {hasLogin ? (
                         <div className="flex items-center gap-1.5">
                           <UserCheck className="size-3.5 text-green-600" aria-hidden />

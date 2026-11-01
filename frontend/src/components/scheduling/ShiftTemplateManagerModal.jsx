@@ -213,9 +213,9 @@ export default function ShiftTemplateManagerModal({ open, onClose }) {
                 const typeMeta = statusBadgeFor(SHIFT_TYPES, template.type)
                 return (
                   <Tr key={template.id}>
-                    <Td className="font-medium text-ink">{template.name}</Td>
+                    <Td primary className="font-medium text-ink">{template.name}</Td>
                     <Td><Badge tone={typeMeta.tone}>{typeMeta.label}</Badge></Td>
-                    <Td className="whitespace-nowrap text-ink-muted">{formatTime(template.start_time)}</Td>
+                    <Td leading className="whitespace-nowrap text-ink-muted">{formatTime(template.start_time)}</Td>
                     <Td className="whitespace-nowrap text-ink-muted">{formatTime(template.clock_in_cutoff)}</Td>
                     <Td className="whitespace-nowrap text-ink-muted">
                       {formatTime(template.end_time)}
@@ -226,8 +226,8 @@ export default function ShiftTemplateManagerModal({ open, onClose }) {
                         ? `${formatTime(template.clock_out_opens_at)} – ${formatTime(template.clock_out_closes_at)}`
                         : '—'}
                     </Td>
-                    <Td><Badge tone={template.is_active ? 'green' : 'gray'}>{template.is_active ? 'Active' : 'Inactive'}</Badge></Td>
-                    <Td>
+                    <Td trailing><Badge tone={template.is_active ? 'green' : 'gray'}>{template.is_active ? 'Active' : 'Inactive'}</Badge></Td>
+                    <Td actions>
                       <div className="flex justify-end gap-1">
                         <button
                           type="button"

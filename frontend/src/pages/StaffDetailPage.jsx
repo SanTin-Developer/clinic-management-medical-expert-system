@@ -534,8 +534,8 @@ export default function StaffDetailPage() {
               <TBody>
                 {staff.salary_histories.map((hist) => (
                   <Tr key={hist.id}>
-                    <Td className="font-medium text-ink">{formatDate(hist.effective_from) || 'Immediate'}</Td>
-                    <Td className="font-mono text-ink font-semibold">
+                    <Td leading className="font-medium text-ink">{formatDate(hist.effective_from) || 'Immediate'}</Td>
+                    <Td primary className="font-mono text-ink font-semibold">
                       ${Number(hist.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </Td>
                     <Td className="text-ink">

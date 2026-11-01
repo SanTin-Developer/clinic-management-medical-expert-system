@@ -152,7 +152,7 @@ export default function SchedulingPage() {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-5">
         <StatCard label="Total shifts" value={stats.total ?? 0} icon={CalendarDays} tone="brand" loading={query.isLoading} />
         <StatCard label="Today" value={stats.today ?? 0} icon={CalendarClock} tone="navy" loading={query.isLoading} />
         <StatCard label="Scheduled" value={stats.scheduled ?? 0} icon={CalendarDays} tone="blue" loading={query.isLoading} />
@@ -226,13 +226,13 @@ export default function SchedulingPage() {
                   const statusMeta = statusBadgeFor(SHIFT_STATUS, shift.status)
                   return (
                     <Tr key={shift.id} onClick={() => setViewing(shift)}>
-                      <Td className="font-medium text-ink">{shift.user?.name ?? '—'}</Td>
-                      <Td className="whitespace-nowrap text-ink-muted">{formatDate(shift.shift_date)}</Td>
+                      <Td primary className="font-medium text-ink">{shift.user?.name ?? '—'}</Td>
+                      <Td leading className="whitespace-nowrap text-ink-muted">{formatDate(shift.shift_date)}</Td>
                       <Td className="whitespace-nowrap text-ink-muted">
                         {formatTime(shift.start_time)} – {formatTime(shift.end_time)}
                       </Td>
                       <Td><Badge tone={typeMeta.tone}>{typeMeta.label}</Badge></Td>
-                      <Td>
+                      <Td trailing>
                         <div className="flex items-center gap-2">
                           <Badge tone={statusMeta.tone}>{statusMeta.label}</Badge>
                           {!shift.published_at ? <Badge tone="amber">Draft</Badge> : null}
