@@ -3,6 +3,7 @@
 # Topology (backend only, free-tier friendly):
 #   royalcare-clinic-api      Docker web service  -> Laravel API + Reverb (port 8000)
 #   royalcare-clinic-expert   Docker web service  -> FastAPI expert system (port 8001)
+#   royalcare-clinic-redis    Key Value (Redis)    -> Cache/Sessions/Queues
 #
 # The admin dashboard and public website are NOT part of this Blueprint. Deploy
 # them separately (Render static sites, Netlify, Vercel, or locally) and point
@@ -14,12 +15,8 @@
 # statements supported) and keep ?sslmode=require. See
 # docs/10-deployment/index.md, section 10.13.
 #
-# Redis is intentionally not provisioned either: Render allows only one free
-# Key Value instance per workspace. Cache and sessions use the ephemeral local
-# disk, and queues use the database (the jobs table is part of the migrations).
-# To use Redis instead, create a Key Value instance and add REDIS_URL,
-# REDIS_CLIENT, and switch CACHE_STORE / SESSION_DRIVER / QUEUE_CONNECTION to
-# `redis` on the API service.
+# Redis is provisioned as a Key Value instance (free tier allows 1 per workspace).
+# It's internal-only and not persistent - suitable for cache/sessions/queues.
 #
 # The onrender.com hostnames below are derived from the service names. If you
 # rename a service (or attach custom domains), update APP_URL,
@@ -85,15 +82,23 @@ services:
         value: require
 
       # --- Cache / queues / sessions ---------------------------------------
-      # No Key Value instance: Render allows only one free one per workspace.
-      # `file` lives on the ephemeral disk (reset on deploy/restart); queues use
-      # the database, which is durable in Supabase.
+      # Redis (Render Key Value) is internal-only and non-persistent: cache and
+      # sessions are fine there, and the queue worker drains jobs quickly. If
+      # the Key Value instance is unavailable, point QUEUE_CONNECTION back at
+      # `database` so queued jobs survive restarts in Supabase.
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: royalcare-clinic-redis
+          property: connectionString
+      - key: REDIS_CLIENT
+        value: phpredis
       - key: CACHE_STORE
-        value: file
+        value: redis
       - key: QUEUE_CONNECTION
-        value: database
+        value: redis
       - key: SESSION_DRIVER
-        value: file
+        value: redis
       - key: SESSION_LIFETIME
         value: "480"
       - key: SESSION_SECURE_COOKIE
@@ -272,3 +277,16 @@ services:
         value: "30"
       - key: EXPERT_AUDIT_ENABLED
         value: "false"
+
+  # ---------------------------------------------------------------------------
+  # Render Key Value (Redis): cache, sessions, queues for the API
+  # ---------------------------------------------------------------------------
+  # Free plan: 25 MB, internal-only, one instance per workspace, and NOT
+  # persistent (contents are lost on restart/redeploy). Keep the API's
+  # SESSION_DRIVER/CACHE_STORE tolerant of that, and switch QUEUE_CONNECTION to
+  # `database` if durable queues are required.
+  - type: keyvalue
+    name: royalcare-clinic-redis
+    plan: free
+    region: singapore
+    ipAllowList: []
