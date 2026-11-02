@@ -1,11 +1,12 @@
-# Render Blueprint for the RoyalCare Clinic Management & Medical Expert System.
+# Render Blueprint for the RoyalCare Clinic backend.
 #
-# Topology (free-tier friendly):
+# Topology (backend only, free-tier friendly):
 #   royalcare-clinic-api      Docker web service  -> Laravel API + Reverb (port 8000)
 #   royalcare-clinic-expert   Docker web service  -> FastAPI expert system (port 8001)
-#   royalcare-clinic-admin    static site         -> React admin dashboard
-#   royalcare-clinic-website  static site         -> public website
-#   royalcare-clinic-redis    Key Value           -> cache / sessions / queues (internal only)
+#
+# The admin dashboard and public website are NOT part of this Blueprint. Deploy
+# them separately (Render static sites, Netlify, Vercel, or locally) and point
+# their VITE_API_URL at the API below.
 #
 # PostgreSQL is deliberately NOT provisioned here. The deployment uses Supabase
 # as the system of record. Render prompts for DB_URL when the Blueprint is
@@ -13,10 +14,16 @@
 # statements supported) and keep ?sslmode=require. See
 # docs/10-deployment/index.md, section 10.13.
 #
+# Redis is intentionally not provisioned either: Render allows only one free
+# Key Value instance per workspace. Cache and sessions use the ephemeral local
+# disk, and queues use the database (the jobs table is part of the migrations).
+# To use Redis instead, create a Key Value instance and add REDIS_URL,
+# REDIS_CLIENT, and switch CACHE_STORE / SESSION_DRIVER / QUEUE_CONNECTION to
+# `redis` on the API service.
+#
 # The onrender.com hostnames below are derived from the service names. If you
-# rename a service (or attach custom domains), update APP_URL, FRONTEND_URL,
-# CORS_ALLOWED_ORIGINS, EXPERT_SYSTEM_URL, the VITE_* values, and the
-# SANCTUM_STATEFUL_DOMAINS value to match.
+# rename a service (or attach custom domains), update APP_URL,
+# EXPERT_SYSTEM_URL, and the CORS values to match.
 
 services:
   # ---------------------------------------------------------------------------
@@ -77,20 +84,16 @@ services:
       - key: DB_SSLMODE
         value: require
 
-      # --- Cache / queues / sessions: Render Key Value ---------------------
-      - key: REDIS_CLIENT
-        value: phpredis
-      - key: REDIS_URL
-        fromService:
-          type: keyvalue
-          name: royalcare-clinic-redis
-          property: connectionString
+      # --- Cache / queues / sessions ---------------------------------------
+      # No Key Value instance: Render allows only one free one per workspace.
+      # `file` lives on the ephemeral disk (reset on deploy/restart); queues use
+      # the database, which is durable in Supabase.
       - key: CACHE_STORE
-        value: redis
+        value: file
       - key: QUEUE_CONNECTION
-        value: redis
+        value: database
       - key: SESSION_DRIVER
-        value: redis
+        value: file
       - key: SESSION_LIFETIME
         value: "480"
       - key: SESSION_SECURE_COOKIE
@@ -99,14 +102,19 @@ services:
         value: lax
       - key: SANCTUM_EXPIRATION
         value: "480"
+      # Only needed for cookie-based SPA auth; the shipped SPA uses bearer
+      # tokens. Add the real frontend host here if you enable cookies.
       - key: SANCTUM_STATEFUL_DOMAINS
-        value: royalcare-clinic-admin.onrender.com,royalcare-clinic-website.onrender.com
+        value: localhost:5173,localhost:5174
 
       # --- URLs / CORS ------------------------------------------------------
+      # Backend-only deployment: the frontend runs separately (locally at
+      # 5173/5174 by default). Add your deployed frontend origin before going
+      # live, e.g. https://your-admin.example.com.
       - key: FRONTEND_URL
-        value: https://royalcare-clinic-admin.onrender.com
+        value: http://localhost:5173
       - key: CORS_ALLOWED_ORIGINS
-        value: https://royalcare-clinic-admin.onrender.com,https://royalcare-clinic-website.onrender.com
+        value: http://localhost:5173,http://localhost:5174
 
       # --- Realtime: Laravel Reverb inside this container ------------------
       # Browsers connect to wss://<api-host>/app/<key>; nginx proxies /app to
@@ -116,7 +124,7 @@ services:
       - key: REVERB_APP_ID
         value: royalcare-clinic
       # Public value: it is embedded in the SPA bundle and the WebSocket path.
-      # Keep it URL-safe and identical to VITE_REVERB_APP_KEY below.
+      # Keep it URL-safe and identical to the frontend's VITE_REVERB_APP_KEY.
       - key: REVERB_APP_KEY
         value: royalcare-clinic-key
       - key: REVERB_APP_SECRET
@@ -249,66 +257,3 @@ services:
         value: "30"
       - key: EXPERT_AUDIT_ENABLED
         value: "false"
-
-  # ---------------------------------------------------------------------------
-  # Admin dashboard (React SPA)
-  # ---------------------------------------------------------------------------
-  - type: web
-    name: royalcare-clinic-admin
-    runtime: static
-    branch: master
-    rootDir: frontend
-    buildCommand: npm ci && npm run build
-    staticPublishPath: ./dist
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
-    envVars:
-      - key: NODE_VERSION
-        value: "22"
-      - key: VITE_API_URL
-        value: https://royalcare-clinic-api.onrender.com/api/v1
-      - key: VITE_PUBLIC_SITE_URL
-        value: https://royalcare-clinic-website.onrender.com
-      # Public Reverb key/host. VITE_* values are inlined at build time, so
-      # rebuild this site after changing them.
-      - key: VITE_REVERB_APP_KEY
-        value: royalcare-clinic-key
-      - key: VITE_REVERB_HOST
-        value: royalcare-clinic-api.onrender.com
-      - key: VITE_REVERB_PORT
-        value: "443"
-      - key: VITE_REVERB_SCHEME
-        value: https
-
-  # ---------------------------------------------------------------------------
-  # Public website (React SPA)
-  # ---------------------------------------------------------------------------
-  - type: web
-    name: royalcare-clinic-website
-    runtime: static
-    branch: master
-    rootDir: website
-    buildCommand: npm ci && npm run build
-    staticPublishPath: ./dist
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
-    envVars:
-      - key: NODE_VERSION
-        value: "22"
-      - key: VITE_API_URL
-        value: https://royalcare-clinic-api.onrender.com/api/v1
-
-  # ---------------------------------------------------------------------------
-  # Redis-compatible cache / sessions / queues (internal only)
-  # ---------------------------------------------------------------------------
-  - type: keyvalue
-    name: royalcare-clinic-redis
-    plan: free
-    region: singapore
-    # No public IPs: reachable only from services in this Render workspace.
-    ipAllowList: []
-    maxmemoryPolicy: noeviction
