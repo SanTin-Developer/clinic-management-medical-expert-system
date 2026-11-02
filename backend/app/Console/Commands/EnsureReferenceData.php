@@ -27,7 +27,10 @@ class EnsureReferenceData extends Command
     public function handle(): int
     {
         $cache = Cache::store('database');
-        $marker = 'reference-data-seeded';
+        // Versioned so extending ProductionSeeder (e.g. the public website
+        // baseline) re-runs the idempotent seeders once on databases already
+        // seeded by an earlier version.
+        $marker = 'reference-data-seeded-v2';
 
         if ($cache->get($marker) !== null) {
             $this->info('Reference data already seeded.');
