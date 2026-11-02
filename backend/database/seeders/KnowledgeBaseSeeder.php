@@ -11,85 +11,161 @@ use Illuminate\Support\Facades\DB;
 
 class KnowledgeBaseSeeder extends Seeder
 {
+    /**
+     * The knowledge base holds ~100 records, but Supabase is reached through a
+     * high-latency session pooler: a row-by-row `updateOrCreate()` loop costs
+     * hundreds of round-trips and can outlive the whole Render deploy window.
+     * Every write below is therefore set-based (`upsert`/`insert`), which keeps
+     * a full re-seed down to a handful of statements.
+     *
+     * There is deliberately no wrapping transaction. Each step is idempotent
+     * (keyed by the unique `code` column) and rebuilds its own links, so an
+     * interrupted run resumes from where it stopped on the next boot instead
+     * of rolling back several minutes of work.
+     */
     public function run(): void
     {
-        DB::transaction(function (): void {
-            $this->upsertSymptoms();
-            $this->upsertDiseases();
-            $this->upsertRules();
-            $this->prunePlaceholders();
-        });
+        $this->upsertSymptoms();
+        $this->upsertDiseases();
+        $this->upsertRules();
+        $this->prunePlaceholders();
     }
 
     private function upsertSymptoms(): void
     {
-        foreach ($this->symptomDefinitions() as $definition) {
-            Symptom::updateOrCreate(
-                ['code' => $definition['code']],
-                [
-                    'name' => $definition['name'],
-                    'description' => $definition['description'],
-                    'is_active' => true,
-                ]
-            );
-        }
+        $now = now();
+        $definitions = $this->symptomDefinitions();
+
+        Symptom::upsert(
+            array_map(fn (array $definition): array => [
+                'code' => $definition['code'],
+                'name' => $definition['name'],
+                'description' => $definition['description'],
+                'is_active' => true,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ], $definitions),
+            ['code'],
+            ['name', 'description', 'is_active', 'updated_at']
+        );
+
+        $this->command?->info(sprintf('Knowledge base: %d symptoms upserted.', count($definitions)));
     }
 
     private function upsertDiseases(): void
     {
-        foreach ($this->diseaseDefinitions() as $definition) {
-            $disease = Disease::updateOrCreate(
-                ['code' => $definition['code']],
-                [
-                    'name' => $definition['name'],
-                    'description' => $definition['description'],
-                    'severity_level' => $definition['severity_level'],
-                    'is_active' => true,
-                ]
-            );
+        $now = now();
+        $definitions = $this->diseaseDefinitions();
 
-            $symptomIds = Symptom::whereIn('code', $definition['symptoms'])
-                ->pluck('id');
+        Disease::upsert(
+            array_map(fn (array $definition): array => [
+                'code' => $definition['code'],
+                'name' => $definition['name'],
+                'description' => $definition['description'],
+                'severity_level' => $definition['severity_level'],
+                'is_active' => true,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ], $definitions),
+            ['code'],
+            ['name', 'description', 'severity_level', 'is_active', 'updated_at']
+        );
 
-            $disease->symptoms()->sync($symptomIds);
+        $diseaseIds = Disease::whereIn('code', array_column($definitions, 'code'))
+            ->pluck('id', 'code');
+        $symptomIds = Symptom::pluck('id', 'code');
+
+        // Rebuild the disease <-> symptom links for the seeded diseases. This
+        // mirrors the previous per-disease sync() but in two statements.
+        DB::table('disease_symptom')
+            ->whereIn('disease_id', $diseaseIds->values())
+            ->delete();
+
+        $links = [];
+
+        foreach ($definitions as $definition) {
+            $diseaseId = $diseaseIds[$definition['code']];
+
+            foreach ($definition['symptoms'] as $symptomCode) {
+                if (! isset($symptomIds[$symptomCode])) {
+                    continue;
+                }
+
+                $links[] = [
+                    'disease_id' => $diseaseId,
+                    'symptom_id' => $symptomIds[$symptomCode],
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+            }
         }
+
+        foreach (array_chunk($links, 500) as $chunk) {
+            DB::table('disease_symptom')->insert($chunk);
+        }
+
+        $this->command?->info(sprintf('Knowledge base: %d diseases upserted.', count($definitions)));
     }
 
     private function upsertRules(): void
     {
-        foreach ($this->ruleDefinitions() as $definition) {
-            $disease = Disease::where('code', $definition['disease_code'])
-                ->firstOrFail();
+        $now = now();
+        $definitions = $this->ruleDefinitions();
 
-            $rule = ExpertRule::updateOrCreate(
-                ['code' => $definition['code']],
-                [
-                    'name' => $definition['name'],
-                    'disease_id' => $disease->id,
-                    'explanation' => $definition['explanation'],
-                    'priority' => $definition['priority'],
-                    'confidence_score' => $definition['confidence_score'],
-                    'is_active' => true,
-                ]
-            );
+        $diseaseIds = Disease::whereIn('code', array_unique(array_column($definitions, 'disease_code')))
+            ->pluck('id', 'code');
 
-            $rule->conditions()->delete();
+        ExpertRule::upsert(
+            array_map(fn (array $definition): array => [
+                'code' => $definition['code'],
+                'name' => $definition['name'],
+                'disease_id' => $diseaseIds[$definition['disease_code']],
+                'explanation' => $definition['explanation'],
+                'priority' => $definition['priority'],
+                'confidence_score' => $definition['confidence_score'],
+                'is_active' => true,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ], $definitions),
+            ['code'],
+            ['name', 'disease_id', 'explanation', 'priority', 'confidence_score', 'is_active', 'updated_at']
+        );
 
-            foreach ($definition['groups'] as $groupNumber => $conditions) {
-                foreach ($conditions as $condition) {
-                    $symptom = Symptom::where('code', $condition['symptom_code'])
-                        ->firstOrFail();
+        $ruleIds = ExpertRule::whereIn('code', array_column($definitions, 'code'))
+            ->pluck('id', 'code');
+        $symptomIds = Symptom::pluck('id', 'code');
 
-                    ExpertRuleCondition::create([
-                        'expert_rule_id' => $rule->id,
-                        'symptom_id' => $symptom->id,
+        ExpertRuleCondition::whereIn('expert_rule_id', $ruleIds->values())->delete();
+
+        $conditions = [];
+
+        foreach ($definitions as $definition) {
+            $ruleId = $ruleIds[$definition['code']];
+
+            foreach ($definition['groups'] as $groupNumber => $group) {
+                foreach ($group as $condition) {
+                    if (! isset($symptomIds[$condition['symptom_code']])) {
+                        continue;
+                    }
+
+                    $conditions[] = [
+                        'expert_rule_id' => $ruleId,
+                        'symptom_id' => $symptomIds[$condition['symptom_code']],
                         'operator' => $condition['operator'],
                         'expected_value' => $condition['expected_value'],
                         'condition_group' => $groupNumber,
-                    ]);
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ];
                 }
             }
         }
+
+        foreach (array_chunk($conditions, 500) as $chunk) {
+            ExpertRuleCondition::insert($chunk);
+        }
+
+        $this->command?->info(sprintf('Knowledge base: %d expert rules upserted.', count($definitions)));
     }
 
     private function prunePlaceholders(): void
