@@ -358,6 +358,11 @@ strip remain code-level placeholders until CMS fields exist.
 - Set `VITE_API_URL` at build time to the deployed API URL, and add the deployed
   origin to the backend `CORS_ALLOWED_ORIGINS`.
 - The admin app also needs `VITE_PUBLIC_SITE_URL` and the `VITE_REVERB_*` values.
+- **`VITE_PUBLIC_SITE_URL` is mandatory in production builds.** It has no
+  localhost fallback: if it is unset the build emits
+  `[sitePreview] VITE_PUBLIC_SITE_URL is not set` and the app fails at runtime
+  rather than silently opening `http://localhost:5174`. Set it to the deployed
+  public website origin (e.g. `https://royalcare-clinic.vercel.app`).
 - Both Dockerfiles start Vite in development mode. Do not deploy them as
   production servers.
 

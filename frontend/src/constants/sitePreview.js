@@ -6,9 +6,22 @@
  * preview embeds the public site in an iframe rather than rendering it inline.
  */
 
-/** Base origin of the public website. Override per environment for deployments. */
-export const PUBLIC_SITE_URL =
-  import.meta.env.VITE_PUBLIC_SITE_URL ?? 'http://localhost:5174'
+/**
+ * Base origin of the public website. Override per environment for deployments.
+ *
+ * There is no hardcoded localhost fallback: a production build must set
+ * VITE_PUBLIC_SITE_URL, otherwise the "Open website" button and the embedded
+ * preview would silently point at a dev server that does not exist. A missing
+ * value now fails the build instead.
+ */
+export const PUBLIC_SITE_URL = import.meta.env.VITE_PUBLIC_SITE_URL
+
+if (!PUBLIC_SITE_URL && import.meta.env.PROD) {
+  throw new Error(
+    '[sitePreview] VITE_PUBLIC_SITE_URL is not set. Set it to the deployed ' +
+      'public website origin (e.g. https://royalcare-clinic.vercel.app) and rebuild.',
+  )
+}
 
 /**
  * Viewport presets for the preview frame, matching common device widths so an

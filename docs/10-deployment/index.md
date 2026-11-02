@@ -951,7 +951,7 @@ VITE_REVERB_APP_KEY=royalcare-clinic-key
 VITE_REVERB_HOST=royalcare-clinic-api.onrender.com
 VITE_REVERB_PORT=443
 VITE_REVERB_SCHEME=https
-VITE_PUBLIC_SITE_URL=<public website URL, if deployed>
+VITE_PUBLIC_SITE_URL=https://royalcare-clinic.vercel.app
 ```
 
 Finally, add the Vercel production origin to the API service so the browser is
