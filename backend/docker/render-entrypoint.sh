@@ -42,8 +42,11 @@ until php artisan migrate --force --no-interaction; do
     sleep 3
 done
 
-# Reference data required by every environment. These seeders are idempotent and
-# never overwrite admin-edited content.
-php artisan db:seed --class=ProductionSeeder --force --no-interaction
+# Reference data required by every environment (roles, the first admin and the
+# medical knowledge base). The seeders are idempotent, but on a cold remote
+# database they take long enough to exceed Render's deploy timeout, so they run
+# in the background and the port binds immediately. The command records a marker
+# in the database, so later boots skip the work; an interrupted run is retried.
+php artisan app:ensure-reference-data >> storage/logs/seed.log 2>&1 &
 
 exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
