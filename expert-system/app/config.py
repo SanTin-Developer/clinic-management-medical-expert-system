@@ -70,6 +70,35 @@ def _bool_from_env(name: str, default: bool) -> bool:
     return raw.strip().lower() in {"1", "true", "yes", "y", "on"}
 
 
+def _normalise_database_url(url: str) -> str:
+    """Point a libpq-style PostgreSQL URL at the installed psycopg 3 driver.
+
+    Managed platforms (Render, Heroku, ...) expose ``postgresql://...`` (or the
+    legacy ``postgres://...``). SQLAlchemy maps a bare ``postgresql`` scheme to
+    psycopg2, which this image does not ship, so rewrite it explicitly.
+
+    When ``DB_SSLMODE`` is set (Supabase requires ``require``), append it to the
+    URL if the caller did not already specify a value. This keeps the expert
+    service encrypted even when the shared ``DATABASE_URL`` omits the query
+    parameter.
+    """
+    if url.startswith("postgresql+psycopg://"):
+        normalised = url
+    elif url.startswith("postgresql://"):
+        normalised = "postgresql+psycopg://" + url[len("postgresql://"):]
+    elif url.startswith("postgres://"):
+        normalised = "postgresql+psycopg://" + url[len("postgres://"):]
+    else:
+        normalised = url
+
+    sslmode = (os.getenv("DB_SSLMODE") or "").strip()
+    if sslmode and "sslmode=" not in normalised:
+        separator = "&" if "?" in normalised else "?"
+        normalised = f"{normalised}{separator}sslmode={sslmode}"
+
+    return normalised
+
+
 @dataclass(frozen=True)
 class Settings:
     """Immutable, validated view of the process environment."""
@@ -103,7 +132,11 @@ def get_settings() -> Settings:
     """
 
     raw_url = os.getenv("DATABASE_URL")
-    database_url = raw_url.strip() if raw_url and raw_url.strip() else None
+    database_url = (
+        _normalise_database_url(raw_url.strip())
+        if raw_url and raw_url.strip()
+        else None
+    )
 
     raw_key = os.getenv("EXPERT_SYSTEM_API_KEY")
     api_key = raw_key.strip() if raw_key and raw_key.strip() else None

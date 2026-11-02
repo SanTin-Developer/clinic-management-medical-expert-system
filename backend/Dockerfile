@@ -44,6 +44,12 @@ COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY docker/warmup.sh /usr/local/bin/warmup.sh
 RUN chmod +x /usr/local/bin/warmup.sh
 
+# Render entrypoint: applies migrations (and safe reference seeders) before
+# handing over to Supervisor. Used only via `dockerCommand` on Render; local
+# Compose keeps the plain CMD below.
+COPY docker/render-entrypoint.sh /usr/local/bin/render-entrypoint.sh
+RUN chmod +x /usr/local/bin/render-entrypoint.sh
+
 EXPOSE 8000
 EXPOSE 8080
 

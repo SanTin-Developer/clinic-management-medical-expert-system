@@ -11,15 +11,22 @@ class DatabaseSeeder extends Seeder
         $this->call([
             RolePermissionSeeder::class,
             AdminUserSeeder::class,
+            KnowledgeBaseSeeder::class,
             ShiftTemplateSeeder::class,
             WebsiteContentSeeder::class,
             AboutContentBlockSeeder::class,
             WebsitePageContentSeeder::class,
         ]);
 
+        // Demo logins are normally local/testing only. A hosted demo can opt in
+        // with SEED_DEMO_USERS=true (set in render.yaml); turn it off before
+        // handling real patient data.
+        if (app()->environment(['local', 'testing']) || $this->demoUsersEnabled()) {
+            $this->call(DemoUsersSeeder::class);
+        }
+
         if (app()->environment(['local', 'testing'])) {
             $this->call([
-                DemoUsersSeeder::class,
                 KhmerDemoDataSeeder::class,
                 QueueDemoSeeder::class,
                 WardRoomBedDemoSeeder::class,
@@ -27,5 +34,10 @@ class DatabaseSeeder extends Seeder
                 WebsiteDemoContentSeeder::class,
             ]);
         }
+    }
+
+    private function demoUsersEnabled(): bool
+    {
+        return filter_var(env('SEED_DEMO_USERS', false), FILTER_VALIDATE_BOOL);
     }
 }

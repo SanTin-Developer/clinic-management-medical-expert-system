@@ -1,0 +1,314 @@
+# Render Blueprint for the RoyalCare Clinic Management & Medical Expert System.
+#
+# Topology (free-tier friendly):
+#   royalcare-clinic-api      Docker web service  -> Laravel API + Reverb (port 8000)
+#   royalcare-clinic-expert   Docker web service  -> FastAPI expert system (port 8001)
+#   royalcare-clinic-admin    static site         -> React admin dashboard
+#   royalcare-clinic-website  static site         -> public website
+#   royalcare-clinic-redis    Key Value           -> cache / sessions / queues (internal only)
+#
+# PostgreSQL is deliberately NOT provisioned here. The deployment uses Supabase
+# as the system of record. Render prompts for DB_URL when the Blueprint is
+# created; use the Supabase *session pooler* URI (port 5432, IPv4, prepared
+# statements supported) and keep ?sslmode=require. See
+# docs/10-deployment/index.md, section 10.13.
+#
+# The onrender.com hostnames below are derived from the service names. If you
+# rename a service (or attach custom domains), update APP_URL, FRONTEND_URL,
+# CORS_ALLOWED_ORIGINS, EXPERT_SYSTEM_URL, the VITE_* values, and the
+# SANCTUM_STATEFUL_DOMAINS value to match.
+
+services:
+  # ---------------------------------------------------------------------------
+  # Laravel API (nginx + php-fpm + queue + scheduler + Reverb + Telegram poller)
+  # ---------------------------------------------------------------------------
+  - type: web
+    name: royalcare-clinic-api
+    runtime: docker
+    plan: free
+    region: singapore
+    branch: master
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    # Migrates, seeds the reference data, then hands over to Supervisor.
+    dockerCommand: /usr/local/bin/render-entrypoint.sh
+    healthCheckPath: /up
+    # Runs once after the first successful deploy. The entrypoint already
+    # applies migrations and seeds ProductionSeeder on every boot; this adds the
+    # one-time demo/content data set.
+    initialDeployHook: "php artisan migrate --force --no-interaction && php artisan db:seed --force --no-interaction"
+    buildFilter:
+      paths:
+        - backend/**
+        - render.yaml
+    envVars:
+      # --- Render runtime ---------------------------------------------------
+      - key: PORT
+        value: "8000"
+
+      # --- Application ------------------------------------------------------
+      - key: APP_NAME
+        value: RoyalCare Clinic
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: APP_KEY
+        generateValue: true
+      - key: APP_URL
+        value: https://royalcare-clinic-api.onrender.com
+      - key: APP_LOCALE
+        value: en
+      - key: APP_FALLBACK_LOCALE
+        value: en
+      - key: APP_FAKER_LOCALE
+        value: en_US
+      - key: BCRYPT_ROUNDS
+        value: "12"
+
+      # --- Database: Supabase ----------------------------------------------
+      # DB_URL is prompted for in the Render dashboard. Format:
+      #   postgresql://postgres.<project-ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres?sslmode=require
+      # Do NOT use the transaction pooler on port 6543 (no prepared statements).
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DB_URL
+        sync: false
+      - key: DB_SSLMODE
+        value: require
+
+      # --- Cache / queues / sessions: Render Key Value ---------------------
+      - key: REDIS_CLIENT
+        value: phpredis
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: royalcare-clinic-redis
+          property: connectionString
+      - key: CACHE_STORE
+        value: redis
+      - key: QUEUE_CONNECTION
+        value: redis
+      - key: SESSION_DRIVER
+        value: redis
+      - key: SESSION_LIFETIME
+        value: "480"
+      - key: SESSION_SECURE_COOKIE
+        value: "true"
+      - key: SESSION_SAME_SITE
+        value: lax
+      - key: SANCTUM_EXPIRATION
+        value: "480"
+      - key: SANCTUM_STATEFUL_DOMAINS
+        value: royalcare-clinic-admin.onrender.com,royalcare-clinic-website.onrender.com
+
+      # --- URLs / CORS ------------------------------------------------------
+      - key: FRONTEND_URL
+        value: https://royalcare-clinic-admin.onrender.com
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://royalcare-clinic-admin.onrender.com,https://royalcare-clinic-website.onrender.com
+
+      # --- Realtime: Laravel Reverb inside this container ------------------
+      # Browsers connect to wss://<api-host>/app/<key>; nginx proxies /app to
+      # Reverb on 127.0.0.1:8080. Server-side broadcasting also uses 127.0.0.1.
+      - key: BROADCAST_CONNECTION
+        value: reverb
+      - key: REVERB_APP_ID
+        value: royalcare-clinic
+      # Public value: it is embedded in the SPA bundle and the WebSocket path.
+      # Keep it URL-safe and identical to VITE_REVERB_APP_KEY below.
+      - key: REVERB_APP_KEY
+        value: royalcare-clinic-key
+      - key: REVERB_APP_SECRET
+        generateValue: true
+      - key: REVERB_HOST
+        value: 127.0.0.1
+      - key: REVERB_PORT
+        value: "8080"
+      - key: REVERB_SCHEME
+        value: http
+      - key: REVERB_SERVER_HOST
+        value: 0.0.0.0
+      - key: REVERB_SERVER_PORT
+        value: "8080"
+      - key: REVERB_SCALING_ENABLED
+        value: "false"
+
+      # --- Medical expert system (FastAPI) ---------------------------------
+      # Free web services sleep when idle, so allow for a cold start.
+      - key: EXPERT_SYSTEM_URL
+        value: https://royalcare-clinic-expert.onrender.com
+      - key: EXPERT_SYSTEM_API_KEY
+        generateValue: true
+      - key: EXPERT_SYSTEM_TIMEOUT
+        value: "60"
+      - key: EXPERT_SYSTEM_CONNECT_TIMEOUT
+        value: "15"
+
+      # --- Mail / optional integrations (demo defaults) --------------------
+      - key: MAIL_MAILER
+        value: log
+      - key: MAIL_FROM_ADDRESS
+        value: no-reply@clinic.local
+      - key: AUTH_SECURITY_ALERTS_ENABLED
+        value: "false"
+      - key: TELEGRAM_ENABLED
+        value: "false"
+      - key: TELEGRAM_WEBHOOK_ENABLED
+        value: "false"
+      # Explicitly disable the poller: otherwise the worker exits non-zero when
+      # Telegram is unconfigured and Supervisor restarts it in a loop.
+      - key: TELEGRAM_POLLING_ENABLED
+        value: "false"
+
+      # --- Storage / uploads ------------------------------------------------
+      # Render's filesystem is ephemeral. Patient documents uploaded to the
+      # local disk are lost on redeploy/restart. Configure S3 or Cloudinary
+      # before storing real data.
+      - key: FILESYSTEM_DISK
+        value: local
+      - key: DOCUMENTS_DISK
+        value: local
+      - key: FILE_SCANNER_DRIVER
+        value: "null"
+
+      # --- Logging ----------------------------------------------------------
+      - key: LOG_CHANNEL
+        value: stderr
+      - key: LOG_LEVEL
+        value: info
+
+      # --- Auth defaults ----------------------------------------------------
+      - key: AUTH_OTP_ENABLED
+        value: "false"
+      - key: AUTH_2FA_MANDATORY
+        value: "false"
+      - key: AUTH_LOCKOUT_ENABLED
+        value: "false"
+      - key: AUTH_REQUIRE_VERIFIED_EMAIL
+        value: "false"
+      - key: AUTH_ENFORCE_TRUSTED_DEVICE
+        value: "false"
+
+      # --- Demo data --------------------------------------------------------
+      # Seeds the demo logins (admin + one per role) on the first deploy.
+      # Set to false and delete/disable the demo accounts before storing real
+      # patient data. See docs/10-deployment/index.md.
+      - key: SEED_DEMO_USERS
+        value: "true"
+
+  # ---------------------------------------------------------------------------
+  # FastAPI medical expert system
+  # ---------------------------------------------------------------------------
+  - type: web
+    name: royalcare-clinic-expert
+    runtime: docker
+    plan: free
+    region: singapore
+    branch: master
+    dockerfilePath: ./expert-system/Dockerfile
+    dockerContext: ./expert-system
+    healthCheckPath: /health
+    buildFilter:
+      paths:
+        - expert-system/**
+        - render.yaml
+    envVars:
+      - key: PORT
+        value: "8001"
+      # Share the Supabase URL with the API. The expert service rewrites the
+      # scheme to postgresql+psycopg and appends DB_SSLMODE when needed.
+      - key: DATABASE_URL
+        fromService:
+          type: web
+          name: royalcare-clinic-api
+          envVarKey: DB_URL
+      - key: DB_SSLMODE
+        value: require
+      # Must match EXPERT_SYSTEM_API_KEY on the API service.
+      - key: EXPERT_SYSTEM_API_KEY
+        fromService:
+          type: web
+          name: royalcare-clinic-api
+          envVarKey: EXPERT_SYSTEM_API_KEY
+      - key: LOG_LEVEL
+        value: INFO
+      # Small pool: Supabase's free session pooler has a limited connection
+      # budget shared with the Laravel API.
+      - key: DB_POOL_SIZE
+        value: "3"
+      - key: DB_MAX_OVERFLOW
+        value: "2"
+      - key: DB_CONNECT_TIMEOUT_SECONDS
+        value: "10"
+      - key: DB_STATEMENT_TIMEOUT_MS
+        value: "5000"
+      - key: EXPERT_RULES_CACHE_TTL_SECONDS
+        value: "60"
+      - key: EXPERT_SYSTEM_REQUEST_TIMEOUT_SECONDS
+        value: "30"
+      - key: EXPERT_AUDIT_ENABLED
+        value: "false"
+
+  # ---------------------------------------------------------------------------
+  # Admin dashboard (React SPA)
+  # ---------------------------------------------------------------------------
+  - type: web
+    name: royalcare-clinic-admin
+    runtime: static
+    branch: master
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: VITE_API_URL
+        value: https://royalcare-clinic-api.onrender.com/api/v1
+      - key: VITE_PUBLIC_SITE_URL
+        value: https://royalcare-clinic-website.onrender.com
+      # Public Reverb key/host. VITE_* values are inlined at build time, so
+      # rebuild this site after changing them.
+      - key: VITE_REVERB_APP_KEY
+        value: royalcare-clinic-key
+      - key: VITE_REVERB_HOST
+        value: royalcare-clinic-api.onrender.com
+      - key: VITE_REVERB_PORT
+        value: "443"
+      - key: VITE_REVERB_SCHEME
+        value: https
+
+  # ---------------------------------------------------------------------------
+  # Public website (React SPA)
+  # ---------------------------------------------------------------------------
+  - type: web
+    name: royalcare-clinic-website
+    runtime: static
+    branch: master
+    rootDir: website
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: VITE_API_URL
+        value: https://royalcare-clinic-api.onrender.com/api/v1
+
+  # ---------------------------------------------------------------------------
+  # Redis-compatible cache / sessions / queues (internal only)
+  # ---------------------------------------------------------------------------
+  - type: keyvalue
+    name: royalcare-clinic-redis
+    plan: free
+    region: singapore
+    # No public IPs: reachable only from services in this Render workspace.
+    ipAllowList: []
+    maxmemoryPolicy: noeviction

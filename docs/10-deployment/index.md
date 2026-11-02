@@ -141,6 +141,8 @@ are recommendations.
 | App | `APP_URL` | `http://localhost:8000` | Public HTTPS API URL |
 | App | `APP_LOCALE` / `APP_FALLBACK_LOCALE` | `en` | Keep `en` unless translations are complete |
 | Database | `DB_CONNECTION` | `pgsql` | `pgsql` |
+| Database | `DB_URL` | empty | Full connection URL; required on Render (Supabase session pooler) |
+| Database | `DB_SSLMODE` | `prefer` | `require` for Supabase |
 | Database | `DB_HOST` | `127.0.0.1` | `postgres` in Compose |
 | Database | `DB_DATABASE` / `DB_USERNAME` / `DB_PASSWORD` | local placeholders | Real credentials from a secret store |
 | Cache | `CACHE_STORE` | `database` | `redis` |
@@ -168,8 +170,11 @@ are recommendations.
 | Mail | `MAIL_*` | `smtp` | Working SMTP/API provider |
 | Realtime | `REVERB_APP_ID` / `REVERB_APP_KEY` / `REVERB_APP_SECRET` | empty | Required for realtime chat |
 | Realtime | `REVERB_HOST` / `REVERB_PORT` / `REVERB_SCHEME` | `localhost` / `8080` / `http` | Public values; `https` behind TLS |
+| Realtime | `REVERB_SERVER_HOST` / `REVERB_SERVER_PORT` | `0.0.0.0` / `8080` | Internal bind address; Render proxies `/app` |
 | Telegram | `TELEGRAM_ENABLED` | `false` | Requires bot token |
 | Telegram | `TELEGRAM_BOT_TOKEN` / `TELEGRAM_WEBHOOK_SECRET` | empty | Secret store only |
+| Telegram | `TELEGRAM_POLLING_ENABLED` | `true` | Set `false` when Telegram is disabled (avoids a restart loop) |
+| Seeding | `SEED_DEMO_USERS` | `false` | `true` only for a hosted demo; never with real patient data |
 | Docs | `SCRAMBLE_DEV_TOOLS` | see `.env.example` | API docs are admin-gated outside `local` |
 | Expert | `EXPERT_SYSTEM_*` | see root table | Must match the Compose values |
 
@@ -457,3 +462,229 @@ Plan rollback before deploying:
 
 See the [Administrator Security Runbook](../ADMIN_SECURITY_RUNBOOK.md) for
 hardening and rollout sequencing.
+
+## 10.13 Render + Supabase Deployment (Blueprint)
+
+The repository root contains [`render.yaml`](../../render.yaml), a Render
+Blueprint for the hosted demo. **Render Postgres is not used.** Supabase is the
+system of record; Render runs the compute and static sites.
+
+> **Status:** the Blueprint and the container entrypoint are configuration, not
+> a verified production deployment. The first deploy must be exercised and the
+> smoke tests in §10.13.5 completed before the URL is shared.
+
+### 10.13.1 Topology
+
+```mermaid
+flowchart LR
+    Browser["Browser"] -->|HTTPS| Admin["royalcare-clinic-admin<br/>static site"]
+    Browser -->|HTTPS| Website["royalcare-clinic-website<br/>static site"]
+    Admin -->|"HTTPS /api/v1<br/>WSS /app"| API["royalcare-clinic-api<br/>Docker · nginx + php-fpm<br/>queue · scheduler · Reverb"]
+    Website -->|"HTTPS /api/v1"| API
+    API -->|"SQL 5432<br/>session pooler + TLS"| Supabase[("Supabase Postgres")]
+    API -->|"HTTP :8001<br/>X-Internal-Api-Key"| Expert["royalcare-clinic-expert<br/>Docker · FastAPI"]
+    Expert -->|"SQL 5432<br/>session pooler + TLS"| Supabase
+    API -->|"redis:// · internal"| KV[("Render Key Value<br/>25 MB free")]
+```
+
+| Render resource | Type | Plan | Public? | Purpose |
+| --- | --- | --- | --- | --- |
+| `royalcare-clinic-api` | Docker web service | `free` | Yes | Laravel API, Reverb, queue worker, scheduler |
+| `royalcare-clinic-expert` | Docker web service | `free` | Yes, key-protected | FastAPI rule engine |
+| `royalcare-clinic-admin` | static site | free | Yes | Admin dashboard |
+| `royalcare-clinic-website` | static site | free | Yes | Public website |
+| `royalcare-clinic-redis` | Key Value | `free` | No (internal only) | Cache, sessions, queues |
+
+The API container exposes one public port (`8000`). nginx proxies `/app` (and
+`/apps`) to Reverb on `127.0.0.1:8080`, so browsers use
+`wss://royalcare-clinic-api.onrender.com/app/<key>` and Render only has to route
+a single HTTP port.
+
+### 10.13.2 Create the Supabase database
+
+1. Create a project at <https://supabase.com/dashboard>. Choose the region
+   closest to the Render region (`singapore` in the Blueprint).
+2. Wait for the database to finish provisioning.
+3. Open **Project Settings → Database → Connection string** and select
+   **Session pooler** (not *Direct* and not *Transaction pooler*).
+4. Copy the URI and replace the password placeholder. Keep port **5432** and
+   append `?sslmode=require` if it is not already present.
+5. If the password contains `@`, `:`, `/`, `?`, `#`, or `%`, URL-encode it. The
+   dashboard's copy button already produces an encoded URI.
+6. Do **not** use the `anon` or `service_role` API keys here. Laravel and the
+   expert system connect with the PostgreSQL user and password.
+
+Example (the `<...>` placeholders are not literal):
+
+```text
+postgresql://postgres.<project-ref>:<url-encoded-password>@aws-0-<region>.pooler.supabase.com:5432/postgres?sslmode=require
+```
+
+Why the session pooler:
+
+- It is reachable over IPv4; Supabase's direct hostname may resolve to IPv6
+  only, which Render's free egress does not support.
+- It supports prepared statements. The transaction pooler on port `6543` does
+  not, and Laravel's PDO layer relies on them.
+- It multiplexes many short-lived PHP connections, which suits the API's
+  request-per-process model.
+
+The connection uses the `postgres` role, which bypasses Supabase Row Level
+Security. Treat the URI as a root credential: store it only in Render's
+environment variables (the Blueprint prompts for it with `sync: false`) and
+never commit it.
+
+### 10.13.3 Create the Render Blueprint
+
+1. Push `render.yaml` to the `master` branch.
+2. In the Render Dashboard choose **New → Blueprint** and select this
+   repository.
+3. Render creates the five resources listed in §10.13.1 and prompts for
+   `DB_URL` on the API service. Paste the Supabase session-pooler URI.
+4. Apply the Blueprint and wait for the first deploy.
+
+Only `DB_URL` is prompted. Render generates `APP_KEY`, `REVERB_APP_SECRET`, and
+`EXPERT_SYSTEM_API_KEY`. The expert service reads `DATABASE_URL` and
+`EXPERT_SYSTEM_API_KEY` from the API service with `fromService`, so the two
+services cannot drift.
+
+If you rename a service or attach a custom domain, update every derived value:
+
+| Value | Where |
+| --- | --- |
+| `APP_URL`, `EXPERT_SYSTEM_URL` | `render.yaml` → API `envVars` |
+| `FRONTEND_URL`, `CORS_ALLOWED_ORIGINS`, `SANCTUM_STATEFUL_DOMAINS` | `render.yaml` → API `envVars` |
+| `VITE_API_URL`, `VITE_PUBLIC_SITE_URL`, `VITE_REVERB_*` | `render.yaml` → static-site `envVars` (rebuild required) |
+| `REVERB_APP_KEY` | Must stay identical in the API and admin services |
+
+### 10.13.4 First deploy and seeding
+
+The API image starts through
+[`backend/docker/render-entrypoint.sh`](../../backend/docker/render-entrypoint.sh),
+which is idempotent:
+
+1. Recreates the writable `storage/` and `bootstrap/cache/` directories and the
+   public storage symlink.
+2. Retries `php artisan migrate --force` up to 10 times (Supabase may still be
+   waking up on the first attempt).
+3. Runs `ProductionSeeder`: roles/permissions, the bootstrap administrator, and
+   the medical knowledge base.
+4. Execs Supervisor, which starts nginx, php-fpm, the queue worker, the
+   scheduler, Reverb, and the Telegram poller.
+
+After the first successful deploy, Render runs the one-time
+`initialDeployHook`:
+
+```text
+php artisan migrate --force --no-interaction
+php artisan db:seed --force --no-interaction
+```
+
+With `SEED_DEMO_USERS=true` this runs the production-safe content seeders and
+creates the demo logins. It runs **once per service**, not on every deploy.
+
+Demo accounts created by the hook:
+
+| Username | Email | Password | Role |
+| --- | --- | --- | --- |
+| `admin` | `admin@clinic.local` | `Admin@12345` | Admin |
+| `doctor` | `doctor@clinic.local` | `Password@12345` | Doctor |
+| `nurse` | `nurse@clinic.local` | `Password@12345` | Nurse |
+| `headnurse` | `headnurse@clinic.local` | `Password@12345` | Head Nurse |
+| `receptionist` | `receptionist@clinic.local` | `Password@12345` | Receptionist |
+| `pharmacist` | `pharmacist@clinic.local` | `Password@12345` | Pharmacist |
+| `patient` | `patient@clinic.local` | `Password@12345` | Patient |
+
+Change the admin password immediately after the first login. If the hook fails
+or the database is reset later, run the seeders again from a Render Shell (if
+your plan exposes one) or locally against the same `DB_URL`:
+
+```powershell
+cd backend
+php artisan db:seed --force
+```
+
+The bootstrap admin is recreated by `ProductionSeeder` on every boot, but an
+existing admin password is never overwritten in production.
+
+### 10.13.5 Smoke tests
+
+| Check | Expected |
+| --- | --- |
+| `GET https://royalcare-clinic-api.onrender.com/up` | `200` |
+| `GET https://royalcare-clinic-expert.onrender.com/health` | `{"status":"ok",...}` |
+| `GET https://royalcare-clinic-admin.onrender.com` | Admin SPA loads; deep links work |
+| `GET https://royalcare-clinic-website.onrender.com` | Public website loads |
+| Admin login with a demo account | `200`; dashboard loads |
+| Open a consultation and request an expert suggestion | Expert response, no `401` |
+| Two browsers on the staff chat page | Messages arrive without a refresh |
+| Browser console | No CORS errors; WebSocket connects to `wss://.../app/...` |
+
+If the expert call fails, check in order: `EXPERT_SYSTEM_URL`, the generated
+`EXPERT_SYSTEM_API_KEY` on both services, the expert service's `/health`, and
+the Supabase connection from the expert logs. Free services sleep, so the first
+call after idle can take up to a minute; the API allows a 60-second expert
+timeout for this reason.
+
+### 10.13.6 Free-tier caveats
+
+- **Web services sleep after ~15 minutes of inactivity.** The next request
+  cold-starts the container (often 30–60 seconds). WebSocket clients disconnect
+  and reconnect. The API's migrations and reference seeders run again on wake,
+  which is safe because they are idempotent.
+- **750 free instance hours per month per workspace**, pooled across services.
+  Two always-on services would exceed the allowance; the idle spin-down is what
+  keeps the demo inside it.
+- **Free Key Value is 25 MB, internal-only, and not persistent.** Cache entries,
+  sessions, and queued jobs are lost when the instance restarts. Do not use it
+  for durable data.
+- **Supabase free projects pause after ~7 days without activity.** Resume the
+  project in the Supabase dashboard if connections start failing. The API cannot
+  resume it automatically.
+- **The container filesystem is ephemeral.** `DOCUMENTS_DISK=local` and the
+  default `public` fallback lose uploads on every deploy/restart. Configure
+  Cloudinary or S3 before storing real documents.
+- **The expert service is public.** It is protected by
+  `EXPERT_SYSTEM_API_KEY`; `/health` and the OpenAPI schema remain public. Do not
+  put patient data in the expert request beyond symptom IDs.
+- **Static sites build at deploy time.** `VITE_*` values are inlined into the
+  bundle; change the env var and trigger a new build. A backend-only deploy does
+  not rebuild the SPAs.
+- **Mail is logged, not delivered.** `MAIL_MAILER=log` writes messages to the
+  API logs. Password-reset and invitation emails will not arrive until SMTP is
+  configured.
+
+### 10.13.7 Production hardening
+
+Before the deployment holds real clinic data:
+
+- Set `SEED_DEMO_USERS=false`, delete or disable the demo accounts, and change
+  the admin password.
+- Replace `MAIL_MAILER=log` with a real SMTP/API provider and test delivery.
+- Set `AUTH_SECURITY_ALERTS_ENABLED=true` once mail works.
+- Move uploads to Cloudinary/S3 (`DOCUMENTS_DISK`, `FILESYSTEM_DISK`,
+  `CLOUDINARY_*`).
+- Attach custom domains and update every URL/CORS value listed in §10.13.3.
+- Enable 2FA and lockout only after staff enrollment.
+- Take a Supabase `pg_dump` before destructive changes. Free projects do not
+  include point-in-time recovery.
+- Review the [Production Readiness Checklist](#1012-production-readiness-checklist)
+  with the Render-specific substitutions above.
+
+### 10.13.8 Moving the expert system to a private service (paid)
+
+Render private services (`type: pserv`) and `preDeployCommand` require a paid
+workspace. When upgrading:
+
+1. Change the expert service in `render.yaml` from `type: web` to `type: pserv`
+   and remove its `healthCheckPath`/public assumptions if desired.
+2. Set the API's `EXPERT_SYSTEM_URL` to the private service address, for example
+   `http://royalcare-clinic-expert:8001`.
+3. Keep `EXPERT_SYSTEM_API_KEY` on both services.
+4. Remove the expert's public URL from any firewall or documentation.
+5. Redeploy the API so it picks up the new URL.
+
+The API still reaches the expert over the workspace private network, so the
+`X-Internal-Api-Key` header remains a second layer of defence rather than the
+only one.
+

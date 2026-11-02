@@ -24,6 +24,12 @@ return Application::configure(basePath: dirname(__DIR__))
         ['middleware' => ['auth:sanctum']],
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Render (and most container platforms) terminate TLS at the load
+        // balancer and forward the original scheme in X-Forwarded-* headers.
+        // Trusting the proxy keeps generated URLs, signed links and redirects
+        // on https instead of falling back to http.
+        $middleware->trustProxies(at: '*');
+
         // API-only app: never redirect unauthenticated requests to a web login
         // route (none is defined), let the SPA handle 401 responses instead.
         $middleware->redirectGuestsTo(null);

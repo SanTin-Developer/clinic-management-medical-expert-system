@@ -7,3 +7,8 @@ tests
 requirements-dev.txt
 Dockerfile
 README.md
+.env
+.env.*
+!.env.example
+.git
+.gitignore

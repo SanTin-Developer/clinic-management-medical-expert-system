@@ -97,7 +97,14 @@ return [
 
     'cipher' => 'AES-256-CBC',
 
-    'key' => env('APP_KEY'),
+    /*
+    | Some hosts (Render included) generate a raw base64 or hex string for
+    | APP_KEY instead of Laravel's `base64:`-prefixed value. Laravel treats an
+    | unprefixed key as literal bytes, so a 44-character base64 string would be
+    | rejected as an invalid AES-256 key length. The helper keeps the config
+    | array serialisable for `php artisan config:cache`.
+    */
+    'key' => \App\Support\AppKey::normalise(env('APP_KEY')),
 
     'previous_keys' => [
         ...array_filter(
