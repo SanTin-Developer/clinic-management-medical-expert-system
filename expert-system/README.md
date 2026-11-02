@@ -337,7 +337,244 @@ See [Deployment & Infrastructure](../docs/10-deployment/index.md).
 5. Deactivate (do not delete) superseded symptoms/diseases/rules via `is_active`.
 6. Re-run the test suite and a manual `/evaluate` smoke test after any change.
 
-## 16. Related documentation
+## 16. Inference engine internals
+
+The service is layered so that each stage has one responsibility. Nothing in the
+engine computes a probability; it only tests configured rules against a submitted
+symptom set.
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                    EXPERT SYSTEM  (expert-system/)                            │
+│                    FastAPI · Python 3.12 · uvicorn :8001                      │
+│                                                                              │
+│  ┌────────────────────────────────────────────────────────────────────────┐  │
+│  │  MIDDLEWARE  LAYER  (app/main.py)                                      │  │
+│  │   • log_requests()        →  request metadata only (never bodies/IDs)   │  │
+│  │   • timeout_middleware()  →  EXPERT_SYSTEM_REQUEST_TIMEOUT_SECONDS     │  │
+│  └────────────────────────────────┬───────────────────────────────────────┘  │
+│                                   │                                          │
+│  ┌────────────────────────────────▼───────────────────────────────────────┐  │
+│  │  ROUTER  LAYER  (app/main.py)                                          │  │
+│  │   GET  /            →  root()                                          │  │
+│  │   GET  /health      →  health_check()   (no DB)                        │  │
+│  │   GET  /ready       →  readiness_check() + SELECT 1                    │  │
+│  │   POST /evaluate    →  evaluate()                                      │  │
+│  │                          ▲  Depends(require_api_key) + Depends(get_db) │  │
+│  └────────────────────────────────┬───────────────────────────────────────┘  │
+│                                   │                                          │
+│  ┌────────────────────────────────▼───────────────────────────────────────┐  │
+│  │  VALIDATION  LAYER  (app/schemas.py — Pydantic)                        │  │
+│  │   • EvaluateRequest   symptom_ids: 1..50 positive ints, extra=forbid   │  │
+│  │   • MatchedRule       rule_code, confidence_score, priority, …         │  │
+│  │   • EvaluateResult    engine, version, is_clinically_validated=false   │  │
+│  │   • CLINICAL_DISCLAIMER  (returned as `notice` on every evaluation)    │  │
+│  └────────────────────────────────┬───────────────────────────────────────┘  │
+│                                   │                                          │
+│  ┌────────────────────────────────▼───────────────────────────────────────┐  │
+│  │  INFERENCE  ENGINE  (app/engine.py)                                    │  │
+│  │                                                                        │  │
+│  │   evaluate_rules(db, symptom_ids)                                      │  │
+│  │     ├─► load_active_rules(db)      ←── _RULE_QUERY (single JOINed SQL)│  │
+│  │     │      │                          • in-process TTL cache (60s)      │  │
+│  │     │      │                          • invalidate_rules_cache()       │  │
+│  │     │      └─► _build_rules(rows)   → Rule + RuleCondition objects     │  │
+│  │     │                                 • eligibility flags               │  │
+│  │     └─► match_rules(rules, selected)                                   │  │
+│  │            │   _condition_satisfied()  →  present / absent + expected   │  │
+│  │            │   group by condition_group  →  AND inside, OR across      │  │
+│  │            └─► sort(key=(-priority, rule_code))                        │  │
+│  │                                                                        │  │
+│  │   Result: List[MatchedRule]  (confidence_score = pass-through)         │  │
+│  └────────────────────────────────┬───────────────────────────────────────┘  │
+│                                   │                                          │
+│  ┌────────────────────────────────▼───────────────────────────────────────┐  │
+│  │  AUDIT  (app/audit.py)  —  opt-in only                                 │  │
+│  │   record_evaluation(db, result, symptom_ids)                           │  │
+│  │     • gated by EXPERT_AUDIT_ENABLED (default: false)                   │  │
+│  │     • best-effort — never fails the request                            │  │
+│  └────────────────────────────────┬───────────────────────────────────────┘  │
+│                                   │                                          │
+│  ┌────────────────────────────────▼───────────────────────────────────────┐  │
+│  │  INFRASTRUCTURE                                                       │  │
+│  │   config.py    → Settings dataclass (env-driven, lru_cache)           │  │
+│  │   database.py  → build_engine() · get_engine() · get_db() dependency  │  │
+│  │   logging_config.py → single-line JSON logs                           │  │
+│  └────────────────────────────────┬───────────────────────────────────────┘  │
+└───────────────────────────────────┼──────────────────────────────────────────┘
+                                    │ SQLAlchemy (psycopg 3, bound parameters)
+                                    ▼
+                    ┌───────────────────────────────────┐
+                    │      POSTGRESQL  (knowledge base) │
+                    │  symptoms · diseases · expert_rules│
+                    │  expert_rule_conditions            │
+                    │  expert_evaluation_audits (opt-in) │
+                    └───────────────────────────────────┘
+```
+
+### Rule loading (`load_active_rules`)
+
+A single JOINed query (`_RULE_QUERY`) reads active rules, their active diseases,
+conditions and symptoms in one round-trip, ordered for deterministic grouping:
+
+```sql
+SELECT er.id, er.code, er.name, er.explanation, er.priority, er.confidence_score,
+       d.code AS disease_code, d.name AS disease_name, d.severity_level,
+       erc.id AS condition_id, erc.symptom_id, erc.operator,
+       erc.expected_value, erc.condition_group,
+       s.name AS symptom_name, s.is_active AS symptom_is_active
+FROM expert_rules er
+JOIN diseases d ON d.id = er.disease_id AND d.is_active = TRUE
+LEFT JOIN expert_rule_conditions erc ON erc.expert_rule_id = er.id
+LEFT JOIN symptoms s ON s.id = erc.symptom_id
+WHERE er.is_active = TRUE
+ORDER BY er.priority DESC, er.code ASC, erc.condition_group ASC, erc.id ASC
+```
+
+`_build_rules` groups the flat rows into `Rule` objects. Rather than silently
+dropping a bad condition, it marks the whole rule **ineligible** so a reduced
+condition set can never produce a false match:
+
+| Condition problem | `is_eligible` | `ineligibility_reason` |
+|---|---|---|
+| Symptom id is `NULL` | `false` | `condition references a missing symptom` |
+| Symptom is inactive | `false` | `condition references an inactive symptom` |
+| Operator not `present`/`absent` | `false` | `unsupported operator '...'` |
+| Rule has zero conditions | `false` | `rule has no conditions` |
+
+Results are cached in-process for `EXPERT_RULES_CACHE_TTL_SECONDS` (default 60).
+`invalidate_rules_cache()` drops the cache after a knowledge-base change.
+
+## 17. Request flow — `POST /evaluate`
+
+```
+ Laravel ──► FastAPI
+     │
+     │  ① HTTP POST /evaluate
+     │     Header: X-Internal-Api-Key        (only when configured)
+     │     Body:   {"symptom_ids": [12, 34]}
+     ▼
+ ┌─────────────────────────────────────────────────────────────┐
+ │ ② MIDDLEWARE                                                 │
+ │    log_requests()       →  log method/path/status/duration   │
+ │    timeout_middleware() →  504 if exceeded                    │
+ └───────────────────────────┬─────────────────────────────────┘
+                             ▼
+ ┌─────────────────────────────────────────────────────────────┐
+ │ ③ DEPENDENCIES                                               │
+ │    require_api_key()   →  401 if key missing/invalid         │
+ │    get_db()            →  open SQLAlchemy Session            │
+ └───────────────────────────┬─────────────────────────────────┘
+                             ▼
+ ┌─────────────────────────────────────────────────────────────┐
+ │ ④ Pydantic VALIDATION  (EvaluateRequest)                     │
+ │    • 1..50 symptom_ids                                       │
+ │    • each: int > 0, ≤ 2147483647                            │
+ │    • extra fields forbidden → 422                            │
+ └───────────────────────────┬─────────────────────────────────┘
+                             ▼
+ ┌─────────────────────────────────────────────────────────────┐
+ │ ⑤ SYMPTOM GATE  (main.py)                                    │
+ │    SELECT id FROM symptoms                                   │
+ │      WHERE is_active = TRUE AND id IN :ids                   │
+ │    invalid_ids = requested − active                          │
+ │    if invalid_ids → 422 {invalid_symptom_ids: [...]}         │
+ └───────────────────────────┬─────────────────────────────────┘
+                             ▼
+ ┌─────────────────────────────────────────────────────────────┐
+ │ ⑥ ENGINE:  evaluate_rules(db, unique_ids)                    │
+ │    load_active_rules() → match_rules() → sorted matches      │
+ └───────────────────────────┬─────────────────────────────────┘
+                             ▼
+ ┌─────────────────────────────────────────────────────────────┐
+ │ ⑦ AUDIT  (opt-in)                                            │
+ │    EXPERT_AUDIT_ENABLED=true?                                │
+ │      → INSERT INTO expert_evaluation_audits                  │
+ │    failure → rollback + log; request still succeeds          │
+ └───────────────────────────┬─────────────────────────────────┘
+                             ▼
+ ┌─────────────────────────────────────────────────────────────┐
+ │ ⑧ RESPONSE  (EvaluateResult — Pydantic)  →  200 OK          │
+ └─────────────────────────────────────────────────────────────┘
+```
+
+## 18. Condition evaluation reference
+
+`expert-system/app/engine.py` — `_condition_satisfied(condition, selected)`:
+
+```python
+def _condition_satisfied(condition: RuleCondition, selected: frozenset[int]) -> bool:
+    is_present = condition.symptom_id in selected
+
+    if condition.operator == "present":
+        evaluated = is_present
+    else:  # "absent" (validated when the rule was loaded)
+        evaluated = not is_present
+
+    return evaluated == condition.expected_value
+```
+
+### Truth table
+
+| `operator` | symptom submitted? | `evaluated` | `expected_value` | satisfied |
+|---|---|---|---|---|
+| `present` | yes | `True` | `true` | ✅ |
+| `present` | no | `False` | `true` | ❌ |
+| `absent` | yes | `False` | `true` | ❌ |
+| `absent` | no | `True` | `true` | ✅ |
+| `present` | yes | `True` | `false` | ❌ |
+| `present` | no | `False` | `false` | ✅ |
+
+### AND / OR grouping
+
+```
+  Group 1: [c1, c2]   →  c1 AND c2
+  Group 2: [c3, c4]   →  c3 AND c4
+  Group 3: [c5]
+
+  Rule matches  ⇔  Group1 OR Group2 OR Group3
+```
+
+Worked example — `RULE-UTI-001` (from `KnowledgeBaseSeeder`):
+
+```
+Group 1: burning AND frequent
+Group 2: burning AND urgency        ← selected: burning + urgency → MATCH
+Group 3: burning AND blood-in-urine
+
+matched_condition_groups = [2]
+```
+
+### `confidence_score` is never calculated
+
+The value travels from the database to the response **unchanged**:
+
+```
+engine.py   _RULE_QUERY     SELECT er.confidence_score …     ← read
+engine.py   _build_rules    confidence_score=float(row[…])  ← parse
+engine.py   match_rules     confidence_score=rule.confidence_score  ← copy
+schemas.py  MatchedRule     confidence_score: float         ← contract
+main.py     /evaluate       returned as-is                  ← response
+```
+
+There is no arithmetic on `confidence_score` anywhere in `app/`. It is a
+configured value, not a probability and not used for ordering (see §8).
+
+## 19. Error paths
+
+| Status | Condition | Handler / location |
+|---|---|---|
+| `401` | Missing/invalid internal API key (when configured) | `require_api_key` |
+| `422` | Body invalid, empty, > 50 symptoms, unknown/inactive IDs | `EvaluateRequest` + symptom gate |
+| `503` | `SQLAlchemyError` | `@app.exception_handler` — `"Database temporarily unavailable."` |
+| `503` | `DATABASE_URL` unset | `@app.exception_handler` — `"Database is not configured."` |
+| `503` | `RuleEngineError` | `@app.exception_handler` — `"Expert system temporarily unavailable."` |
+| `504` | `EXPERT_SYSTEM_REQUEST_TIMEOUT_SECONDS` exceeded | `timeout_middleware` |
+| `200` | Valid request, no rule matched | empty `matched_rules` (not an error) |
+
+Error handlers never return SQL, credentials, or stack traces.
+
+## 20. Related documentation
 
 - [Root README](../README.md)
 - [API Documentation](../docs/07-api-documentation/index.md)
