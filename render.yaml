@@ -170,15 +170,30 @@ services:
         value: "false"
 
       # --- Storage / uploads ------------------------------------------------
-      # Render's filesystem is ephemeral. Patient documents uploaded to the
-      # local disk are lost on redeploy/restart. Configure S3 or Cloudinary
-      # before storing real data.
+      # Render's filesystem is ephemeral: anything written to the local disk is
+      # lost on the next deploy/restart. Patient documents therefore go to
+      # Cloudinary (DOCUMENTS_DISK=cloudinary); announcement posters and
+      # website media switch to Cloudinary automatically once the credentials
+      # below are present. Keep FILESYSTEM_DISK=local for throwaway scratch
+      # files that never need to survive a restart.
       - key: FILESYSTEM_DISK
         value: local
       - key: DOCUMENTS_DISK
-        value: local
+        value: cloudinary
       - key: FILE_SCANNER_DRIVER
         value: "null"
+      # Cloudinary credentials are secrets: enter them in the Render dashboard
+      # (or set them with the Render API/CLI), not in this file.
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: CLOUDINARY_FOLDER
+        value: Clinic Management System and Medical Expert systems
+      - key: CLOUDINARY_SECURE
+        value: "true"
 
       # --- Logging ----------------------------------------------------------
       - key: LOG_CHANNEL
