@@ -13,6 +13,16 @@ set -eu
 
 cd /var/www/html
 
+# libpq resolves the client certificate relative to $HOME. The image starts as
+# root, so Supervisor and every child inherit HOME=/root, which www-data cannot
+# traverse; each PDO connection then fails with
+#   could not open certificate file "/root/.postgresql/postgresql.crt"
+# even though no client certificate is configured (Supabase only needs TLS).
+# Point HOME at a world-readable directory so libpq simply finds no certificate
+# and falls back to the CA bundle. Exported here (not only per Supervisor
+# program) so php-fpm, the queue worker, the scheduler and artisan all agree.
+export HOME=/var/www
+
 # Render instances start with an empty filesystem. Recreate the Laravel writable
 # directories before php-fpm runs as www-data.
 mkdir -p \
