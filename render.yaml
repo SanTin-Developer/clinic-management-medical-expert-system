@@ -15,8 +15,12 @@
 # statements supported) and keep ?sslmode=require. See
 # docs/10-deployment/index.md, section 10.13.
 #
-# Redis is provisioned as a Key Value instance (free tier allows 1 per workspace).
-# It's internal-only and not persistent - suitable for cache/sessions/queues.
+# Redis: the production recommendation is a managed Upstash Redis database
+# reached over TLS (see docs/10-deployment, "Redis (Upstash)"). The Blueprint
+# also provisions a Render Key Value instance as a zero-config free-tier
+# fallback for cache/sessions/queues: it is internal-only and not persistent.
+# When the Upstash REDIS_HOST/REDIS_PORT/REDIS_PASSWORD variables are set they
+# take precedence over the Key Value REDIS_URL.
 #
 # The onrender.com hostnames below are derived from the service names. If you
 # rename a service (or attach custom domains), update APP_URL,
@@ -82,10 +86,27 @@ services:
         value: require
 
       # --- Cache / queues / sessions ---------------------------------------
-      # Redis (Render Key Value) is internal-only and non-persistent: cache and
-      # sessions are fine there, and the queue worker drains jobs quickly. If
-      # the Key Value instance is unavailable, point QUEUE_CONNECTION back at
-      # `database` so queued jobs survive restarts in Supabase.
+      # Preferred production setup: a managed Upstash Redis over TLS. Create the
+      # database (https://upstash.com) and copy its Redis connection host, port
+      # (the RESP port, typically 6379 - not the REST port 443) and password.
+      # Set the values below in the Render dashboard (they are secrets:
+      # sync:false, so the Blueprint never stores them). Use the native
+      # RESP/TCP endpoint, NOT the Upstash HTTPS REST URL.
+      - key: REDIS_HOST
+        sync: false
+      - key: REDIS_PORT
+        sync: false
+      - key: REDIS_PASSWORD
+        sync: false
+      - key: REDIS_USERNAME
+        value: default
+      - key: REDIS_SCHEME
+        value: tls
+      # Free-tier fallback: the internal Key Value instance. Its REDIS_URL wins
+      # over REDIS_HOST while REDIS_HOST is empty, so leaving REDIS_HOST blank
+      # keeps the Blueprint working with zero external setup. The Key Value is
+      # internal-only and non-persistent; if jobs must survive a restart, set
+      # QUEUE_CONNECTION=database so they persist in Supabase.
       - key: REDIS_URL
         fromService:
           type: keyvalue

@@ -112,17 +112,27 @@ class PerformanceLimitsTest extends TestCase
     {
         $this->seedData();
 
+        // Financial and inventory aggregates are deliberately NOT cached: they
+        // must always reflect live PostgreSQL state. Guard the query budget (no
+        // per-row scanning) but do not assert cache hits here.
         $summaryCold = $this->queriesFor('/api/v1/reports/summary');
         $summaryWarm = $this->queriesFor('/api/v1/reports/summary');
 
         $this->assertLessThanOrEqual(30, $summaryCold, 'summary should not scan per row');
         $this->assertGreaterThan($summaryWarm, $summaryCold, 'summary cold must do real work');
-        $this->assertLessThanOrEqual(3, $summaryWarm, 'summary must be served from cache when warm');
+        // Summary embeds billing + inventory, so it is read live every request.
+        $this->assertGreaterThan(3, $summaryWarm, 'summary is database-authoritative and must not be cached');
 
-        $this->queriesFor('/api/v1/reports/revenue');
-        $this->assertLessThanOrEqual(3, $this->queriesFor('/api/v1/reports/revenue'), 'revenue must be cached');
+        // Revenue and inventory are financial/stock data: never served from cache.
+        $revenueWarm = $this->queriesFor('/api/v1/reports/revenue');
+        $this->assertGreaterThan(3, $revenueWarm, 'revenue is database-authoritative and must not be cached');
 
-        $this->queriesFor('/api/v1/reports/inventory');
-        $this->assertLessThanOrEqual(3, $this->queriesFor('/api/v1/reports/inventory'), 'inventory must be cached');
+        $inventoryWarm = $this->queriesFor('/api/v1/reports/inventory');
+        $this->assertGreaterThan(3, $inventoryWarm, 'inventory is database-authoritative and must not be cached');
+
+        // Appointments is the one low-risk cached report: the warm read is cheap.
+        $this->queriesFor('/api/v1/reports/appointments');
+        $appointmentsWarm = $this->queriesFor('/api/v1/reports/appointments');
+        $this->assertLessThanOrEqual(3, $appointmentsWarm, 'appointments must be served from cache when warm');
     }
 }

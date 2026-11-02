@@ -32,7 +32,6 @@ use App\Http\Controllers\Api\MedicineController;
 use App\Http\Controllers\Api\NewsController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\NursingTaskController;
-use App\Http\Controllers\Api\SystemAlertController;
 use App\Http\Controllers\Api\PasswordResetController;
 use App\Http\Controllers\Api\PatientAssignmentController;
 use App\Http\Controllers\Api\PatientController;
@@ -48,6 +47,7 @@ use App\Http\Controllers\Api\PublicServiceController;
 use App\Http\Controllers\Api\PublicTeamController;
 use App\Http\Controllers\Api\PublicWebsiteController;
 use App\Http\Controllers\Api\QueueEntryController;
+use App\Http\Controllers\Api\RedisHealthController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\RoomController;
 use App\Http\Controllers\Api\SearchController;
@@ -59,6 +59,7 @@ use App\Http\Controllers\Api\StaffDocumentController;
 use App\Http\Controllers\Api\StaffInvitationController;
 use App\Http\Controllers\Api\StockMovementController;
 use App\Http\Controllers\Api\SymptomController;
+use App\Http\Controllers\Api\SystemAlertController;
 use App\Http\Controllers\Api\TelegramController;
 use App\Http\Controllers\Api\TwoFactorController;
 use App\Http\Controllers\Api\UserController;
@@ -522,6 +523,10 @@ Route::prefix('v1')->group(function () {
         Route::post('/system-alerts/{systemAlert}/read', [SystemAlertController::class, 'markRead']);
         Route::post('/system-alerts/{systemAlert}/acknowledge', [SystemAlertController::class, 'acknowledge']);
         Route::post('/system-alerts/{systemAlert}/resolve', [SystemAlertController::class, 'resolve']);
+
+        // TEMPORARY: Redis connectivity diagnostic (Admin-only). Remove after
+        // verifying the deployed Redis connection. See docs/10-deployment.
+        Route::get('/system/redis-health', [RedisHealthController::class, 'check']);
 
         // Telegram linking & group notifications
         Route::get('/telegram/status', [TelegramController::class, 'status']);

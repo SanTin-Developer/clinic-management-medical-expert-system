@@ -21,6 +21,22 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
+/**
+ * Read-only aggregate reports for the dashboard.
+ *
+ * Cache strategy (deliberately asymmetric):
+ *  - `appointments` is the only cached endpoint: it aggregates appointment
+ *    counts by status and doctor, which are low-risk and change infrequently.
+ *    Cached with a stale-within grace period to avoid a thundering herd.
+ *  - `summary`, `revenue` and `inventory` are NEVER cached. The summary embeds
+ *    billing and inventory figures; revenue and inventory report on payments,
+ *    invoices, balances and stock levels. All are read straight from PostgreSQL
+ *    so that no financial or dispensing decision can ever be informed by a
+ *    stale cached value. See docs/10-deployment for the performance trade-off.
+ *
+ * Every endpoint keeps its existing response shape, filters and the
+ * `reports.view` permission; only the caching behaviour differs.
+ */
 class ReportController extends Controller
 {
     private const REPORT_TITLES = [
@@ -33,8 +49,9 @@ class ReportController extends Controller
     {
         $this->authorizeReports($request);
 
+        // Contains billing and inventory figures: read live from PostgreSQL.
         return response()->json([
-            'data' => $this->cachedReport('report:summary', fn (): array => $this->summaryData()),
+            'data' => $this->summaryData(),
         ]);
     }
 
@@ -134,6 +151,27 @@ class ReportController extends Controller
         ];
     }
 
+    /**
+     * Cache a low-risk aggregate (appointment counts) so dashboard queries are
+     * not recomputed on every request. Falls back to computing directly when
+     * caching is off. Uses a stale-within grace period so that when the cache
+     * expires, a single request refreshes it and every other request keeps
+     * serving the stale value (avoids a thundering herd on the database).
+     *
+     * Only call this for data that is safe to be momentarily stale. Financial
+     * and inventory figures must go through the database directly.
+     */
+    private function cachedReport(string $key, Closure $callback): mixed
+    {
+        if (! config('reports.cache.enabled')) {
+            return $callback();
+        }
+
+        $ttl = (int) config('reports.cache.ttl', 300);
+
+        return Cache::flexible($key, [$ttl, $ttl + 60], $callback);
+    }
+
     public function revenue(Request $request): JsonResponse
     {
         $this->authorizeReports($request);
@@ -143,11 +181,10 @@ class ReportController extends Controller
             'to' => ['nullable', 'date'],
         ]);
 
+        // Financial aggregates are database-authoritative: never cached, so a
+        // stale value can never inform a payment, invoice or balance decision.
         return response()->json([
-            'data' => $this->cachedReport(
-                'report:revenue:'.($validated['from'] ?? 'all').'|'.($validated['to'] ?? 'all'),
-                fn (): array => $this->revenueData($validated)
-            ),
+            'data' => $this->revenueData($validated),
         ]);
     }
 
@@ -191,8 +228,10 @@ class ReportController extends Controller
     {
         $this->authorizeReports($request);
 
+        // Stock levels are database-authoritative: never cached, so dispensing,
+        // stock validation and reorder decisions always see live quantities.
         return response()->json([
-            'data' => $this->cachedReport('report:inventory', fn (): array => $this->inventoryData()),
+            'data' => $this->inventoryData(),
         ]);
     }
 
@@ -270,24 +309,6 @@ class ReportController extends Controller
             'inventory' => $this->inventoryExport(),
             default => abort(404, 'Unknown report.'),
         };
-    }
-
-    /**
-     * Cache aggregate report payloads so dashboard queries are not recomputed
-     * on every request. Falls back to computing directly when caching is off.
-     * Uses a stale-within grace period so that when the cache expires, a single
-     * request refreshes it and every other request keeps serving the stale
-     * value (avoids a thundering herd on the database).
-     */
-    private function cachedReport(string $key, Closure $callback): mixed
-    {
-        if (! config('reports.cache.enabled')) {
-            return $callback();
-        }
-
-        $ttl = (int) config('reports.cache.ttl', 300);
-
-        return Cache::flexible($key, [$ttl, $ttl + 60], $callback);
     }
 
     private function appointmentsExport(Request $request): array

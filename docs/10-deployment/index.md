@@ -145,9 +145,11 @@ are recommendations.
 | Database | `DB_SSLMODE` | `prefer` | `require` for Supabase |
 | Database | `DB_HOST` | `127.0.0.1` | `postgres` in Compose |
 | Database | `DB_DATABASE` / `DB_USERNAME` / `DB_PASSWORD` | local placeholders | Real credentials from a secret store |
-| Cache | `CACHE_STORE` | `database` | `file` on Render free (no Key Value); `redis` when available |
-| Queue | `QUEUE_CONNECTION` | `database` | `database` on Render free (jobs survive restarts); `redis` when available |
-| Session | `SESSION_DRIVER` | `database` | `file` on Render free; `redis` when available |
+| Cache | `CACHE_STORE` | `database` | `redis` (Upstash, or Render Key Value on free tier) |
+| Queue | `QUEUE_CONNECTION` | `database` | `redis`; use `database` if jobs must survive a restart |
+| Session | `SESSION_DRIVER` | `database` | `redis` if cookie sessions are used; bearer-token SPA does not need it |
+| Redis | `REDIS_HOST` / `REDIS_PORT` / `REDIS_PASSWORD` | empty | Upstash RESP endpoint + password (TLS via `REDIS_SCHEME=tls`) |
+| Redis | `REDIS_URL` | empty | Render Key Value internal URL (free-tier fallback; wins while `REDIS_HOST` is empty) |
 | Session | `SESSION_SECURE_COOKIE` | `false` | `true` behind TLS |
 | Session | `SANCTUM_EXPIRATION` | `480` | Reviewed token lifetime in minutes |
 | CORS | `CORS_ALLOWED_ORIGINS` | `http://localhost:5173,http://localhost:5174` | Exact HTTPS origins only |
@@ -483,6 +485,7 @@ flowchart LR
     Admin -->|"HTTPS /api/v1<br/>WSS /app"| API["royalcare-clinic-api<br/>Docker · nginx + php-fpm<br/>queue · scheduler · Reverb"]
     Website -->|"HTTPS /api/v1"| API
     API -->|"SQL 5432<br/>session pooler + TLS"| Supabase[("Supabase Postgres")]
+    API -->|"rediss:// · TLS"| Redis[("Redis<br/>Upstash (managed) / Render Key Value (free)")]
     API -->|"HTTP :8001<br/>X-Internal-Api-Key"| Expert["royalcare-clinic-expert<br/>Docker · FastAPI"]
     Expert -->|"SQL 5432<br/>session pooler + TLS"| Supabase
 ```
@@ -491,11 +494,204 @@ flowchart LR
 | --- | --- | --- | --- | --- |
 | `royalcare-clinic-api` | Docker web service | `free` | Yes | Laravel API, Reverb, queue worker, scheduler |
 | `royalcare-clinic-expert` | Docker web service | `free` | Yes, key-protected | FastAPI rule engine |
+| `royalcare-clinic-redis` | Key Value | `free` | No (internal only) | Cache, sessions, queues (free-tier fallback) |
+| Upstash Redis | Managed Redis | paid/free tier | No (credentials) | Production cache, sessions, queues (TLS) |
 
-There is no Redis (Render allows only one free Key Value instance per
-workspace, and it is not persistent). The API uses `CACHE_STORE=file`,
-`SESSION_DRIVER=file`, and `QUEUE_CONNECTION=database`; queued jobs therefore
-survive restarts because the `jobs` table lives in Supabase.
+The API uses `CACHE_STORE=redis`, `SESSION_DRIVER=redis`, and
+`QUEUE_CONNECTION=redis`. It reaches Redis through `REDIS_URL` (Render Key
+Value) with `REDIS_CLIENT=phpredis`, or through the Upstash `REDIS_HOST` /
+`REDIS_PORT` / `REDIS_PASSWORD` / `REDIS_SCHEME=tls` settings when those are set
+(see **Redis (Upstash, production)** below).
+
+Render's free Key Value is **25 MB, internal-only, and not persistent**: cache
+entries, sessions, and queued jobs are lost when the instance restarts or
+redeploys. That is acceptable for the demo (users re-login, queued jobs are
+re-run by the scheduler), but if jobs must survive a restart, set
+`QUEUE_CONNECTION=database` and keep the durable `jobs` table in Supabase.
+
+The reference-data marker is deliberately stored in the **`database` cache
+store**, not Redis, so the idempotent seeding survives a Redis wipe.
+
+#### Redis (Upstash, production)
+
+The Render Key Value is a free-tier convenience: it is internal-only and **not
+persistent**, so a restart drops sessions and queued jobs. For anything that
+must survive restarts — or that needs TLS and an external connection — use a
+managed **Upstash Redis** database instead. Laravel's `phpredis` client connects
+to Upstash over TLS with the same configuration it uses for any Redis.
+
+> **Use the native RESP/TCP endpoint, not the Upstash REST URL.** Upstash offers
+> an HTTPS REST API (`https://<host>:443`) and a Redis-compatible endpoint on a
+> different port. Laravel speaks the Redis protocol, so copy the **Redis
+> connection string / endpoint** (host, port, password), never the REST URL.
+
+1. Create a database at <https://upstash.com>. Pick a region close to the Render
+   services (e.g. `ap-southeast-1` / Singapore) to keep round-trips short.
+2. In the Upstash console open the database and copy the **endpoint** (host and
+   port) and the **password**. If the username is not `default`, copy that too.
+3. On the Render API service, set these environment variables (they are secrets:
+   the Blueprint declares them with `sync: false`, so the values are entered in
+   the dashboard, never stored in `render.yaml`):
+
+   | Variable | Value | Notes |
+   | --- | --- | --- |
+   | `REDIS_HOST` | `<region>.upstash.io` | Upstash RESP endpoint host |
+   | `REDIS_PORT` | `6379` | RESP port from the Upstash console; **not** the REST port 443 |
+   | `REDIS_PASSWORD` | `<upstash password>` | From the Upstash console |
+   | `REDIS_USERNAME` | `default` | Only if Upstash uses a username |
+   | `REDIS_SCHEME` | `tls` | Upgrades the connection to TLS |
+   | `REDIS_CLIENT` | `phpredis` | Already the default in the Blueprint |
+   | `REDIS_DB` | `0` | Queue + sessions |
+   | `REDIS_CACHE_DB` | `1` | Cache (kept separate on purpose) |
+   | `CACHE_STORE` | `redis` | |
+   | `QUEUE_CONNECTION` | `redis` | |
+   | `SESSION_DRIVER` | `redis` | Only if not using bearer tokens (see below) |
+
+   When `REDIS_HOST` is set, it takes precedence over the Key Value `REDIS_URL`,
+   so the same Blueprint supports both. Leave `REDIS_HOST` blank to fall back to
+   the internal Key Value.
+4. **Sessions.** The shipped SPA authenticates with **Sanctum bearer tokens**,
+   so it does not need server-side sessions; `SESSION_DRIVER=redis` is optional.
+   Keep `SESSION_DRIVER=redis` only if you enable cookie-based auth (then also set
+   `SANCTUM_STATEFUL_DOMAINS` to the SPA origin). Bearer-token clients are
+   unaffected either way.
+5. Redeploy the API so the new variables take effect.
+
+##### TLS failure mode: `read error on connection` at AUTH
+
+If the logs show
+
+```text
+RedisException: read error on connection to <region>.upstash.io:6379
+  at PhpRedisConnector.php ... $client->auth([$config['username'], $config['password']])
+```
+
+the connection was opened as **plain TCP** against Upstash's TLS-only port. Upstash
+accepts the TCP socket, never negotiates TLS, and drops the client when it sends a
+plaintext `AUTH` — which surfaces as a read error on the very next command. The
+cause is a missing `REDIS_SCHEME=tls`: without it Laravel passes the bare host to
+phpredis, and phpredis never prepends `tls://`. The fix is exactly the
+`REDIS_SCHEME=tls` variable above; verify it is present **and** that `REDIS_HOST`
+is also present (a non-empty `REDIS_URL` would otherwise win and disable TLS).
+
+If the same symptom persists after the fix, check in order: the password is
+correct and not truncated in the Render dashboard, the database is not paused or at
+its request limit, the Upstash region matches, and the API's outbound IP is not
+blocked. Upstash's free tier is TLS-only; there is no plain-TCP fallback.
+
+##### Queue worker outage behaviour
+
+`docker/supervisord.conf` runs the worker as
+`queue:work --sleep=1 --tries=3 --max-time=3600` with `startsecs=5` and
+`startretries=5`. If Redis stays unreachable, five consecutive failed starts move
+the program to Supervisor's `FATAL` state and it stops respawning it — preventing
+the noisy restart loop seen during the outage. The normal hourly `--max-time` exit
+runs far longer than `startsecs`, so it is still treated as a clean start and
+restarted as intended. Recovery from `FATAL` needs a container restart (a redeploy
+or a manual restart on Render). Retry/failure handling is unchanged: each job
+still uses `tries=3`, and failures land in the `failed_jobs` table in Supabase.
+
+Verify connectivity from a one-off Render **Shell** (or locally against Upstash)
+before declaring it production-ready:
+
+```bash
+php artisan tinker --execute="cache()->store('redis')->put('rc:ping', now()->toIso8601String(), 10); echo cache()->store('redis')->get('rc:ping').PHP_EOL;"
+php artisan tinker --execute="echo 'conn: '.config('database.redis.default.host').':'.config('database.redis.default.port').' tls='.(config('database.redis.default.scheme') ?? 'plain').PHP_EOL;"
+```
+
+A returned timestamp and `tls=tls` confirm a working, encrypted connection.
+
+#### Redis connectivity diagnostic (temporary, Admin-only)
+
+The Render free plan has no shell access, so the commands above cannot be run
+against the deployed container. As a temporary substitute, the API exposes a
+single Admin-only endpoint that pings the **actual configured default Redis
+connection** and returns a fixed, non-leaking payload.
+
+```text
+GET /api/v1/system/redis-health
+```
+
+It sits behind `auth:sanctum` (401 for guests) and the `system.health.view`
+permission, which only the **Admin** role holds (403 for every other role). The
+response is always one of:
+
+```json
+{ "status": "ok", "connected": true }
+```
+
+```json
+{ "status": "error", "connected": false, "message": "Redis connection failed." }
+```
+
+It never includes the host, port, username, password, DSN, exception class or
+stack trace, and it never returns a hardcoded success.
+
+**Exact request to verify the deployed connection**
+
+```bash
+curl -s -o /dev/null -w '%{http_code}\n' \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Bearer <ADMIN_SANCTUM_TOKEN>' \
+  https://royalcare-clinic-api.onrender.com/api/v1/system/redis-health
+```
+
+Expected `200`. Then read the body:
+
+```bash
+curl -s \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Bearer <ADMIN_SANCTUM_TOKEN>' \
+  https://royalcare-clinic-api.onrender.com/api/v1/system/redis-health
+```
+
+- `{"status":"ok","connected":true}` → Redis is reachable and authenticated.
+- `{"status":"error","connected":false,"message":"Redis connection failed."}` →
+  the app could not establish the connection (or authenticate). Check the
+  `REDIS_*` environment variables, the Upstash region/TLS settings, and
+  Upstash's request/connection limits.
+
+Create the token by logging in as an admin via `POST /api/v1/auth/login` (or from
+the SPA → Dev Tools → localStorage, if a token was stored). Because the endpoint
+is temporary and gated, it does not need a separate rate limit beyond the
+standard `api` throttle (60/min per user).
+
+**Removing the diagnostic after verification**
+
+1. Delete `backend/app/Http/Controllers/Api/RedisHealthController.php`.
+2. Remove the route line in `backend/routes/api.php`:
+   `Route::get('/system/redis-health', [RedisHealthController::class, 'check']);`
+   and the `use App\Http\Controllers\Api\RedisHealthController;` import.
+3. Delete `backend/tests/Feature/RedisHealthTest.php`.
+4. Deploy. The endpoint disappears with the container that no longer contains it.
+
+**Cache strategy.** Only low-volatility, non-financial data is cached:
+
+- Dashboard analytics (`dashboard:analytics`) and the `appointments` report are
+  cached with a stale-within grace period and invalidated on the relevant model
+  writes (which also emit a realtime `DashboardMetricsUpdated` signal).
+- **`summary`, `revenue` and `inventory` are never cached.** They aggregate
+  payments, invoices, balances and stock levels, which must stay
+  database-authoritative (see `ReportController`). This trades a little report
+  speed for guaranteed correctness on money and stock.
+- The reference-data marker uses the **`database`** store so seeding survives a
+  Redis flush.
+
+**Queue worker.** No separate Render service is required: `php artisan
+queue:work` already runs under Supervisor inside the API container
+(`backend/docker/supervisord.conf`), currently as
+`queue:work --sleep=1 --tries=3 --max-time=3600`. It uses `QUEUE_CONNECTION`, so
+pointing that at Redis is enough. If you later need a dedicated worker, add a
+Render **Background Worker** with start command:
+
+```bash
+php artisan queue:work redis --sleep=3 --tries=3 --timeout=90 --max-time=3600
+```
+
+and disable the in-container worker to avoid double-processing. Failed jobs land
+in the `failed_jobs` table in Supabase (`QUEUE_FAILED_DRIVER=database-uuids`);
+inspect them with `php artisan queue:failed` and retry with `php artisan
+queue:retry all`.
 
 The API container exposes one public port (`8000`). nginx proxies `/app` (and
 `/apps`) to Reverb on `127.0.0.1:8080`, so browsers use
@@ -557,6 +753,12 @@ the two web services manually with the same settings:
 | Health Check Path | `/up` | `/health` |
 | Plan / Region | Free / Singapore | Free / Singapore |
 | `PORT` | `8000` | `8001` |
+
+Create one **Key Value** instance named `royalcare-clinic-redis` (free,
+Singapore, internal only) and copy its **Internal Redis URL** into the API's
+`REDIS_URL`. Then set `REDIS_CLIENT=phpredis`, `CACHE_STORE=redis`,
+`SESSION_DRIVER=redis`, and `QUEUE_CONNECTION=redis`. With the Blueprint this
+is wired with `fromService`; manually, paste the internal URL.
 
 `DB_URL` on the API and `DATABASE_URL` on the expert service must point at the
 same Supabase session-pooler URI. `EXPERT_SYSTEM_API_KEY` must be identical on
@@ -667,6 +869,9 @@ lands.
 - **750 free instance hours per month per workspace**, pooled across services.
   Two always-on services would exceed the allowance; the idle spin-down is what
   keeps the demo inside it.
+- **The free Key Value is 25 MB, internal-only and non-persistent.** Cache,
+  sessions and queued jobs disappear on restart/redeploy. Log everyone out, or
+  move `QUEUE_CONNECTION` back to `database` if jobs must survive.
 - **Supabase free projects pause after ~7 days without activity.** Resume the
   project in the Supabase dashboard if connections start failing. The API cannot
   resume it automatically.

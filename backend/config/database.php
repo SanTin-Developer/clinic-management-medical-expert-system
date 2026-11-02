@@ -141,6 +141,28 @@ return [
     | provides a richer body of commands than a typical key-value system
     | such as Memcached. You may define your connection settings here.
     |
+    | Two connection styles are supported, selected by the environment:
+    |
+    |  * Managed Redis over TLS (Upstash, Redis Cloud, ElastiCache, ...): leave
+    |    REDIS_URL empty and set REDIS_HOST / REDIS_PORT / REDIS_PASSWORD (and
+    |    REDIS_USERNAME when the provider uses a username, e.g. Upstash's
+    |    "default"). Set REDIS_SCHEME=tls so phpredis negotiates TLS. Never use
+    |    Upstash's HTTPS REST endpoint here: it is a REST API, not the native
+    |    RESP protocol phpredis speaks.
+    |
+    |  * A full connection URL (Render Key Value, local Docker): set REDIS_URL
+    |    and leave REDIS_HOST empty. The URL is used as-is, which keeps the
+    |    existing Render Blueprint and docker-compose setups working.
+    |
+    | IMPORTANT - REDIS_HOST wins over REDIS_URL. Laravel merges a connection
+    | URL *after* the discrete settings, so a non-empty REDIS_URL would
+    | otherwise silently override REDIS_HOST/REDIS_SCHEME and downgrade the
+    | connection to plain TCP (the exact failure that broke Upstash). The
+    | `url` option below is therefore suppressed whenever REDIS_HOST is set.
+    |
+    | The `default` connection (db 0) backs the queue and sessions; the `cache`
+    | connection (db 1 by default) backs the cache store, so a flushed cache
+    | never disturbs queued jobs.
     */
 
     'redis' => [
@@ -154,11 +176,17 @@ return [
         ],
 
         'default' => [
-            'url' => env('REDIS_URL'),
+            // REDIS_HOST takes precedence: when it is set (Upstash), the
+            // connection URL is ignored so the TLS scheme is honoured.
+            'url' => env('REDIS_HOST') ? null : env('REDIS_URL'),
             'host' => env('REDIS_HOST', '127.0.0.1'),
             'username' => env('REDIS_USERNAME'),
             'password' => env('REDIS_PASSWORD'),
             'port' => env('REDIS_PORT', '6379'),
+            // 'tls' upgrades the plain TCP connection to TLS. It is ignored when
+            // REDIS_URL already carries a rediss:// scheme. An empty value is
+            // normalised to null so phpredis never receives a bare "://" prefix.
+            'scheme' => env('REDIS_SCHEME') ?: null,
             'database' => env('REDIS_DB', '0'),
             'max_retries' => env('REDIS_MAX_RETRIES', 3),
             'backoff_algorithm' => env('REDIS_BACKOFF_ALGORITHM', 'decorrelated_jitter'),
@@ -167,11 +195,13 @@ return [
         ],
 
         'cache' => [
-            'url' => env('REDIS_URL'),
+            // Same precedence rule as the default connection: REDIS_HOST wins.
+            'url' => env('REDIS_HOST') ? null : env('REDIS_URL'),
             'host' => env('REDIS_HOST', '127.0.0.1'),
             'username' => env('REDIS_USERNAME'),
             'password' => env('REDIS_PASSWORD'),
             'port' => env('REDIS_PORT', '6379'),
+            'scheme' => env('REDIS_SCHEME') ?: null,
             'database' => env('REDIS_CACHE_DB', '1'),
             'max_retries' => env('REDIS_MAX_RETRIES', 3),
             'backoff_algorithm' => env('REDIS_BACKOFF_ALGORITHM', 'decorrelated_jitter'),
