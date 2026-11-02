@@ -145,9 +145,9 @@ are recommendations.
 | Database | `DB_SSLMODE` | `prefer` | `require` for Supabase |
 | Database | `DB_HOST` | `127.0.0.1` | `postgres` in Compose |
 | Database | `DB_DATABASE` / `DB_USERNAME` / `DB_PASSWORD` | local placeholders | Real credentials from a secret store |
-| Cache | `CACHE_STORE` | `database` | `redis` |
-| Queue | `QUEUE_CONNECTION` | `database` | `redis` |
-| Session | `SESSION_DRIVER` | `database` | `redis` |
+| Cache | `CACHE_STORE` | `database` | `file` on Render free (no Key Value); `redis` when available |
+| Queue | `QUEUE_CONNECTION` | `database` | `database` on Render free (jobs survive restarts); `redis` when available |
+| Session | `SESSION_DRIVER` | `database` | `file` on Render free; `redis` when available |
 | Session | `SESSION_SECURE_COOKIE` | `false` | `true` behind TLS |
 | Session | `SANCTUM_EXPIRATION` | `480` | Reviewed token lifetime in minutes |
 | CORS | `CORS_ALLOWED_ORIGINS` | `http://localhost:5173,http://localhost:5174` | Exact HTTPS origins only |
@@ -163,7 +163,7 @@ are recommendations.
 | Auth | `AUTH_INVITATION_EXPIRE_HOURS` | `72` | Invitation validity |
 | Auth | `AUTH_SECURITY_ALERTS_ENABLED` | `true` | Security notification emails |
 | Files | `FILESYSTEM_DISK` | `local` | Private disk; `s3` or Cloudinary if configured |
-| Files | `DOCUMENTS_DISK` | `local` | Patient/staff document disk |
+| Files | `DOCUMENTS_DISK` | `local` | `cloudinary` on Render (ephemeral disk) |
 | Files | `DOCUMENTS_MAX_SIZE_KB` | `10240` (10 MB) | Must stay under the proxy body limit |
 | Files | `FILE_SCANNER_DRIVER` | `null` | `clamav` for virus scanning |
 | Files | `CLOUDINARY_*` | empty | Optional media storage |
@@ -463,47 +463,55 @@ Plan rollback before deploying:
 See the [Administrator Security Runbook](../ADMIN_SECURITY_RUNBOOK.md) for
 hardening and rollout sequencing.
 
-## 10.13 Render + Supabase Deployment (Blueprint)
+## 10.13 Render + Supabase + Vercel Deployment
 
 The repository root contains [`render.yaml`](../../render.yaml), a Render
-Blueprint for the hosted demo. **Render Postgres is not used.** Supabase is the
-system of record; Render runs the compute and static sites.
+Blueprint for the **backend only**. **Render Postgres is not used.** Supabase is
+the system of record, Render runs the two containers, and the React admin
+dashboard is hosted on Vercel.
 
-> **Status:** the Blueprint and the container entrypoint are configuration, not
-> a verified production deployment. The first deploy must be exercised and the
-> smoke tests in §10.13.5 completed before the URL is shared.
+> **Status:** verified against a live deployment (November 2026). The API and
+> expert containers are live on Render, the database is Supabase, and the admin
+> SPA is built from `frontend/`.
 
 ### 10.13.1 Topology
 
 ```mermaid
 flowchart LR
-    Browser["Browser"] -->|HTTPS| Admin["royalcare-clinic-admin<br/>static site"]
-    Browser -->|HTTPS| Website["royalcare-clinic-website<br/>static site"]
+    Browser["Browser"] -->|HTTPS| Admin["Admin dashboard<br/>Vercel · frontend/"]
+    Browser -->|HTTPS| Website["Public website<br/>(deployed separately)"]
     Admin -->|"HTTPS /api/v1<br/>WSS /app"| API["royalcare-clinic-api<br/>Docker · nginx + php-fpm<br/>queue · scheduler · Reverb"]
     Website -->|"HTTPS /api/v1"| API
     API -->|"SQL 5432<br/>session pooler + TLS"| Supabase[("Supabase Postgres")]
     API -->|"HTTP :8001<br/>X-Internal-Api-Key"| Expert["royalcare-clinic-expert<br/>Docker · FastAPI"]
     Expert -->|"SQL 5432<br/>session pooler + TLS"| Supabase
-    API -->|"redis:// · internal"| KV[("Render Key Value<br/>25 MB free")]
 ```
 
 | Render resource | Type | Plan | Public? | Purpose |
 | --- | --- | --- | --- | --- |
 | `royalcare-clinic-api` | Docker web service | `free` | Yes | Laravel API, Reverb, queue worker, scheduler |
 | `royalcare-clinic-expert` | Docker web service | `free` | Yes, key-protected | FastAPI rule engine |
-| `royalcare-clinic-admin` | static site | free | Yes | Admin dashboard |
-| `royalcare-clinic-website` | static site | free | Yes | Public website |
-| `royalcare-clinic-redis` | Key Value | `free` | No (internal only) | Cache, sessions, queues |
+
+There is no Redis (Render allows only one free Key Value instance per
+workspace, and it is not persistent). The API uses `CACHE_STORE=file`,
+`SESSION_DRIVER=file`, and `QUEUE_CONNECTION=database`; queued jobs therefore
+survive restarts because the `jobs` table lives in Supabase.
 
 The API container exposes one public port (`8000`). nginx proxies `/app` (and
 `/apps`) to Reverb on `127.0.0.1:8080`, so browsers use
 `wss://royalcare-clinic-api.onrender.com/app/<key>` and Render only has to route
 a single HTTP port.
 
+The admin dashboard and the public website are **not** part of `render.yaml`.
+Deploy them separately and point their `VITE_API_URL` at the API.
+
 ### 10.13.2 Create the Supabase database
 
-1. Create a project at <https://supabase.com/dashboard>. Choose the region
-   closest to the Render region (`singapore` in the Blueprint).
+1. Create a project at <https://supabase.com/dashboard>. Choose the **same
+   region as the Render services** (`singapore` in the Blueprint). Cross-region
+   round-trips are the dominant cost on a free Supabase plan: a migration that
+   takes seconds locally can take minutes from another continent, and the
+   knowledge-base seeder is a few hundred statements.
 2. Wait for the database to finish provisioning.
 3. Open **Project Settings → Database → Connection string** and select
    **Session pooler** (not *Direct* and not *Transaction pooler*).
@@ -534,28 +542,38 @@ Security. Treat the URI as a root credential: store it only in Render's
 environment variables (the Blueprint prompts for it with `sync: false`) and
 never commit it.
 
-### 10.13.3 Create the Render Blueprint
+### 10.13.3 Create the Render services
 
-1. Push `render.yaml` to the `master` branch.
-2. In the Render Dashboard choose **New → Blueprint** and select this
-   repository.
-3. Render creates the five resources listed in §10.13.1 and prompts for
-   `DB_URL` on the API service. Paste the Supabase session-pooler URI.
-4. Apply the Blueprint and wait for the first deploy.
+Either apply the Blueprint (`New → Blueprint`, which prompts for `DB_URL` and
+generates `APP_KEY`, `REVERB_APP_SECRET`, and `EXPERT_SYSTEM_API_KEY`) or create
+the two web services manually with the same settings:
 
-Only `DB_URL` is prompted. Render generates `APP_KEY`, `REVERB_APP_SECRET`, and
-`EXPERT_SYSTEM_API_KEY`. The expert service reads `DATABASE_URL` and
-`EXPERT_SYSTEM_API_KEY` from the API service with `fromService`, so the two
-services cannot drift.
+| Setting | API | Expert |
+| --- | --- | --- |
+| Runtime | Docker | Docker |
+| Root Directory | `backend/` | `expert-system/` |
+| Dockerfile | `./Dockerfile` | `./Dockerfile` |
+| Docker Command | `/usr/local/bin/render-entrypoint.sh` | *(image default)* |
+| Health Check Path | `/up` | `/health` |
+| Plan / Region | Free / Singapore | Free / Singapore |
+| `PORT` | `8000` | `8001` |
+
+`DB_URL` on the API and `DATABASE_URL` on the expert service must point at the
+same Supabase session-pooler URI. `EXPERT_SYSTEM_API_KEY` must be identical on
+both services; the API sends it as `X-Internal-Api-Key`.
+
+Set `REVERB_APP_KEY=royalcare-clinic-key` and
+`REVERB_APP_SECRET=<random>` on the API. The key is public (it is embedded in the
+SPA bundle); the secret is not.
 
 If you rename a service or attach a custom domain, update every derived value:
 
 | Value | Where |
 | --- | --- |
-| `APP_URL`, `EXPERT_SYSTEM_URL` | `render.yaml` → API `envVars` |
-| `FRONTEND_URL`, `CORS_ALLOWED_ORIGINS`, `SANCTUM_STATEFUL_DOMAINS` | `render.yaml` → API `envVars` |
-| `VITE_API_URL`, `VITE_PUBLIC_SITE_URL`, `VITE_REVERB_*` | `render.yaml` → static-site `envVars` (rebuild required) |
-| `REVERB_APP_KEY` | Must stay identical in the API and admin services |
+| `APP_URL`, `EXPERT_SYSTEM_URL` | API service environment |
+| `FRONTEND_URL`, `CORS_ALLOWED_ORIGINS`, `SANCTUM_STATEFUL_DOMAINS` | API service environment (add the Vercel production origin) |
+| `VITE_API_URL`, `VITE_PUBLIC_SITE_URL`, `VITE_REVERB_*` | Vercel project environment (rebuild required) |
+| `REVERB_APP_KEY` | Must stay identical in the API and the Vercel project |
 
 ### 10.13.4 First deploy and seeding
 
@@ -563,25 +581,31 @@ The API image starts through
 [`backend/docker/render-entrypoint.sh`](../../backend/docker/render-entrypoint.sh),
 which is idempotent:
 
-1. Recreates the writable `storage/` and `bootstrap/cache/` directories and the
+1. Exports `HOME=/var/www`. libpq looks for a client certificate under `$HOME`;
+   Supervisor would otherwise inherit `HOME=/root`, which `www-data` cannot
+   traverse, and every PDO connection would fail with
+   `could not open certificate file "/root/.postgresql/postgresql.crt"`.
+2. Recreates the writable `storage/` and `bootstrap/cache/` directories and the
    public storage symlink.
-2. Retries `php artisan migrate --force` up to 10 times (Supabase may still be
+3. Retries `php artisan migrate --force` up to 10 times (Supabase may still be
    waking up on the first attempt).
-3. Runs `ProductionSeeder`: roles/permissions, the bootstrap administrator, and
-   the medical knowledge base.
-4. Execs Supervisor, which starts nginx, php-fpm, the queue worker, the
-   scheduler, Reverb, and the Telegram poller.
+4. Starts `php artisan app:ensure-reference-data` **in the background** and
+   immediately execs Supervisor, so the port binds and the health check passes
+   while roles, the bootstrap administrator and the medical knowledge base are
+   seeded. Progress is written to `storage/logs/seed.log`.
+5. Supervisor starts nginx, php-fpm, the queue worker, the scheduler, Reverb,
+   and the Telegram poller.
 
-After the first successful deploy, Render runs the one-time
-`initialDeployHook`:
+`app:ensure-reference-data` records a `reference-data-seeded` marker in the
+`database` cache store once `ProductionSeeder` succeeds, so later boots skip the
+work. The seeders are idempotent and keyed on the unique `code` columns; an
+interrupted run is retried on the next boot. The knowledge-base seeder uses
+set-based `upsert`/`insert` statements (a handful of round-trips) rather than one
+query per record, which is what keeps a cold deploy inside Render's window.
 
-```text
-php artisan migrate --force --no-interaction
-php artisan db:seed --force --no-interaction
-```
-
-With `SEED_DEMO_USERS=true` this runs the production-safe content seeders and
-creates the demo logins. It runs **once per service**, not on every deploy.
+`SEED_DEMO_USERS=true` additionally creates the demo logins. The `initialDeployHook`
+in `render.yaml` runs `php artisan db:seed` **once per service** to add the demo
+content; the entrypoint's reference seeding runs on every boot.
 
 Demo accounts created by the hook:
 
@@ -595,17 +619,18 @@ Demo accounts created by the hook:
 | `pharmacist` | `pharmacist@clinic.local` | `Password@12345` | Pharmacist |
 | `patient` | `patient@clinic.local` | `Password@12345` | Patient |
 
-Change the admin password immediately after the first login. If the hook fails
-or the database is reset later, run the seeders again from a Render Shell (if
-your plan exposes one) or locally against the same `DB_URL`:
+Change the admin password immediately after the first login. The free plan has
+no Shell or one-off jobs, so if the seeders need to be re-run later, run them
+locally against the same `DB_URL`:
 
 ```powershell
 cd backend
 php artisan db:seed --force
 ```
 
-The bootstrap admin is recreated by `ProductionSeeder` on every boot, but an
-existing admin password is never overwritten in production.
+The bootstrap admin is recreated whenever the reference-data seeder runs (every
+boot until the marker is set), but an existing admin password is never
+overwritten in production.
 
 ### 10.13.5 Smoke tests
 
@@ -613,11 +638,13 @@ existing admin password is never overwritten in production.
 | --- | --- |
 | `GET https://royalcare-clinic-api.onrender.com/up` | `200` |
 | `GET https://royalcare-clinic-expert.onrender.com/health` | `{"status":"ok",...}` |
-| `GET https://royalcare-clinic-admin.onrender.com` | Admin SPA loads; deep links work |
-| `GET https://royalcare-clinic-website.onrender.com` | Public website loads |
+| `GET https://royalcare-clinic-expert.onrender.com/ready` | `{"status":"ready","database":"ok"}` |
+| `GET /api/v1/knowledge-base/diseases` (admin token) | `total` is 20 |
+| `GET /api/v1/knowledge-base/symptoms` (admin token) | `total` is 63 |
+| `GET /api/v1/knowledge-base/expert-rules` (admin token) | `total` is 20 |
+| `POST /api/v1/expert-system/evaluate` with symptom IDs | `matched_rules` is not empty |
+| Admin dashboard on Vercel | SPA loads; a deep link (e.g. `/patients`) reloads correctly |
 | Admin login with a demo account | `200`; dashboard loads |
-| Open a consultation and request an expert suggestion | Expert response, no `401` |
-| Two browsers on the staff chat page | Messages arrive without a refresh |
 | Browser console | No CORS errors; WebSocket connects to `wss://.../app/...` |
 
 If the expert call fails, check in order: `EXPERT_SYSTEM_URL`, the generated
@@ -625,6 +652,11 @@ If the expert call fails, check in order: `EXPERT_SYSTEM_URL`, the generated
 the Supabase connection from the expert logs. Free services sleep, so the first
 call after idle can take up to a minute; the API allows a 60-second expert
 timeout for this reason.
+
+If the knowledge base is still empty, read `storage/logs/seed.log` in the API
+logs: `app:ensure-reference-data` prints per-phase progress and the elapsed time.
+The seeding runs in the background, so a deploy can be "live" before the data
+lands.
 
 ### 10.13.6 Free-tier caveats
 
@@ -635,21 +667,20 @@ timeout for this reason.
 - **750 free instance hours per month per workspace**, pooled across services.
   Two always-on services would exceed the allowance; the idle spin-down is what
   keeps the demo inside it.
-- **Free Key Value is 25 MB, internal-only, and not persistent.** Cache entries,
-  sessions, and queued jobs are lost when the instance restarts. Do not use it
-  for durable data.
 - **Supabase free projects pause after ~7 days without activity.** Resume the
   project in the Supabase dashboard if connections start failing. The API cannot
   resume it automatically.
-- **The container filesystem is ephemeral.** `DOCUMENTS_DISK=local` and the
-  default `public` fallback lose uploads on every deploy/restart. Configure
-  Cloudinary or S3 before storing real documents.
+- **The container filesystem is ephemeral.** With `DOCUMENTS_DISK=cloudinary`
+  patient documents, announcement posters and website media are stored in
+  Cloudinary; anything still written to `FILESYSTEM_DISK=local` is lost on every
+  deploy/restart.
 - **The expert service is public.** It is protected by
   `EXPERT_SYSTEM_API_KEY`; `/health` and the OpenAPI schema remain public. Do not
   put patient data in the expert request beyond symptom IDs.
-- **Static sites build at deploy time.** `VITE_*` values are inlined into the
-  bundle; change the env var and trigger a new build. A backend-only deploy does
-  not rebuild the SPAs.
+- **The frontend builds on Vercel.** `VITE_*` values are inlined into the bundle
+  at build time; change the env var in the Vercel project and redeploy. A
+  backend-only deploy does not rebuild the SPA, and a frontend-only commit does
+  not redeploy the API (`buildFilter` limits it to `backend/**`).
 - **Mail is logged, not delivered.** `MAIL_MAILER=log` writes messages to the
   API logs. Password-reset and invitation emails will not arrive until SMTP is
   configured.
@@ -662,8 +693,10 @@ Before the deployment holds real clinic data:
   the admin password.
 - Replace `MAIL_MAILER=log` with a real SMTP/API provider and test delivery.
 - Set `AUTH_SECURITY_ALERTS_ENABLED=true` once mail works.
-- Move uploads to Cloudinary/S3 (`DOCUMENTS_DISK`, `FILESYSTEM_DISK`,
-  `CLOUDINARY_*`).
+- Move uploads to Cloudinary/S3 and verify `DOCUMENTS_DISK=cloudinary` plus
+  `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`
+  (`CLOUDINARY_FOLDER` and `CLOUDINARY_SECURE=true` are optional). Rotate the
+  Cloudinary API secret if it was ever shared in plain text.
 - Attach custom domains and update every URL/CORS value listed in §10.13.3.
 - Enable 2FA and lockout only after staff enrollment.
 - Take a Supabase `pg_dump` before destructive changes. Free projects do not
@@ -687,4 +720,46 @@ workspace. When upgrading:
 The API still reaches the expert over the workspace private network, so the
 `X-Internal-Api-Key` header remains a second layer of defence rather than the
 only one.
+
+### 10.13.9 Deploy the admin dashboard to Vercel
+
+The admin SPA lives in `frontend/` and is a plain Vite build. Import the
+repository at <https://vercel.com/new> and configure:
+
+| Setting | Value |
+| --- | --- |
+| Framework preset | Vite |
+| Root Directory | `frontend` |
+| Build Command | `npm run build` |
+| Output Directory | `dist` |
+| Install Command | `npm ci` (or leave the default) |
+
+[`frontend/vercel.json`](../../frontend/vercel.json) rewrites every path to
+`index.html`, so client-side routes survive a hard refresh.
+
+Add these environment variables to the **Production** (and Preview) scope, then
+deploy:
+
+```text
+VITE_API_URL=https://royalcare-clinic-api.onrender.com/api/v1
+VITE_REVERB_APP_KEY=royalcare-clinic-key
+VITE_REVERB_HOST=royalcare-clinic-api.onrender.com
+VITE_REVERB_PORT=443
+VITE_REVERB_SCHEME=https
+VITE_PUBLIC_SITE_URL=<public website URL, if deployed>
+```
+
+Finally, add the Vercel production origin to the API service so the browser is
+allowed to call it, and redeploy the API (environment changes restart the
+container):
+
+```text
+FRONTEND_URL=https://<project>.vercel.app
+CORS_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:5174,https://<project>.vercel.app
+SANCTUM_STATEFUL_DOMAINS=localhost:5173,localhost:5174,<project>.vercel.app
+```
+
+`sanctum` stateful domains are host names **without** the scheme. The shipped SPA
+uses bearer tokens, so this only matters if cookie-based auth is enabled later.
+
 
