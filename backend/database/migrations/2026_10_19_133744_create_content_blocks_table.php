@@ -15,7 +15,10 @@ return new class extends Migration
             $table->string('title')->nullable();
             $table->text('body')->nullable();
             $table->json('data')->nullable();
-            $table->foreignId('image_media_id')->nullable()->constrained('media_assets')->nullOnDelete();
+            // The foreign key to `media_assets` is added in
+            // 2026_10_31_000009_add_image_media_foreign_key_to_content_blocks_table.php,
+            // because that table is created by a later migration.
+            $table->foreignId('image_media_id')->nullable()->index();
             $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
 
