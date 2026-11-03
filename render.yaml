@@ -41,10 +41,9 @@ services:
     # Migrates, seeds the reference data, then hands over to Supervisor.
     dockerCommand: /usr/local/bin/render-entrypoint.sh
     healthCheckPath: /up
-    # Runs only on the FIRST successful deploy. The entrypoint applies
-    # migrations on every boot and seeds the reference data plus the optional
-    # demo dataset (SEED_DEMO_DATA) on every boot, so this hook is a fallback
-    # for fresh databases rather than the mechanism that enables demo data.
+    # Runs once after the first successful deploy. The entrypoint already
+    # applies migrations and seeds ProductionSeeder on every boot; this adds the
+    # one-time demo/content data set.
     initialDeployHook: "php artisan migrate --force --no-interaction && php artisan db:seed --force --no-interaction"
     buildFilter:
       paths:
@@ -241,25 +240,10 @@ services:
         value: "false"
 
       # --- Demo data --------------------------------------------------------
-      # SEED_DEMO_USERS seeds the demo logins (admin + one per role).
-      # SEED_DEMO_DATA additionally seeds the full demo dataset: the 40-person
-      # staff directory plus the production-like page data (attendance, shifts,
-      # leave, announcements, alerts, audit logs, chat, pharmacy POS sales,
-      # inpatient billing, holidays, expert audits, invitations, contact
-      # messages, media, patient documents and recent activity).
-      #
-      # The entrypoint runs `php artisan app:seed-demo-data` on EVERY boot, so
-      # toggling these flags takes effect on the next deploy — unlike the
-      # initialDeployHook, which only fires once. The command is a no-op when
-      # SEED_DEMO_DATA is off, and records a marker so it runs only once per
-      # database.
-      #
-      # They write demo staff, patients and clinical records, so set BOTH to
-      # false and delete or disable the demo accounts before storing real
+      # Seeds the demo logins (admin + one per role) on the first deploy.
+      # Set to false and delete/disable the demo accounts before storing real
       # patient data. See docs/10-deployment/index.md.
       - key: SEED_DEMO_USERS
-        value: "true"
-      - key: SEED_DEMO_DATA
         value: "true"
 
   # ---------------------------------------------------------------------------

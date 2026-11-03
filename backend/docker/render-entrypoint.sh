@@ -59,23 +59,4 @@ done
 # in the database, so later boots skip the work; an interrupted run is retried.
 php artisan app:ensure-reference-data >> storage/logs/seed.log 2>&1 &
 
-# Optional demo dataset (SEED_DEMO_DATA=true): the 40-person staff directory
-# plus the production-like page data. This must run from the entrypoint rather
-# than the `initialDeployHook`, because that hook only fires on the FIRST
-# successful deploy — enabling the flag on an already-live service would
-# otherwise never take effect.
-#
-# It runs in the foreground when the flag is on, so a failure is visible in the
-# deploy log instead of being swallowed by a detached process that Render may
-# reap before it finishes. The seeders are idempotent and fast enough (~10s on
-# a warm database) to fit inside the deploy window; the flag is off by default,
-# so this is a no-op in production hardening.
-if [ "${SEED_DEMO_DATA:-false}" = "true" ]; then
-    echo "render-entrypoint: SEED_DEMO_DATA=true, seeding demo data..."
-    php artisan app:seed-demo-data >> storage/logs/seed.log 2>&1
-    echo "render-entrypoint: demo seeding finished with exit code $?"
-else
-    echo "render-entrypoint: SEED_DEMO_DATA is off, skipping demo data."
-fi
-
 exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
