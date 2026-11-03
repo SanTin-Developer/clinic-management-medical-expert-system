@@ -7,11 +7,13 @@ use App\Models\WebsiteSetting;
 use Illuminate\Database\Seeder;
 
 /**
- * Seeds the singleton website settings row and the required system pages so the
+ * Seeds the singleton website settings row and the About system page so the
  * public website renders with sensible defaults on a fresh install. Idempotent.
  *
  * Only site-wide settings live here. The homepage copy is seeded by
- * WebsitePageContentSeeder, which owns it as content blocks.
+ * WebsitePageContentSeeder, which owns it as content blocks, and the two legal
+ * documents are owned by LegalDocumentSeeder (they need structured
+ * `policy_content`, not the plain `body` this seeder writes).
  */
 class WebsiteContentSeeder extends Seeder
 {
@@ -33,18 +35,6 @@ class WebsiteContentSeeder extends Seeder
                 'title' => 'About Us',
                 'excerpt' => 'Learn more about RoyalCare Medical Clinic.',
                 'body' => '<p>RoyalCare is a full-service medical clinic dedicated to the health and well-being of our community. Our team of experienced doctors, nurses and specialists provides compassionate, patient-centred care.</p><p>Edit this page from the Website Management section of the admin dashboard.</p>',
-            ],
-            [
-                'slug' => 'privacy-policy',
-                'title' => 'Privacy Policy',
-                'excerpt' => 'How we collect, use and protect your information.',
-                'body' => '<p>We respect your privacy and are committed to protecting your personal information. This policy explains what data we collect through this website and how it is used.</p><p>Edit this page from the Website Management section of the admin dashboard.</p>',
-            ],
-            [
-                'slug' => 'terms-of-use',
-                'title' => 'Terms of Use',
-                'excerpt' => 'The terms governing the use of this website.',
-                'body' => '<p>By accessing this website you agree to these terms of use. The content provided is for general information only and does not constitute medical advice.</p><p>Edit this page from the Website Management section of the admin dashboard.</p>',
             ],
         ];
 

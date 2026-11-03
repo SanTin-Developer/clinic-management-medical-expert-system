@@ -14,6 +14,7 @@ class DatabaseSeeder extends Seeder
             KnowledgeBaseSeeder::class,
             ShiftTemplateSeeder::class,
             WebsiteContentSeeder::class,
+            LegalDocumentSeeder::class,
             AboutContentBlockSeeder::class,
             WebsitePageContentSeeder::class,
         ]);

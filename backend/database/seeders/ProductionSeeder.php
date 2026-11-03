@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\PublicPage;
 use App\Models\WebsiteSetting;
 use Illuminate\Database\Seeder;
 
@@ -20,17 +19,17 @@ class ProductionSeeder extends Seeder
             RolePermissionSeeder::class,
             AdminUserSeeder::class,
             KnowledgeBaseSeeder::class,
+            LegalDocumentSeeder::class,
         ]);
 
         // Public website baseline. The About page is intentionally NOT seeded:
-        // it is authored by the clinic in the admin CMS. Only the two legal
-        // documents the public routes resolve are created, as published system
-        // pages, so /privacy-policy and /terms-of-use resolve on a fresh
-        // deployment instead of returning a 404.
-        $this->seedWebsiteBaseline();
+        // it is authored by the clinic in the admin CMS. LegalDocumentSeeder
+        // above only touches the two legal documents the public routes resolve,
+        // so /privacy-policy and /terms-of-use never 404 on a fresh deployment.
+        $this->seedWebsiteSettings();
     }
 
-    private function seedWebsiteBaseline(): void
+    private function seedWebsiteSettings(): void
     {
         $settings = WebsiteSetting::current();
 
@@ -41,27 +40,5 @@ class ProductionSeeder extends Seeder
             'seo_description' => $settings->seo_description ?: 'RoyalCare Medical Clinic — compassionate, expert healthcare for you and your family.',
             'business_hours' => $settings->business_hours ?: 'Every day: Open 24 hours',
         ])->save();
-
-        foreach (LegalDocumentContent::pages() as $page) {
-            // Search on slug only, and only fill when creating: re-running must
-            // never overwrite content the clinic edited in the admin.
-            if (PublicPage::query()->where('slug', $page['slug'])->exists()) {
-                continue;
-            }
-
-            PublicPage::create([
-                'slug' => $page['slug'],
-                'title' => $page['title'],
-                'title_km' => $page['title_km'],
-                'excerpt' => $page['excerpt'],
-                'excerpt_km' => $page['excerpt_km'],
-                'policy_content' => $page['policy_content'],
-                'internal_notes' => $page['internal_notes'],
-                'status' => PublicPage::STATUS_PUBLISHED,
-                'is_system' => true,
-                'show_in_footer' => true,
-                'published_at' => now(),
-            ]);
-        }
     }
 }

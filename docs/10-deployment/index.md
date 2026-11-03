@@ -261,8 +261,9 @@ docker compose exec backend php artisan db:seed
 ```
 
 `db:seed` runs `RolePermissionSeeder`, `AdminUserSeeder`, `ShiftTemplateSeeder`,
-and the website content seeders, plus demo users and demo clinic content when
-`APP_ENV` is `local` or `testing`.
+and the website content seeders (settings, About page, and the bilingual legal
+documents), plus demo users and demo clinic content when `APP_ENV` is `local`
+or `testing`.
 
 ### Phase 4 — Build production SPA bundles
 

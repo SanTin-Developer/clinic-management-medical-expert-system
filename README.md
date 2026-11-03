@@ -325,7 +325,7 @@ cd website && npm install && npm run dev
 | `RolePermissionSeeder` | All | The seven roles and every permission |
 | `AdminUserSeeder` | All | The local administrator account |
 | `ShiftTemplateSeeder` | All | Baseline shift templates |
-| `WebsiteContentSeeder`, `AboutContentBlockSeeder`, `WebsitePageContentSeeder` | All | Baseline CMS content |
+| `WebsiteContentSeeder`, `LegalDocumentSeeder`, `AboutContentBlockSeeder`, `WebsitePageContentSeeder` | All | Baseline CMS content, including the bilingual legal documents |
 | `DemoUsersSeeder` | `local`, `testing` | Demo staff and patient accounts |
 | `KhmerDemoDataSeeder`, `QueueDemoSeeder`, `WardRoomBedDemoSeeder`, `InpatientDemoDataSeeder`, `WebsiteDemoContentSeeder` | `local`, `testing` | Demo clinic and website content |
 

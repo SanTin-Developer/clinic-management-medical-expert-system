@@ -29,8 +29,9 @@ class EnsureReferenceData extends Command
         $cache = Cache::store('database');
         // Versioned so extending ProductionSeeder (e.g. the public website
         // baseline) re-runs the idempotent seeders once on databases already
-        // seeded by an earlier version.
-        $marker = 'reference-data-seeded-v2';
+        // seeded by an earlier version. v3 backfills the structured
+        // policy_content of legal rows that predate LegalDocumentSeeder.
+        $marker = 'reference-data-seeded-v3';
 
         if ($cache->get($marker) !== null) {
             $this->info('Reference data already seeded.');

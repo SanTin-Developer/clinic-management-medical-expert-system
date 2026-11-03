@@ -272,7 +272,8 @@ PostgreSQL and SQLite. `DashboardMetricsService` reads these views.
 | `RolePermissionSeeder` | Creates roles, permissions, and role assignments |
 | `AdminUserSeeder` | Creates the local administrator account |
 | `ShiftTemplateSeeder` | Baseline shift templates |
-| `WebsiteContentSeeder` | Baseline website settings/content |
+| `WebsiteContentSeeder` | Baseline website settings and the About page |
+| `LegalDocumentSeeder` | Privacy Policy and Terms of Use with structured EN/KM content |
 | `AboutContentBlockSeeder` | About-page content blocks |
 | `WebsitePageContentSeeder` | Baseline CMS pages |
 
