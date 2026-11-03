@@ -177,6 +177,7 @@ are recommendations.
 | Telegram | `TELEGRAM_BOT_TOKEN` / `TELEGRAM_WEBHOOK_SECRET` | empty | Secret store only |
 | Telegram | `TELEGRAM_POLLING_ENABLED` | `true` | Set `false` when Telegram is disabled (avoids a restart loop) |
 | Seeding | `SEED_DEMO_USERS` | `false` | `true` only for a hosted demo; never with real patient data |
+| Seeding | `SEED_DEMO_DATA` | `false` | `true` additionally seeds the 40-person staff directory and full page demo data; never with real patient data |
 | Docs | `SCRAMBLE_DEV_TOOLS` | see `.env.example` | API docs are admin-gated outside `local` |
 | Expert | `EXPERT_SYSTEM_*` | see root table | Must match the Compose values |
 
@@ -806,9 +807,15 @@ interrupted run is retried on the next boot. The knowledge-base seeder uses
 set-based `upsert`/`insert` statements (a handful of round-trips) rather than one
 query per record, which is what keeps a cold deploy inside Render's window.
 
-`SEED_DEMO_USERS=true` additionally creates the demo logins. The `initialDeployHook`
-in `render.yaml` runs `php artisan db:seed` **once per service** to add the demo
-content; the entrypoint's reference seeding runs on every boot.
+`SEED_DEMO_USERS=true` additionally creates the demo logins, and
+`SEED_DEMO_DATA=true` additionally seeds the full demo dataset — the
+40-person staff directory plus production-like page data (attendance, shifts,
+leave, announcements, alerts, audit logs, chat, pharmacy POS sales, inpatient
+billing, clinic holidays, expert audits, invitations, contact messages, media,
+patient documents and recent patient/appointment/revenue history). The
+`initialDeployHook` in `render.yaml` runs `php artisan db:seed` **once per
+service** to add the demo content; the entrypoint's reference seeding runs on
+every boot. Both flags are idempotent, so re-running the hook is safe.
 
 Demo accounts created by the hook:
 
@@ -895,8 +902,9 @@ lands.
 
 Before the deployment holds real clinic data:
 
-- Set `SEED_DEMO_USERS=false`, delete or disable the demo accounts, and change
-  the admin password.
+- Set `SEED_DEMO_USERS=false` **and `SEED_DEMO_DATA=false`**, delete or disable
+  the demo accounts, delete the demo staff/patient records, and change the
+  admin password.
 - Replace `MAIL_MAILER=log` with a real SMTP/API provider and test delivery.
 - Set `AUTH_SECURITY_ALERTS_ENABLED=true` once mail works.
 - Move uploads to Cloudinary/S3 and verify `DOCUMENTS_DISK=cloudinary` plus

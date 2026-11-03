@@ -241,9 +241,19 @@ services:
 
       # --- Demo data --------------------------------------------------------
       # Seeds the demo logins (admin + one per role) on the first deploy.
-      # Set to false and delete/disable the demo accounts before storing real
-      # patient data. See docs/10-deployment/index.md.
+      # SEED_DEMO_DATA additionally seeds the full demo dataset: the 40-person
+      # staff directory plus the production-like page data (attendance, shifts,
+      # leave, announcements, alerts, audit logs, chat, pharmacy POS sales,
+      # inpatient billing, holidays, expert audits, invitations, contact
+      # messages, media, patient documents and recent activity).
+      #
+      # Both run from the initialDeployHook's `db:seed`. They write demo staff,
+      # patients and clinical records, so set BOTH to false and delete or
+      # disable the demo accounts before storing real patient data.
+      # See docs/10-deployment/index.md.
       - key: SEED_DEMO_USERS
+        value: "true"
+      - key: SEED_DEMO_DATA
         value: "true"
 
   # ---------------------------------------------------------------------------
