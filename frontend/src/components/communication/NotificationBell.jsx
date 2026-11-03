@@ -8,6 +8,7 @@ import Modal from '../ui/Modal.jsx'
 import Button from '../ui/Button.jsx'
 import { cn } from '../../utils/cn.js'
 import { notificationApi, systemAlertApi } from '../../api/communication.js'
+import { websiteAdminApi } from '../../api/websiteAdmin.js'
 import { getEcho } from '../../lib/echo.js'
 import { useAuth } from '../../hooks/useAuth.js'
 import { useLanguage } from '../../hooks/useLanguage.js'
@@ -18,6 +19,7 @@ const BROADCAST_EVENT = '.Illuminate\\Notifications\\Events\\BroadcastNotificati
 
 const KIND_LABELS = {
   new_message: 'Message',
+  contact_message: 'Website message',
   telegram_delivery_failed: 'Delivery issue',
   system_announcement: 'Announcement',
   patient_assigned: 'Patient assignment',
@@ -45,6 +47,15 @@ function describe(notification, t) {
         : t('New message'),
       body: data.preview ?? data.conversation_title ?? '',
       url: data.url,
+    }
+  }
+  if (kind === 'contact_message') {
+    return {
+      title: data.sender_name
+        ? t('{name} sent a website message', { name: data.sender_name })
+        : t('New website message'),
+      body: [data.subject, data.preview].filter(Boolean).join(' • '),
+      url: data.url ?? '/website/contact-messages',
     }
   }
   if (kind === 'telegram_delivery_failed') {
@@ -129,6 +140,10 @@ function detailsFor(notification, t) {
     add('Conversation', data.conversation_title)
     add('From', data.sender_name)
     add('Chat type', data.is_group ? t('Group') : t('Direct message'))
+  } else if (kind === 'contact_message') {
+    add('From', data.sender_name)
+    add('Email', data.sender_email)
+    add('Subject', data.subject)
   } else if (kind === 'patient_assigned') {
     add('Patient', data.patient_name)
     add('Ward', data.ward_name)
@@ -270,6 +285,22 @@ export default function NotificationBell() {
   const openNotification = (notification) => {
     setOpen(false)
     setDetail(notification)
+
+    const kind = notification.kind ?? notification.data?.kind
+    const contactMessageId = notification.data?.contact_message_id
+
+    if (kind === 'contact_message' && contactMessageId && can('website.contact.manage')) {
+      websiteAdminApi
+        .markContactMessageRead(contactMessageId)
+        .then(() => {
+          queryClient.invalidateQueries({ queryKey: ['website', 'admin', 'contact-messages'] })
+          queryClient.invalidateQueries({ queryKey: ['website', 'admin', 'dashboard'] })
+        })
+        .catch(() => {
+          // The bell entry still opens even if the inbox receipt cannot be saved.
+        })
+    }
+
     if (!notification.read_at) {
       if (notification._type === 'system') {
         systemAlertApi

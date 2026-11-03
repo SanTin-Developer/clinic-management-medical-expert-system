@@ -410,7 +410,9 @@ Status labels: **Implemented**, **Partially implemented**, **Proposed**,
   `/services`, `/team`, `/gallery`, `/articles`, `/articles/{slug}`,
   `/media/{asset}`, and `POST /website/contact`
 - **Rules:** Unauthenticated, read-only, published content only. The contact
-  endpoint is throttled. No patient or staff data is exposed.
+  endpoint is throttled. No patient or staff data is exposed. Each submission
+  notifies website administrators in the notification bell, and the bell entry
+  stays in sync with the message's read/unread state.
 
 ## 6.12 Medical Expert System
 

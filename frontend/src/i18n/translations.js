@@ -79,6 +79,10 @@ export const KM_TRANSLATIONS = {
   "Open the bell to review them.": "បើកកណ្ដឹងដើម្បីពិនិត្យមើល។",
   "{name} sent a message": "{name} បានផ្ញើសារ",
   "New message": "សារថ្មី",
+  "Website message": "សារពីគេហទំព័រ",
+  "{name} sent a website message": "{name} បានផ្ញើសារពីគេហទំព័រ",
+  "New website message": "សារថ្មីពីគេហទំព័រ",
+  Subject: "ចំណងជើង",
   "Telegram delivery failed": "ការផ្ញើតាម Telegram បរាជ័យ",
   "A Telegram copy of your message could not be delivered.":
     "ច្បាប់ចម្លងសាររបស់អ្នកតាម Telegram មិនអាចផ្ញើបានទេ។",

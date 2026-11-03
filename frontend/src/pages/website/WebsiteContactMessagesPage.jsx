@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Inbox, Mail, MailOpen, Trash2 } from 'lucide-react'
 import PageHeader from '../../components/ui/PageHeader.jsx'
@@ -21,6 +22,7 @@ import { formatDateTime } from '../../utils/format.js'
 
 export default function WebsiteContactMessagesPage() {
   const { can } = useAuth()
+  const queryClient = useQueryClient()
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('')
@@ -42,6 +44,11 @@ export default function WebsiteContactMessagesPage() {
   const rows = query.data?.data ?? []
   const stats = query.data?.stats ?? {}
 
+  const refreshRelated = () => {
+    queryClient.invalidateQueries({ queryKey: ['notifications'] })
+    queryClient.invalidateQueries({ queryKey: ['website', 'admin', 'dashboard'] })
+  }
+
   const toggleRead = async (row) => {
     try {
       const res = row.read_at
@@ -51,6 +58,7 @@ export default function WebsiteContactMessagesPage() {
       toast.success(res?.message ?? 'Contact message updated.')
       setSelected((current) => (current?.id === row.id ? { ...current, ...updated } : current))
       query.refetch()
+      refreshRelated()
     } catch (err) {
       toast.error(err.message)
     }
@@ -63,6 +71,7 @@ export default function WebsiteContactMessagesPage() {
       toast.success('Message deleted.')
       setDeleting(null)
       query.refetch()
+      refreshRelated()
     } catch (err) {
       toast.error(err.message)
     } finally {

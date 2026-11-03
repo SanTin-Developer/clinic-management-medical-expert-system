@@ -3,8 +3,10 @@
 namespace Tests\Feature;
 
 use App\Models\ContactMessage;
+use App\Notifications\ContactMessageReceivedNotification;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use Laravel\Sanctum\Sanctum;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\Concerns\CreatesUsers;
@@ -38,6 +40,24 @@ class WebsiteContactMessageTest extends TestCase
             'subject' => 'Appointment question',
             'read_at' => null,
         ]);
+    }
+
+    public function test_contact_submission_notifies_website_administrators(): void
+    {
+        Notification::fake();
+
+        $admin = $this->userWithRole('Admin');
+        $nurse = $this->userWithRole('Nurse');
+
+        $this->postJson('/api/v1/website/contact', [
+            'name' => 'Sokha Chan',
+            'email' => 'sokha@example.com',
+            'subject' => 'Appointment question',
+            'message' => 'Do you open on Sunday mornings?',
+        ])->assertCreated();
+
+        Notification::assertSentTo($admin, ContactMessageReceivedNotification::class);
+        Notification::assertNotSentTo($nurse, ContactMessageReceivedNotification::class);
     }
 
     public function test_contact_message_requires_valid_payload(): void
@@ -109,6 +129,38 @@ class WebsiteContactMessageTest extends TestCase
             ->assertOk();
 
         $this->assertDatabaseMissing('contact_messages', ['id' => $message->id]);
+    }
+
+    public function test_marking_message_read_updates_the_bell_notification(): void
+    {
+        $admin = $this->userWithRole('Admin');
+
+        $this->postJson('/api/v1/website/contact', [
+            'name' => 'Sokha Chan',
+            'email' => 'sokha@example.com',
+            'subject' => 'Appointment question',
+            'message' => 'Do you open on Sunday mornings?',
+        ])->assertCreated();
+
+        $message = ContactMessage::query()->firstOrFail();
+        $notification = $admin->notifications()->firstOrFail();
+
+        Sanctum::actingAs($admin);
+
+        $this->postJson('/api/v1/website/admin/contact-messages/'.$message->id.'/read')
+            ->assertOk();
+
+        $this->assertNotNull($notification->fresh()->read_at);
+
+        $this->postJson('/api/v1/website/admin/contact-messages/'.$message->id.'/unread')
+            ->assertOk();
+
+        $this->assertNull($notification->fresh()->read_at);
+
+        $this->deleteJson('/api/v1/website/admin/contact-messages/'.$message->id)
+            ->assertOk();
+
+        $this->assertDatabaseMissing('notifications', ['id' => $notification->id]);
     }
 
     public function test_non_admin_cannot_access_contact_inbox(): void
