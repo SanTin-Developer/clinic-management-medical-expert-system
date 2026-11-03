@@ -59,4 +59,12 @@ done
 # in the database, so later boots skip the work; an interrupted run is retried.
 php artisan app:ensure-reference-data >> storage/logs/seed.log 2>&1 &
 
+# Optional demo dataset (SEED_DEMO_DATA=true): the 40-person staff directory
+# plus the production-like page data. This must run from the entrypoint rather
+# than the `initialDeployHook`, because that hook only fires on the FIRST
+# successful deploy — enabling the flag on an already-live service would
+# otherwise never take effect. Same marker/retry pattern as above; a no-op when
+# the flag is off.
+php artisan app:seed-demo-data >> storage/logs/seed.log 2>&1 &
+
 exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf

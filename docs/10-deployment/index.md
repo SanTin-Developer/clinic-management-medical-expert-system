@@ -362,7 +362,9 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml exec backend php
 
 Rules:
 
-- Never run `db:seed` in production.
+- Never run `db:seed` **manually** in production. The entrypoint runs it in a
+  controlled, marker-guarded way (`app:seed-demo-data`) only when
+  `SEED_DEMO_DATA=true`; a manual run bypasses that guard.
 - Never run `migrate:fresh`, `db:wipe`, or `docker compose down -v` against
   clinic data.
 - Create real accounts through invitations and approvals, not seeders.
@@ -793,10 +795,10 @@ which is idempotent:
    public storage symlink.
 3. Retries `php artisan migrate --force` up to 10 times (Supabase may still be
    waking up on the first attempt).
-4. Starts `php artisan app:ensure-reference-data` **in the background** and
-   immediately execs Supervisor, so the port binds and the health check passes
-   while roles, the bootstrap administrator and the medical knowledge base are
-   seeded. Progress is written to `storage/logs/seed.log`.
+4. Starts `php artisan app:ensure-reference-data` and
+   `php artisan app:seed-demo-data` **in the background**, then immediately execs
+   Supervisor, so the port binds and the health check passes while the seeders
+   run. Progress is written to `storage/logs/seed.log`.
 5. Supervisor starts nginx, php-fpm, the queue worker, the scheduler, Reverb,
    and the Telegram poller.
 
@@ -812,10 +814,15 @@ query per record, which is what keeps a cold deploy inside Render's window.
 40-person staff directory plus production-like page data (attendance, shifts,
 leave, announcements, alerts, audit logs, chat, pharmacy POS sales, inpatient
 billing, clinic holidays, expert audits, invitations, contact messages, media,
-patient documents and recent patient/appointment/revenue history). The
-`initialDeployHook` in `render.yaml` runs `php artisan db:seed` **once per
-service** to add the demo content; the entrypoint's reference seeding runs on
-every boot. Both flags are idempotent, so re-running the hook is safe.
+patient documents and recent patient/appointment/revenue history).
+
+**Demo data is seeded from the entrypoint, not the `initialDeployHook`.** That
+hook runs only on the *first* successful deploy, so enabling `SEED_DEMO_DATA` on
+an already-live service would never take effect if seeding depended on it.
+Instead the entrypoint runs `php artisan app:seed-demo-data` on **every boot**,
+which is a no-op when the flag is off and records a `demo-data-seeded` marker
+after the first successful run. Both flags are idempotent, so re-running is safe
+and an interrupted run is retried on the next boot.
 
 Demo accounts created by the hook:
 
