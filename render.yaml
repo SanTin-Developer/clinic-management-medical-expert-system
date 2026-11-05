@@ -179,11 +179,28 @@ services:
       - key: EXPERT_SYSTEM_CONNECT_TIMEOUT
         value: "15"
 
-      # --- Mail / optional integrations (demo defaults) --------------------
+      # --- Mail / optional integrations ------------------------------------
+      # Brevo SMTP. Port 2525 is required on Render Free instances: effective
+      # 2026, Free web services cannot open outbound connections to 25, 465 or
+      # 587, which makes the default STARTTLS port (587) time out. Brevo also
+      # listens on 2525 with STARTTLS, so scheme stays `smtp`.
       - key: MAIL_MAILER
-        value: log
+        value: smtp
+      - key: MAIL_SCHEME
+        value: smtp
+      - key: MAIL_HOST
+        value: smtp-relay.brevo.com
+      - key: MAIL_PORT
+        value: "2525"
+      - key: MAIL_USERNAME
+        value: b88143001@smtp-brevo.com
+      # Secret: set this in the Render dashboard, never in git.
+      - key: MAIL_PASSWORD
+        sync: false
       - key: MAIL_FROM_ADDRESS
-        value: no-reply@clinic.local
+        value: santinoeurn0601@gmail.com
+      - key: MAIL_FROM_NAME
+        value: RoyalCare Clinic
       - key: AUTH_SECURITY_ALERTS_ENABLED
         value: "false"
       - key: TELEGRAM_ENABLED
