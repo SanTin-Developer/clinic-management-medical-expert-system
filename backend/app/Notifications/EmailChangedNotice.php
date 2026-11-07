@@ -29,11 +29,15 @@ class EmailChangedNotice extends Notification
 
     public function toMail(object $notifiable): MailMessage
     {
+        $frontend = rtrim((string) config('services.frontend.url', config('app.url')), '/');
+
         return (new MailMessage)
             ->subject('Your clinic account email address was changed')
-            ->greeting('Hello,')
-            ->line('The email address for a RoyalCare Clinic account was changed from '.$this->oldEmail.' to '.$this->newEmail.'.')
-            ->line('For security, all sessions and trusted devices were signed out.')
-            ->line('If you did not make this change, contact your administrator immediately.');
+            ->view(['html' => 'emails.email-changed', 'text' => 'emails.text.email-changed'], [
+                'oldEmail' => $this->oldEmail,
+                'newEmail' => $this->newEmail,
+                'url' => $frontend.'/settings',
+                'preheader' => 'The email address on your RoyalCare Clinic account was changed.',
+            ]);
     }
 }

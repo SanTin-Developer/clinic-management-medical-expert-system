@@ -25,12 +25,16 @@ class PasswordResetOtpNotification extends Notification
 
     public function toMail(object $notifiable): MailMessage
     {
+        $frontend = rtrim((string) config('services.frontend.url', config('app.url')), '/');
+
         return (new MailMessage)
             ->subject('Your clinic password reset code')
-            ->greeting('Hello '.$notifiable->name.',')
-            ->line('We received a request to reset the password for your account. Use the one-time code below to continue:')
-            ->line('**'.$this->code.'**')
-            ->line('This code expires in '.$this->expiresInMinutes.' minutes and can only be used once.')
-            ->line('If you did not request a password reset, you can safely ignore this email.');
+            ->view(['html' => 'emails.password-reset', 'text' => 'emails.text.password-reset'], [
+                'name' => $notifiable->name,
+                'code' => $this->code,
+                'expiresInMinutes' => $this->expiresInMinutes,
+                'url' => $frontend.'/forgot-password',
+                'preheader' => 'Your one-time password reset code for RoyalCare Clinic.',
+            ]);
     }
 }

@@ -25,22 +25,24 @@ class AccountStatusChangedNotification extends Notification
 
     public function toMail(object $notifiable): MailMessage
     {
-        $message = (new MailMessage)
+        $mapped = match ($this->status) {
+            'suspended' => ['label' => 'Suspended', 'color' => 'red'],
+            'disabled' => ['label' => 'Disabled', 'color' => 'red'],
+            'active' => ['label' => 'Reactivated', 'color' => 'green'],
+            'approved' => ['label' => 'Approved', 'color' => 'green'],
+            'rejected' => ['label' => 'Rejected', 'color' => 'red'],
+            default => ['label' => 'Updated', 'color' => 'slate'],
+        };
+
+        return (new MailMessage)
             ->subject('Your clinic account status has changed')
-            ->greeting('Hello '.$notifiable->name.',');
-
-        $message->line(match ($this->status) {
-            'suspended' => 'Your RoyalCare Clinic account has been suspended.',
-            'disabled' => 'Your RoyalCare Clinic account has been disabled.',
-            'active' => 'Your RoyalCare Clinic account has been reactivated.',
-            default => 'Your RoyalCare Clinic account status has changed.',
-        });
-
-        if ($this->reason !== null && $this->reason !== '') {
-            $message->line('Reason: '.$this->reason);
-        }
-
-        return $message
-            ->line('If you believe this is a mistake, contact your administrator.');
+            ->view(['html' => 'emails.account-status-changed', 'text' => 'emails.text.account-status-changed'], [
+                'name' => $notifiable->name,
+                'statusLabel' => $mapped['label'],
+                'statusColor' => $mapped['color'],
+                'reason' => $this->reason !== null && $this->reason !== '' ? $this->reason : null,
+                'url' => 'mailto:'.(string) config('mail.from.address'),
+                'preheader' => 'Your RoyalCare Clinic account status has changed.',
+            ]);
     }
 }

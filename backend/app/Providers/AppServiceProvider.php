@@ -35,6 +35,7 @@ use App\Services\Website\WebsiteMediaStorage;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
@@ -246,6 +247,17 @@ class AppServiceProvider extends ServiceProvider
             ]);
 
             return $frontend.'/verify-email?verify_url='.urlencode($url);
+        });
+
+        VerifyEmail::toMailUsing(function (object $notifiable, string $verificationUrl): MailMessage {
+            return (new MailMessage)
+                ->subject('Verify your email address')
+                ->view(['html' => 'emails.email-verification', 'text' => 'emails.text.email-verification'], [
+                    'name' => $notifiable->name ?? 'there',
+                    'url' => $verificationUrl,
+                    'expiresInMinutes' => (int) config('auth.verification.expire', 60),
+                    'preheader' => 'Confirm your email address to activate your RoyalCare Clinic account.',
+                ]);
         });
     }
 }

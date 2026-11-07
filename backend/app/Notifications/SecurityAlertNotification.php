@@ -32,21 +32,18 @@ class SecurityAlertNotification extends Notification implements ShouldQueue
     public function toMail(object $notifiable): MailMessage
     {
         $when = optional($this->event->created_at)->toDayDateTimeString() ?? 'an unknown time';
+        $frontend = rtrim((string) config('services.frontend.url', config('app.url')), '/');
 
-        $message = (new MailMessage)
+        return (new MailMessage)
             ->subject('Important security alert on your clinic account')
-            ->greeting('Hello '.$notifiable->name.',')
-            ->line('We detected an important security event on your RoyalCare Clinic account.');
-
-        $message->line('Event: '.$this->describe());
-        $message->line('When: '.$when);
-
-        if ($this->event->ip_address !== null) {
-            $message->line('IP address: '.$this->event->ip_address);
-        }
-
-        return $message
-            ->line('If this was not you, please change your password and contact your administrator immediately.');
+            ->view(['html' => 'emails.security-alert', 'text' => 'emails.text.security-alert'], [
+                'name' => $notifiable->name,
+                'eventDescription' => $this->describe(),
+                'when' => $when,
+                'ipAddress' => $this->event->ip_address,
+                'url' => $frontend.'/settings',
+                'preheader' => 'A security event was recorded on your RoyalCare Clinic account.',
+            ]);
     }
 
     private function describe(): string

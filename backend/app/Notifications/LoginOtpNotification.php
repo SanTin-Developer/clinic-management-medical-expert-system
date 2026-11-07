@@ -25,12 +25,16 @@ class LoginOtpNotification extends Notification
 
     public function toMail(object $notifiable): MailMessage
     {
+        $frontend = rtrim((string) config('services.frontend.url', config('app.url')), '/');
+
         return (new MailMessage)
             ->subject('Your clinic login verification code')
-            ->greeting('Hello '.$notifiable->name.',')
-            ->line('A sign-in attempt was made from a new device. Use the one-time code below to continue:')
-            ->line('**'.$this->code.'**')
-            ->line('This code expires in '.$this->expiresInMinutes.' minutes and can only be used once.')
-            ->line('If you did not attempt to sign in, change your password immediately.');
+            ->view(['html' => 'emails.login-otp', 'text' => 'emails.text.login-otp'], [
+                'name' => $notifiable->name,
+                'code' => $this->code,
+                'expiresInMinutes' => $this->expiresInMinutes,
+                'url' => $frontend.'/login/verify',
+                'preheader' => 'Your one-time sign-in code for RoyalCare Clinic.',
+            ]);
     }
 }

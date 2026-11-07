@@ -29,12 +29,16 @@ class EmailChangeCodeNotification extends Notification
 
     public function toMail(object $notifiable): MailMessage
     {
+        $frontend = rtrim((string) config('services.frontend.url', config('app.url')), '/');
+
         return (new MailMessage)
             ->subject('Confirm your new clinic email address')
-            ->greeting('Hello,')
-            ->line('Use the code below to confirm '.$this->newEmail.' as the new email address for your RoyalCare Clinic account:')
-            ->line('**'.$this->code.'**')
-            ->line('This code expires in '.(int) config('auth.email_change.expire_minutes', 15).' minutes.')
-            ->line('If you did not request this change you can ignore this email.');
+            ->view(['html' => 'emails.email-change-code', 'text' => 'emails.text.email-change-code'], [
+                'newEmail' => $this->newEmail,
+                'code' => $this->code,
+                'expiresInMinutes' => (int) config('auth.email_change.expire_minutes', 15),
+                'url' => $frontend.'/settings',
+                'preheader' => 'Your code to confirm a new RoyalCare Clinic email address.',
+            ]);
     }
 }

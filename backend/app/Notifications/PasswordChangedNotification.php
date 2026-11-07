@@ -20,11 +20,14 @@ class PasswordChangedNotification extends Notification
 
     public function toMail(object $notifiable): MailMessage
     {
+        $frontend = rtrim((string) config('services.frontend.url', config('app.url')), '/');
+
         return (new MailMessage)
             ->subject('Your clinic password was changed')
-            ->greeting('Hello '.$notifiable->name.',')
-            ->line('This is a security notice that the password for your account was just changed.')
-            ->line('All other sessions and trusted devices have been signed out.')
-            ->line('If you did not make this change, contact your administrator immediately.');
+            ->view(['html' => 'emails.password-changed', 'text' => 'emails.text.password-changed'], [
+                'name' => $notifiable->name,
+                'url' => $frontend.'/settings',
+                'preheader' => 'Your RoyalCare Clinic password was changed.',
+            ]);
     }
 }
