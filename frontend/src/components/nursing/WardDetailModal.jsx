@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { BedDouble, DoorOpen, Plus } from 'lucide-react'
+import { BedDouble, DoorOpen, Eye, Pencil, Plus } from 'lucide-react'
 import Modal from '../ui/Modal.jsx'
 import Button from '../ui/Button.jsx'
 import Badge from '../ui/Badge.jsx'
@@ -15,12 +15,19 @@ import { BED_STATUS, BED_STATUS_OPTIONS, ROOM_TYPES, statusBadgeFor, WARD_TYPES 
 import { formatCurrency, patientFullName } from '../../utils/format.js'
 import RoomFormModal from './RoomFormModal.jsx'
 import BedFormModal from './BedFormModal.jsx'
+import RoomDetailModal from './RoomDetailModal.jsx'
 
 export default function WardDetailModal({ open, onClose, wardId, onEdit, onChanged }) {
   const { can } = useAuth()
-  const manage = can('beds.manage') || can('wards.manage')
+  const queryClient = useQueryClient()
+  const manageRooms = can('wards.manage')
+  const manageBeds = can('beds.manage')
+  const viewRooms = can('wards.view') || can('beds.view') || manageRooms || manageBeds
   const [roomFormOpen, setRoomFormOpen] = useState(false)
+  const [editingRoom, setEditingRoom] = useState(null)
   const [bedFormRoomId, setBedFormRoomId] = useState(null)
+  const [editingBed, setEditingBed] = useState(null)
+  const [roomDetailId, setRoomDetailId] = useState(null)
 
   const wardQuery = useQuery({
     queryKey: ['ward', wardId, 'detail'],
@@ -50,11 +57,39 @@ export default function WardDetailModal({ open, onClose, wardId, onEdit, onChang
     return map
   }, [bedsQuery.data])
 
+  const refreshAll = () => {
+    roomsQuery.refetch()
+    bedsQuery.refetch()
+    queryClient.invalidateQueries({ queryKey: ['room'] })
+    onChanged?.()
+  }
+
+  const openRoomForm = (room = null) => {
+    setEditingRoom(room)
+    setRoomFormOpen(true)
+  }
+
+  const closeRoomForm = () => {
+    setRoomFormOpen(false)
+    setEditingRoom(null)
+  }
+
+  const openBedForm = (roomId, bed = null) => {
+    setEditingBed(bed)
+    setBedFormRoomId(roomId)
+  }
+
+  const closeBedForm = () => {
+    setEditingBed(null)
+    setBedFormRoomId(null)
+  }
+
   const changeBedStatus = async (bed, status) => {
     try {
       await bedApi.setStatus(bed.id, status)
       toast.success(`Bed ${bed.label} set to ${status}.`)
       bedsQuery.refetch()
+      queryClient.invalidateQueries({ queryKey: ['room'] })
     } catch (err) {
       toast.error(err.message)
     }
@@ -107,8 +142,8 @@ export default function WardDetailModal({ open, onClose, wardId, onEdit, onChang
             <div>
               <div className="mb-2 flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-ink">Rooms &amp; beds</h3>
-                {manage ? (
-                  <Button size="sm" variant="outline" onClick={() => setRoomFormOpen(true)}>
+                {manageRooms ? (
+                  <Button size="sm" variant="outline" onClick={() => openRoomForm()}>
                     <Plus className="size-4" aria-hidden /> Add room
                   </Button>
                 ) : null}
@@ -134,10 +169,22 @@ export default function WardDetailModal({ open, onClose, wardId, onEdit, onChang
                               <span className="text-xs font-medium text-ink-muted">{formatCurrency(room.price_per_day)}/day</span>
                             ) : null}
                           </div>
-                          {manage ? (
-                            <Button size="sm" variant="ghost" onClick={() => setBedFormRoomId(room.id)}>
-                              <Plus className="size-4" aria-hidden /> Add bed
-                            </Button>
+                          {viewRooms ? (
+                            <div className="flex flex-wrap items-center gap-1">
+                              <Button size="sm" variant="ghost" onClick={() => setRoomDetailId(room.id)}>
+                                <Eye className="size-4" aria-hidden /> View
+                              </Button>
+                              {manageRooms ? (
+                                <Button size="sm" variant="ghost" onClick={() => openRoomForm(room)}>
+                                  <Pencil className="size-4" aria-hidden /> Edit
+                                </Button>
+                              ) : null}
+                              {manageBeds ? (
+                                <Button size="sm" variant="ghost" onClick={() => openBedForm(room.id)}>
+                                  <Plus className="size-4" aria-hidden /> Add bed
+                                </Button>
+                              ) : null}
+                            </div>
                           ) : null}
                         </div>
                         {beds.length === 0 ? (
@@ -152,17 +199,29 @@ export default function WardDetailModal({ open, onClose, wardId, onEdit, onChang
                                     <BedDouble className="size-4 text-ink-muted" aria-hidden /> {bed.label}
                                     <Badge tone={bedMeta.tone}>{bedMeta.label}</Badge>
                                   </span>
-                                  {manage && bed.status !== 'occupied' ? (
-                                    <Select
-                                      className="h-8 w-32 text-xs"
-                                      value={bed.status}
-                                      onChange={(e) => changeBedStatus(bed, e.target.value)}
-                                      aria-label={`Status for bed ${bed.label}`}
-                                    >
-                                      {BED_STATUS_OPTIONS.filter((o) => o.value !== 'occupied').map((o) => (
-                                        <option key={o.value} value={o.value}>{o.label}</option>
-                                      ))}
-                                    </Select>
+                                  {manageBeds ? (
+                                    <div className="flex items-center gap-1">
+                                      {bed.status !== 'occupied' ? (
+                                        <Select
+                                          className="h-8 w-32 text-xs"
+                                          value={bed.status}
+                                          onChange={(e) => changeBedStatus(bed, e.target.value)}
+                                          aria-label={`Status for bed ${bed.label}`}
+                                        >
+                                          {BED_STATUS_OPTIONS.filter((o) => o.value !== 'occupied').map((o) => (
+                                            <option key={o.value} value={o.value}>{o.label}</option>
+                                          ))}
+                                        </Select>
+                                      ) : null}
+                                      <button
+                                        type="button"
+                                        aria-label={`Edit bed ${bed.label}`}
+                                        className="rounded-lg p-1.5 text-ink-muted transition-colors hover:bg-canvas hover:text-ink"
+                                        onClick={() => openBedForm(room.id, bed)}
+                                      >
+                                        <Pencil className="size-4" aria-hidden />
+                                      </button>
+                                    </div>
                                   ) : null}
                                 </div>
                               )
@@ -181,16 +240,27 @@ export default function WardDetailModal({ open, onClose, wardId, onEdit, onChang
 
       <RoomFormModal
         open={roomFormOpen}
-        onClose={() => setRoomFormOpen(false)}
+        onClose={closeRoomForm}
         wardId={wardId}
-        onSaved={() => { roomsQuery.refetch(); bedsQuery.refetch(); onChanged?.() }}
+        room={editingRoom}
+        onSaved={refreshAll}
       />
       <BedFormModal
         open={Boolean(bedFormRoomId)}
-        onClose={() => setBedFormRoomId(null)}
+        onClose={closeBedForm}
         rooms={rooms}
         roomId={bedFormRoomId}
-        onSaved={() => { roomsQuery.refetch(); bedsQuery.refetch(); onChanged?.() }}
+        bed={editingBed}
+        onSaved={refreshAll}
+      />
+      <RoomDetailModal
+        open={Boolean(roomDetailId)}
+        onClose={() => setRoomDetailId(null)}
+        roomId={roomDetailId}
+        onEditRoom={(room) => openRoomForm(room)}
+        onAddBed={(room) => openBedForm(room.id)}
+        onEditBed={(bed) => openBedForm(bed.room_id, bed)}
+        onChanged={refreshAll}
       />
     </>
   )

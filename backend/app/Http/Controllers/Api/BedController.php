@@ -85,8 +85,16 @@ class BedController extends Controller
                     ->where('room_id', $request->input('room_id', $bed->room_id))
                     ->ignore($bed->id),
             ],
+            'status' => ['sometimes', Rule::in($this->manageableStatuses())],
             'notes' => ['sometimes', 'nullable', 'string'],
         ]);
+
+        // Occupancy is driven exclusively by the admission workflow.
+        if (array_key_exists('status', $validated) && $bed->status === Bed::STATUS_OCCUPIED) {
+            return response()->json([
+                'message' => 'An occupied bed can only be freed by discharging or transferring the patient.',
+            ], 422);
+        }
 
         $bed->update($validated);
 

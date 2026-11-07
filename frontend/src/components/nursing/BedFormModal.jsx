@@ -45,7 +45,10 @@ export default function BedFormModal({ open, onClose, onSaved, rooms = [], roomI
     setSaving(true)
     try {
       if (editing) {
-        await bedApi.update(bed.id, { label: form.label.trim(), notes: form.notes || null })
+        const payload = { label: form.label.trim(), notes: form.notes || null }
+        // `occupied` is admission-driven and is intentionally not editable.
+        if (bed.status !== 'occupied') payload.status = form.status
+        await bedApi.update(bed.id, payload)
         toast.success('Bed updated.')
       } else {
         await bedApi.create({
@@ -99,7 +102,7 @@ export default function BedFormModal({ open, onClose, onSaved, rooms = [], roomI
           <Field label="Label" htmlFor="bed-label" required error={errors.label}>
             <Input id="bed-label" value={form.label} onChange={(e) => set('label')(e.target.value)} invalid={Boolean(errors.label)} placeholder="e.g. A" />
           </Field>
-          {!editing ? (
+          {!editing || bed.status !== 'occupied' ? (
             <Field label="Status" htmlFor="bed-status">
               <Select id="bed-status" value={form.status} onChange={(e) => set('status')(e.target.value)}>
                 {BED_STATUS_OPTIONS.filter((o) => o.value !== 'occupied').map((o) => (
