@@ -7,6 +7,10 @@ import {
   resolveInitialLanguage,
   translate,
 } from "../i18n/index.js";
+import {
+  startDomTranslation,
+  stopDomTranslation,
+} from "../i18n/domTranslator.js";
 import { setFormatLocale } from "../utils/format.js";
 import { LanguageContext } from "./LanguageContext.js";
 
@@ -52,6 +56,21 @@ export function LanguageProvider({ children }) {
   useEffect(() => {
     document.documentElement.lang = language;
     document.documentElement.dataset.language = language;
+  }, [language]);
+
+  // Translate English text that legacy screens still hard-code, until every
+  // screen has been moved to explicit `t()` calls.
+  useEffect(() => {
+    if (language !== "km") {
+      stopDomTranslation();
+      return undefined;
+    }
+
+    const timer = window.setTimeout(() => startDomTranslation(document.body), 0);
+    return () => {
+      window.clearTimeout(timer);
+      stopDomTranslation();
+    };
   }, [language]);
 
   const t = useCallback(

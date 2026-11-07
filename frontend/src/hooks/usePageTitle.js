@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
+import { useLanguage } from './useLanguage.js'
 
 const BASE = 'RoyalCare'
 
@@ -63,9 +64,11 @@ export function pageTitleFor(pathname) {
 }
 
 export function usePageTitle(title) {
+  const { t } = useLanguage()
+
   useEffect(() => {
-    document.title = TAB_TITLE(title)
-  }, [title])
+    document.title = TAB_TITLE(title ? t(title) : '')
+  }, [title, t])
 }
 
 export default function DocumentTitle() {

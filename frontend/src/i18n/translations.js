@@ -648,8 +648,9 @@ export const KM_TRANSLATIONS = {
   All: "ទាំងអស់",
   "No appointment on this date": "គ្មានការណាត់ជួបនៅកាលបរិច្ឆេទមួយនេះ",
   "Np appointment yet": "គ្មានការណាត់ជួននៅឡើយ",
-  "Nothing is scheduled for ${formatDate(date)}": "",
-  "No appointment yet": "",
+  "Nothing is scheduled for ${formatDate(date)}":
+    "គ្មានអ្វីត្រូវបានកំណត់ពេលសម្រាប់ ${formatDate(date)}",
+  "No appointment yet": "មិនទាន់មានការណាត់ជួបនៅឡើយទេ",
 
   // System alerts & notification centre
   Unread: "មិនបានអាន",
